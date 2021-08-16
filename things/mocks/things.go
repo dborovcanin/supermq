@@ -264,6 +264,10 @@ func (trm *thingRepositoryMock) RetrieveByKey(_ context.Context, key string) (st
 	return "", things.ErrNotFound
 }
 
+func (trm *thingRepositoryMock) SearchThingsParams(ctx context.Context, devices []string, modem bool) (things.Page, error) {
+	return things.Page{}, nil
+}
+
 func (trm *thingRepositoryMock) connect(conn Connection) {
 	trm.mu.Lock()
 	defer trm.mu.Unlock()

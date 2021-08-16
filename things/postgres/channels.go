@@ -103,13 +103,13 @@ func (cr channelRepository) Update(ctx context.Context, channel things.Channel) 
 }
 
 func (cr channelRepository) RetrieveByID(ctx context.Context, owner, id string) (things.Channel, error) {
-	q := `SELECT name, metadata FROM channels WHERE id = $1 AND owner = $2;`
+	q := `SELECT name, metadata FROM channels WHERE id = $1;`
 
 	dbch := dbChannel{
 		ID:    id,
 		Owner: owner,
 	}
-	if err := cr.db.QueryRowxContext(ctx, q, id, owner).StructScan(&dbch); err != nil {
+	if err := cr.db.QueryRowxContext(ctx, q, id).StructScan(&dbch); err != nil {
 		pqErr, ok := err.(*pq.Error)
 		if err == sql.ErrNoRows || ok && errInvalid == pqErr.Code.Name() {
 			return things.Channel{}, things.ErrNotFound
@@ -129,11 +129,20 @@ func (cr channelRepository) RetrieveAll(ctx context.Context, owner string, pm th
 		return things.ChannelsPage{}, errors.Wrap(things.ErrSelectEntity, err)
 	}
 
+	where := ""
+	if nq != "" || mq != "" {
+		where = "WHERE"
+	}
+
+	mq = strings.TrimPrefix(mq, " AND")
+	if mq == "" {
+		nq = strings.TrimPrefix(nq, " AND")
+	}
+
 	q := fmt.Sprintf(`SELECT id, name, metadata FROM channels
-	      WHERE owner = :owner %s%s ORDER BY %s %s LIMIT :limit OFFSET :offset;`, mq, nq, oq, dq)
+	     %s %s%s ORDER BY %s %s LIMIT :limit OFFSET :offset;`, where, mq, nq, oq, dq)
 
 	params := map[string]interface{}{
-		"owner":    owner,
 		"limit":    pm.Limit,
 		"offset":   pm.Offset,
 		"name":     name,
@@ -156,7 +165,7 @@ func (cr channelRepository) RetrieveAll(ctx context.Context, owner string, pm th
 		items = append(items, ch)
 	}
 
-	cq := fmt.Sprintf(`SELECT COUNT(*) FROM channels WHERE owner = :owner %s%s;`, nq, mq)
+	cq := fmt.Sprintf(`SELECT COUNT(*) FROM channels %s %s%s;`, where, nq, mq)
 
 	total, err := total(ctx, cr.db, cq, params)
 	if err != nil {

@@ -90,6 +90,14 @@ func (es eventStore) ListThings(ctx context.Context, token string, pm things.Pag
 	return es.svc.ListThings(ctx, token, pm)
 }
 
+func (es eventStore) SearchThingsParams(ctx context.Context, devices []string, modem bool) (things.Page, error) {
+	return es.svc.SearchThingsParams(ctx, devices, modem)
+}
+
+func (es eventStore) ListByIds(ctx context.Context, token string, ids []string) (things.Page, error) {
+	return es.svc.ListByIds(ctx, token, ids)
+}
+
 func (es eventStore) ListThingsByChannel(ctx context.Context, token, chID string, pm things.PageMetadata) (things.Page, error) {
 	return es.svc.ListThingsByChannel(ctx, token, chID, pm)
 }

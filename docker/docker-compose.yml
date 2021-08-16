@@ -164,7 +164,7 @@ services:
       - mainflux-auth-redis-volume:/data
 
   things:
-    image: mainflux/things:${MF_RELEASE_TAG}
+    image: mainflux/things
     container_name: mainflux-things
     depends_on:
       - things-db

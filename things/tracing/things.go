@@ -90,6 +90,14 @@ func (trm thingRepositoryMiddleware) RetrieveAll(ctx context.Context, owner stri
 	return trm.repo.RetrieveAll(ctx, owner, pm)
 }
 
+func (trm thingRepositoryMiddleware) SearchThingsParams(ctx context.Context, devices []string, modem bool) (things.Page, error) {
+	span := createSpan(ctx, trm.tracer, retrieveAllThingsOp)
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
+	return trm.repo.SearchThingsParams(ctx, devices, modem)
+}
+
 func (trm thingRepositoryMiddleware) RetrieveByIDs(ctx context.Context, thingIDs []string, pm things.PageMetadata) (things.Page, error) {
 	span := createSpan(ctx, trm.tracer, retrieveAllThingsOp)
 	defer span.Finish()

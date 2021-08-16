@@ -1,6 +1,7 @@
 // Copyright (c) Mainflux
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !test
 // +build !test
 
 package api
@@ -208,4 +209,22 @@ func (ms *metricsMiddleware) ListMembers(ctx context.Context, token, groupID str
 	}(time.Now())
 
 	return ms.svc.ListMembers(ctx, token, groupID, pm)
+}
+
+func (ms *metricsMiddleware) SearchThingsParams(ctx context.Context, devices []string, modem bool) (things.Page, error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "search_things_paramters").Add(1)
+		ms.latency.With("method", "search_things_paramters").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.SearchThingsParams(ctx, devices, modem)
+}
+
+func (ms *metricsMiddleware) ListByIds(ctx context.Context, token string, ids []string) (things.Page, error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "list_things_by_ids").Add(1)
+		ms.latency.With("method", "list_things_by_ids").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.ListByIds(ctx, token, ids)
 }

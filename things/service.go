@@ -12,6 +12,8 @@ import (
 	"github.com/mainflux/mainflux/pkg/ulid"
 )
 
+const snKey = "sn"
+
 var (
 	// ErrUnauthorizedAccess indicates missing or invalid credentials provided
 	// when accessing a protected resource.
@@ -40,6 +42,8 @@ var (
 
 	// ErrFailedToRetrieveThings failed to retrieve things.
 	ErrFailedToRetrieveThings = errors.New("failed to retrieve group members")
+
+	ErrInvalidMetadataKey = errors.New("invalid metadata key")
 )
 
 // Service specifies an API that must be fullfiled by the domain service
@@ -121,6 +125,10 @@ type Service interface {
 
 	// ListMembers retrieves everything that is assigned to a group identified by groupID.
 	ListMembers(ctx context.Context, token, groupID string, pm PageMetadata) (Page, error)
+
+	// GN
+	SearchThingsParams(ctx context.Context, devices []string, modem bool) (Page, error)
+	ListByIds(ctx context.Context, token string, ids []string) (Page, error)
 }
 
 // PageMetadata contains page metadata that helps navigation.
@@ -422,6 +430,46 @@ func (ts *thingsService) ListMembers(ctx context.Context, token, groupID string,
 	}
 
 	return ts.things.RetrieveByIDs(ctx, res, pm)
+}
+
+func (ts *thingsService) SearchThingsParams(ctx context.Context, devices []string, modem bool) (Page, error) {
+	// Remove duplicates.
+	tmp := map[string]bool{}
+	for _, d := range devices {
+		tmp[d] = true
+	}
+	devices = []string{}
+
+	for k := range tmp {
+		devices = append(devices, k)
+	}
+
+	return ts.things.SearchThingsParams(ctx, devices, modem)
+}
+
+func extractField(th Thing, field string) (string, error) {
+	f, ok := th.Metadata[field]
+	if !ok {
+		return "", nil
+	}
+	v, ok := f.(string)
+	if !ok {
+		return "", ErrInvalidMetadataKey
+	}
+	return v, nil
+}
+
+func findString(value string, data []string) bool {
+	for _, v := range data {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+func (ts *thingsService) ListByIds(ctx context.Context, token string, ids []string) (Page, error) {
+	return ts.things.RetrieveByIDs(ctx, ids, PageMetadata{})
 }
 
 func (ts *thingsService) members(ctx context.Context, token, groupID, groupType string, limit, offset uint64) ([]string, error) {

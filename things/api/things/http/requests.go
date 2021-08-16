@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxLimitSize = 100
+	maxLimitSize = 10000
 	maxNameSize  = 1024
 	nameOrder    = "name"
 	idOrder      = "id"
@@ -356,4 +356,13 @@ func (req listThingsGroupReq) validate() error {
 
 	return nil
 
+}
+
+type paramsReq struct {
+	modem   bool
+	Devices []string `json:"Devices"`
+}
+
+func (pr paramsReq) validate() error {
+	return nil
 }

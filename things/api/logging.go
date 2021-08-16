@@ -1,6 +1,7 @@
 // Copyright (c) Mainflux
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !test
 // +build !test
 
 package api
@@ -303,4 +304,30 @@ func (lm *loggingMiddleware) ListMembers(ctx context.Context, token, groupID str
 	}(time.Now())
 
 	return lm.svc.ListMembers(ctx, token, groupID, pm)
+}
+
+func (lm *loggingMiddleware) SearchThingsParams(ctx context.Context, devices []string, modem bool) (_ things.Page, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method search_things_parameters with modem flag: %v took %s to complete", modem, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+
+	return lm.svc.SearchThingsParams(ctx, devices, modem)
+}
+
+func (lm *loggingMiddleware) ListByIds(ctx context.Context, token string, ids []string) (_ things.Page, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method list_things_by_ids: %s took %s to complete", ids, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+
+	return lm.svc.ListByIds(ctx, token, ids)
 }

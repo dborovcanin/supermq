@@ -6,6 +6,7 @@ package http
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mainflux/mainflux"
 )
@@ -113,6 +114,15 @@ type viewThingRes struct {
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
+type searchThingParamsRes struct {
+	DeviceID     string      `json:"device_id"`     // Thing ID + contour
+	DeviceNumber interface{} `json:"device_number"` // meter number
+	RadioID      interface{} `json:"radio_id"`      // not relevant
+	Address      string      `json:"address"`
+	UNP          interface{} `json:"unp"`
+	Manufacturer interface{} `json:"manufacturer"`
+}
+
 func (res viewThingRes) Code() int {
 	return http.StatusOK
 }
@@ -139,6 +149,24 @@ func (res thingsPageRes) Headers() map[string]string {
 }
 
 func (res thingsPageRes) Empty() bool {
+	return false
+}
+
+type thingsParamsRes struct {
+	IDProvider string                 `json:"id_provider"`
+	Date       time.Time              `json:"date"`
+	Things     []searchThingParamsRes `json:"devices"`
+}
+
+func (res thingsParamsRes) Code() int {
+	return http.StatusOK
+}
+
+func (res thingsParamsRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res thingsParamsRes) Empty() bool {
 	return false
 }
 

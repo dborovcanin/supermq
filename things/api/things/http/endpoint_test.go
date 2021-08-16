@@ -96,7 +96,7 @@ func newService(tokens map[string]string) things.Service {
 }
 
 func newServer(svc things.Service) *httptest.Server {
-	mux := httpapi.MakeHandler(mocktracer.New(), svc)
+	mux := httpapi.MakeHandler(mocktracer.New(), svc, "", "")
 	return httptest.NewServer(mux)
 }
 

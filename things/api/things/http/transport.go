@@ -37,7 +37,7 @@ const (
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(tracer opentracing.Tracer, svc things.Service) http.Handler {
+func MakeHandler(tracer opentracing.Tracer, svc things.Service, username, pass string) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(encodeError),
 	}
@@ -194,6 +194,21 @@ func MakeHandler(tracer opentracing.Tracer, svc things.Service) http.Handler {
 	r.Get("/groups/:groupId", kithttp.NewServer(
 		kitot.TraceServer(tracer, "list_members")(listMembersEndpoint(svc)),
 		decodeListMembersRequest,
+		encodeResponse,
+		opts...,
+	))
+
+	// GN
+	r.Post("/DeviceParameters", kithttp.NewServer(
+		kitot.TraceServer(tracer, "things_parameters")(searchThingsParamsEndpoint(svc)),
+		decodeSearchByParams(username, pass),
+		encodeResponse,
+		opts...,
+	))
+
+	r.Post("/things/ids", kithttp.NewServer(
+		kitot.TraceServer(tracer, "list_things_by_ids")(listThingsByIdsEndpoint(svc)),
+		decodeSearchByParams(username, pass),
 		encodeResponse,
 		opts...,
 	))
@@ -479,6 +494,28 @@ func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 	return req, nil
 }
 
+func decodeSearchByParams(uname, pass string) kithttp.DecodeRequestFunc {
+	return func(_ context.Context, r *http.Request) (interface{}, error) {
+		u, p, ok := r.BasicAuth()
+		if !ok || u != uname || p != pass {
+			return nil, things.ErrUnauthorizedAccess
+		}
+		modem := r.URL.Query().Get("modem")
+		m := false
+		if modem == "true" {
+			m = true
+		}
+		req := paramsReq{
+			modem: m,
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req.Devices); err != nil {
+			return nil, errors.Wrap(things.ErrMalformedEntity, err)
+		}
+
+		return req, nil
+	}
+}
+
 func encodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	w.Header().Set("Content-Type", contentType)
 
@@ -523,6 +560,8 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 		case errors.Contains(errorVal, things.ErrScanMetadata),
 			errors.Contains(errorVal, things.ErrSelectEntity):
 			w.WriteHeader(http.StatusUnprocessableEntity)
+		case errors.Contains(errorVal, things.ErrScanParams):
+			w.WriteHeader(http.StatusInternalServerError)
 
 		case errors.Contains(errorVal, things.ErrCreateEntity),
 			errors.Contains(errorVal, things.ErrUpdateEntity),

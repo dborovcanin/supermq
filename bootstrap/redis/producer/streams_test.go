@@ -87,7 +87,7 @@ func newThingsService(auth mainflux.AuthServiceClient) things.Service {
 }
 
 func newThingsServer(svc things.Service) *httptest.Server {
-	mux := httpapi.MakeHandler(mocktracer.New(), svc)
+	mux := httpapi.MakeHandler(mocktracer.New(), svc, "", "")
 	return httptest.NewServer(mux)
 }
 func TestAdd(t *testing.T) {

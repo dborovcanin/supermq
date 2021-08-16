@@ -291,7 +291,7 @@ func TestListCerts(t *testing.T) {
 }
 
 func newThingsServer(svc things.Service) *httptest.Server {
-	mux := httpapi.MakeHandler(mocktracer.New(), svc)
+	mux := httpapi.MakeHandler(mocktracer.New(), svc, "", "")
 	return httptest.NewServer(mux)
 }
 

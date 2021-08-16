@@ -21,6 +21,10 @@ const (
 	errFK         = "foreign_key_violation"
 	errInvalid    = "invalid_text_representation"
 	errTruncation = "string_data_right_truncation"
+	locationKey   = "location"
+
+	meterNum1 = "meter_num_1"
+	meterNum2 = "meter_num_2"
 )
 
 var _ things.ThingRepository = (*thingRepository)(nil)
@@ -190,11 +194,9 @@ func (tr thingRepository) RetrieveByIDs(ctx context.Context, thingIDs []string, 
 	}
 
 	q := fmt.Sprintf(`SELECT id, owner, name, key, metadata FROM things
-					   %s%s%s ORDER BY %s %s LIMIT :limit OFFSET :offset;`, idq, mq, nq, oq, dq)
+					   %s%s%s ORDER BY %s %s;`, idq, mq, nq, oq, dq)
 
 	params := map[string]interface{}{
-		"limit":    pm.Limit,
-		"offset":   pm.Offset,
 		"name":     name,
 		"metadata": m,
 	}
@@ -321,6 +323,151 @@ func (tr thingRepository) RetrieveAll(ctx context.Context, owner string, pm thin
 			Order:  pm.Order,
 			Dir:    pm.Dir,
 		},
+	}
+
+	return page, nil
+}
+
+func (tr thingRepository) SearchThingsParams(ctx context.Context, devices []string, modem bool) (things.Page, error) {
+	if modem {
+		return tr.searchModems(ctx, devices)
+	}
+	return tr.searchMeters(ctx, devices)
+}
+
+func (tr thingRepository) searchModems(ctx context.Context, devices []string) (things.Page, error) {
+	q := `SELECT th.id, th.name, th.key, th.metadata, ch.metadata
+	FROM things th
+	JOIN connections conn on th.id = conn.thing_id
+	JOIN channels ch ON conn.channel_id = ch.id
+	WHERE th.metadata -> 'watermeter' -> 'sn' <@ '%s'::jsonb`
+
+	var b strings.Builder
+	for _, dev := range devices {
+		fmt.Fprintf(&b, "\"%s\", ", dev)
+	}
+	s := b.String()
+	s = "[" + s[:b.Len()-2] + "]"
+	q = fmt.Sprintf(q, s)
+
+	rows, err := tr.db.QueryContext(ctx, q)
+	if err != nil {
+		return things.Page{}, errors.Wrap(things.ErrSelectEntity, err)
+	}
+	defer rows.Close()
+
+	var items []things.Thing
+	for rows.Next() {
+		dbth := dbThing{}
+		meta := []byte{}
+		if err := rows.Scan(&dbth.ID, &dbth.Name, &dbth.Key, &dbth.Metadata, &meta); err != nil {
+			return things.Page{}, errors.Wrap(things.ErrSelectEntity, err)
+		}
+
+		var m metadata
+		if err := json.Unmarshal(dbth.Metadata, &m); err != nil {
+			return things.Page{}, errors.Wrap(things.ErrMalformedEntity, err)
+		}
+
+		th := things.Thing{
+			ID:       dbth.ID,
+			Owner:    dbth.Owner,
+			Name:     dbth.Name,
+			Key:      dbth.Key,
+			Metadata: m.Value,
+		}
+
+		if err != nil {
+			return things.Page{}, errors.Wrap(things.ErrViewEntity, err)
+		}
+		var lm locationMeta
+		if len(meta) > 0 {
+			if err := json.Unmarshal(meta, &lm); err != nil {
+				return things.Page{}, errors.Wrap(things.ErrMalformedEntity, err)
+			}
+			th.Metadata[locationKey] = lm.Loc.String()
+		}
+		items = append(items, th)
+	}
+	ret := []things.Thing{}
+	for _, th := range items {
+		item := th
+		item.ID = th.ID + "#1"
+		ret = append(ret, item)
+		if _, ok := th.Metadata[meterNum2]; ok {
+			item.ID = th.ID + "#2"
+			ret = append(ret, item)
+		}
+	}
+	page := things.Page{
+		Things: ret,
+	}
+
+	return page, nil
+}
+
+func (tr thingRepository) searchMeters(ctx context.Context, devices []string) (things.Page, error) {
+	q := `SELECT CONCAT(th.id, '#1'), th.name, th.key, th.metadata, ch.metadata
+	FROM things th
+	JOIN connections conn on th.id = conn.thing_id
+	JOIN channels ch ON conn.channel_id = ch.id
+	WHERE th.metadata -> 'watermeter' -> '%s' <@ '%s'::jsonb
+	UNION ALL
+		SELECT CONCAT(th.id, '#2'), th.name, th.key, th.metadata, ch.metadata
+		FROM things th
+		JOIN connections conn on th.id = conn.thing_id
+		JOIN channels ch ON conn.channel_id = ch.id WHERE
+		th.metadata -> 'watermeter' -> '%s' <@ '%s'::jsonb;`
+
+	var b strings.Builder
+	for _, dev := range devices {
+		fmt.Fprintf(&b, "\"%s\", ", dev)
+	}
+	s := b.String()
+	s = "[" + s[:b.Len()-2] + "]"
+	q = fmt.Sprintf(q, meterNum1, s, meterNum2, s)
+
+	rows, err := tr.db.QueryContext(ctx, q)
+	if err != nil {
+		return things.Page{}, errors.Wrap(things.ErrSelectEntity, err)
+	}
+	defer rows.Close()
+
+	var items []things.Thing
+	for rows.Next() {
+		dbth := dbThing{}
+		meta := []byte{}
+		if err := rows.Scan(&dbth.ID, &dbth.Name, &dbth.Key, &dbth.Metadata, &meta); err != nil {
+			return things.Page{}, errors.Wrap(things.ErrSelectEntity, err)
+		}
+
+		var m metadata
+		if err := json.Unmarshal(dbth.Metadata, &m); err != nil {
+			return things.Page{}, errors.Wrap(things.ErrMalformedEntity, err)
+		}
+
+		th := things.Thing{
+			ID:       dbth.ID,
+			Owner:    dbth.Owner,
+			Name:     dbth.Name,
+			Key:      dbth.Key,
+			Metadata: m.Value,
+		}
+
+		if err != nil {
+			return things.Page{}, errors.Wrap(things.ErrViewEntity, err)
+		}
+		var lm locationMeta
+		if len(meta) > 0 {
+			if err := json.Unmarshal(meta, &lm); err != nil {
+				return things.Page{}, errors.Wrap(things.ErrMalformedEntity, err)
+			}
+			th.Metadata[locationKey] = lm.Loc.String()
+		}
+		items = append(items, th)
+	}
+	page := things.Page{
+		Things: items,
 	}
 
 	return page, nil
@@ -457,7 +604,7 @@ func toDBThing(th things.Thing) (dbThing, error) {
 
 func toThing(dbth dbThing) (things.Thing, error) {
 	var metadata map[string]interface{}
-	if err := json.Unmarshal([]byte(dbth.Metadata), &metadata); err != nil {
+	if err := json.Unmarshal(dbth.Metadata, &metadata); err != nil {
 		return things.Thing{}, errors.Wrap(things.ErrMalformedEntity, err)
 	}
 
@@ -468,4 +615,23 @@ func toThing(dbth dbThing) (things.Thing, error) {
 		Key:      dbth.Key,
 		Metadata: metadata,
 	}, nil
+}
+
+type locationMeta struct {
+	Loc location `json:"watermeter"`
+}
+
+type metadata struct {
+	Value map[string]interface{} `json:"watermeter"`
+}
+
+type location struct {
+	Country string `json:"country"`
+	City    string `json:"city"`
+	Street  string `json:"street"`
+	Number  string `json:"number"`
+}
+
+func (l location) String() string {
+	return strings.Join([]string{l.Street + " " + l.Number, l.City, l.Country}, ", ")
 }

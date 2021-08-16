@@ -5,6 +5,8 @@ package http
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/mainflux/mainflux/auth"
@@ -156,44 +158,6 @@ func viewThingEndpoint(svc things.Service) endpoint.Endpoint {
 			Key:      thing.Key,
 			Metadata: thing.Metadata,
 		}
-		return res, nil
-	}
-}
-
-func listThingsEndpoint(svc things.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(listResourcesReq)
-
-		if err := req.validate(); err != nil {
-			return nil, err
-		}
-
-		page, err := svc.ListThings(ctx, req.token, req.pageMetadata)
-		if err != nil {
-			return nil, err
-		}
-
-		res := thingsPageRes{
-			pageRes: pageRes{
-				Total:  page.Total,
-				Offset: page.Offset,
-				Limit:  page.Limit,
-				Order:  page.Order,
-				Dir:    page.Dir,
-			},
-			Things: []viewThingRes{},
-		}
-		for _, thing := range page.Things {
-			view := viewThingRes{
-				ID:       thing.ID,
-				Owner:    thing.Owner,
-				Name:     thing.Name,
-				Key:      thing.Key,
-				Metadata: thing.Metadata,
-			}
-			res.Things = append(res.Things, view)
-		}
-
 		return res, nil
 	}
 }
@@ -535,6 +499,114 @@ func listMembersEndpoint(svc things.Service) endpoint.Endpoint {
 		}
 
 		return buildThingsResponse(page), nil
+	}
+}
+
+func listThingsEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(listResourcesReq)
+
+		if err := req.validate(); err != nil {
+			return nil, err
+		}
+
+		page, err := svc.ListThings(ctx, req.token, req.pageMetadata)
+		if err != nil {
+			return nil, err
+		}
+
+		res := thingsPageRes{
+			pageRes: pageRes{
+				Total:  page.Total,
+				Offset: page.Offset,
+				Limit:  page.Limit,
+				Order:  page.Order,
+				Dir:    page.Dir,
+			},
+			Things: []viewThingRes{},
+		}
+		for _, thing := range page.Things {
+			view := viewThingRes{
+				ID:       thing.ID,
+				Owner:    thing.Owner,
+				Name:     thing.Name,
+				Key:      thing.Key,
+				Metadata: thing.Metadata,
+			}
+			res.Things = append(res.Things, view)
+		}
+
+		return res, nil
+	}
+}
+
+func searchThingsParamsEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(paramsReq)
+
+		page, err := svc.SearchThingsParams(ctx, req.Devices, req.modem)
+		if err != nil {
+			return nil, err
+		}
+
+		res := thingsParamsRes{
+			IDProvider: "MTS",
+			Date:       time.Now(),
+			Things:     []searchThingParamsRes{},
+		}
+		for _, thing := range page.Things {
+			view := searchThingParamsRes{
+				DeviceID:     thing.ID,
+				Address:      thing.Name + ", " + thing.Metadata["location"].(string),
+				UNP:          nil,
+				Manufacturer: "gss",
+			}
+			// If contour one is found - take first meter.
+			if strings.HasSuffix(thing.ID, "#1") {
+				view.DeviceNumber = thing.Metadata["meter_num_1"]
+			}
+			// Take second meter otherwise.
+			if strings.HasSuffix(thing.ID, "#2") {
+				view.DeviceNumber = thing.Metadata["meter_num_2"]
+			}
+			res.Things = append(res.Things, view)
+		}
+
+		return res, nil
+	}
+}
+
+func listThingsByIdsEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(paramsReq)
+
+		page, err := svc.ListByIds(ctx, "", req.Devices)
+		if err != nil {
+			return nil, err
+		}
+
+		res := thingsPageRes{
+			pageRes: pageRes{
+				Total:  page.Total,
+				Offset: page.Offset,
+				Limit:  page.Limit,
+				Order:  page.Order,
+				Dir:    page.Dir,
+			},
+			Things: []viewThingRes{},
+		}
+		for _, thing := range page.Things {
+			view := viewThingRes{
+				ID:       thing.ID,
+				Owner:    thing.Owner,
+				Name:     thing.Name,
+				Key:      thing.Key,
+				Metadata: thing.Metadata,
+			}
+			res.Things = append(res.Things, view)
+		}
+
+		return res, nil
 	}
 }
 

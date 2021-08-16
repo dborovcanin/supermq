@@ -68,6 +68,8 @@ const (
 	defJaegerURL       = ""
 	defAuthURL         = "localhost:8181"
 	defAuthTimeout     = "1s"
+	defAdminUsername   = "admin"
+	defAdminPass       = "admin"
 
 	envLogLevel        = "MF_THINGS_LOG_LEVEL"
 	envDBHost          = "MF_THINGS_DB_HOST"
@@ -97,6 +99,8 @@ const (
 	envJaegerURL       = "MF_JAEGER_URL"
 	envAuthURL         = "MF_AUTH_GRPC_URL"
 	envAuthTimeout     = "MF_AUTH_GRPC_TIMEOUT"
+	envAdminUsername   = "MF_ADMIN_USERNAME"
+	envAdminPass       = "MF_ADMIN_PASSWORD"
 )
 
 type config struct {
@@ -119,6 +123,8 @@ type config struct {
 	standaloneToken string
 	jaegerURL       string
 	authURL         string
+	adminUsername   string
+	adminPass       string
 	authTimeout     time.Duration
 }
 
@@ -157,7 +163,7 @@ func main() {
 	svc := newService(auth, dbTracer, cacheTracer, db, cacheClient, esClient, logger)
 	errs := make(chan error, 2)
 
-	go startHTTPServer(thhttpapi.MakeHandler(thingsTracer, svc), cfg.httpPort, cfg, logger, errs)
+	go startHTTPServer(thhttpapi.MakeHandler(thingsTracer, svc, cfg.adminUsername, cfg.adminPass), cfg.httpPort, cfg, logger, errs)
 	go startHTTPServer(authhttpapi.MakeHandler(thingsTracer, svc), cfg.authHTTPPort, cfg, logger, errs)
 	go startGRPCServer(svc, thingsTracer, cfg, logger, errs)
 
@@ -214,6 +220,8 @@ func loadConfig() config {
 		standaloneToken: mainflux.Env(envStandaloneToken, defStandaloneToken),
 		jaegerURL:       mainflux.Env(envJaegerURL, defJaegerURL),
 		authURL:         mainflux.Env(envAuthURL, defAuthURL),
+		adminUsername:   mainflux.Env(envAdminUsername, defAdminUsername),
+		adminPass:       mainflux.Env(envAdminPass, defAdminPass),
 		authTimeout:     authTimeout,
 	}
 }

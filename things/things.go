@@ -28,6 +28,9 @@ var (
 
 	// ErrEntityConnected indicates error while checking connection in database
 	ErrEntityConnected = errors.New("check thing-channel connection in database error")
+
+	// ErrScanParams indicates problem with metadata in db
+	ErrScanParams = errors.New("failed to scan device parameters")
 )
 
 // Metadata to be used for Mainflux thing or channel for customized
@@ -75,6 +78,9 @@ type ThingRepository interface {
 
 	// RetrieveAll retrieves the subset of things owned by the specified user
 	RetrieveAll(ctx context.Context, owner string, pm PageMetadata) (Page, error)
+
+	// RetrieveAllSearchThingsParams retrieves the subset of things owned by the specified user
+	SearchThingsParams(ctx context.Context, devices []string, modem bool) (Page, error)
 
 	// RetrieveByIDs retrieves the subset of things specified by given thing ids.
 	RetrieveByIDs(ctx context.Context, thingIDs []string, pm PageMetadata) (Page, error)

@@ -12,11 +12,10 @@ import (
 	"time"
 
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
-	influxdata "github.com/influxdata/influxdb/client/v2"
+	//influxdata "github.com/influxdata/influxdb/client/v2"
+	influxdatav2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/mainflux/mainflux"
-	"github.com/mainflux/mainflux/consumers"
 	"github.com/mainflux/mainflux/consumers/writers/api"
-	"github.com/mainflux/mainflux/consumers/writers/influxdb"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/messaging/brokers"
@@ -78,18 +77,20 @@ func main() {
 	}
 	defer pubSub.Close()
 
-	client, err := influxdata.NewHTTPClient(clientCfg)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to create InfluxDB client: %s", err))
-		os.Exit(1)
-	}
+	client := influxdatav2.NewClient(defDBUrl, defDBToken)
+	//client, err := influxdata.NewHTTPClient(clientCfg)
+	/*
+		if err != nil {
+			logger.Error(fmt.Sprintf("Failed to create InfluxDB client: %s", err))
+			os.Exit(1)
+		}*/
 	defer client.Close()
+	/*
+		repo := influxdb.New(client, cfg.dbName)
 
-	repo := influxdb.New(client, cfg.dbName)
-
-	counter, latency := makeMetrics()
-	repo = api.LoggingMiddleware(repo, logger)
-	repo = api.MetricsMiddleware(repo, counter, latency)
+		counter, latency := makeMetrics()
+		repo = api.LoggingMiddleware(repo, logger)
+		repo = api.MetricsMiddleware(repo, counter, latency)
 
 	if err := consumers.Start(svcName, pubSub, repo, cfg.configPath, logger); err != nil {
 		logger.Error(fmt.Sprintf("Failed to start InfluxDB writer: %s", err))
@@ -113,7 +114,7 @@ func main() {
 	}
 }
 
-func loadConfigs() (config, influxdata.HTTPConfig) {
+func loadConfigs() config /*influxdata.HTTPConfig*/ {
 	cfg := config{
 		brokerURL:  mainflux.Env(envBrokerURL, defBrokerURL),
 		logLevel:   mainflux.Env(envLogLevel, defLogLevel),
@@ -125,14 +126,14 @@ func loadConfigs() (config, influxdata.HTTPConfig) {
 		dbPass:     mainflux.Env(envDBPass, defDBPass),
 		configPath: mainflux.Env(envConfigPath, defConfigPath),
 	}
-
-	clientCfg := influxdata.HTTPConfig{
-		Addr:     fmt.Sprintf("http://%s:%s", cfg.dbHost, cfg.dbPort),
-		Username: cfg.dbUser,
-		Password: cfg.dbPass,
-	}
-
-	return cfg, clientCfg
+	/*
+		clientCfg := influxdata.HTTPConfig{
+			Addr:     fmt.Sprintf("http://%s:%s", cfg.dbHost, cfg.dbPort),
+			Username: cfg.dbUser,
+			Password: cfg.dbPass,
+		}
+	*/
+	return cfg //, clientCfg
 }
 
 func makeMetrics() (*kitprometheus.Counter, *kitprometheus.Summary) {

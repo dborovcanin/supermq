@@ -58,7 +58,6 @@ type config struct {
 	brokerURL  string
 	logLevel   string
 	port       string
-	dbName     string
 	dbHost     string
 	dbPort     string
 	dbUser     string

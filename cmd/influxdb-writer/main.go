@@ -22,7 +22,6 @@ import (
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/messaging/brokers"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -32,17 +31,19 @@ const (
 	defBrokerURL  = "nats://localhost:4222"
 	defLogLevel   = "error"
 	defPort       = "8180"
-	defDB         = "mainflux"
 	defDBHost     = "localhost"
 	defDBPort     = "8086"
 	defDBUser     = "mainflux"
 	defDBPass     = "mainflux"
 	defConfigPath = "/config.toml"
 
-	envBrokerURL  = "MF_BROKER_URL"
+	defDBBucket = "mainflux-bucket"
+	defDBOrg    = "mainflux"
+	defDBToken  = "mainflux-token"
+
+	envNatsURL    = "MF_NATS_URL"
 	envLogLevel   = "MF_INFLUX_WRITER_LOG_LEVEL"
 	envPort       = "MF_INFLUX_WRITER_PORT"
-	envDB         = "MF_INFLUXDB_DB"
 	envDBHost     = "MF_INFLUXDB_HOST"
 	envDBPort     = "MF_INFLUXDB_PORT"
 	envDBUser     = "MF_INFLUXDB_ADMIN_USER"
@@ -51,7 +52,6 @@ const (
 	envDBBucket   = "MF_INFLUXDB_BUCKET"
 	envDBOrg      = "MF_INFLUXDB_ORG"
 	envDBToken    = "MF_INFLUXDB_TOKEN"
-	envDBUrl      = "http://localhost:8086"
 )
 
 type config struct {
@@ -71,10 +71,8 @@ type config struct {
 }
 
 func main() {
-	cfg, clientCfg := loadConfigs()
-	ctx, cancel := context.WithCancel(context.Background())
-	g, ctx := errgroup.WithContext(ctx)
-
+	cfg /*, clientCfg*/ := loadConfigs()
+	print(cfg.dbUrl)
 	println("Hello from influxdb Writer")
 	logger, err := logger.New(os.Stdout, cfg.logLevel)
 	if err != nil {
@@ -134,7 +132,6 @@ func loadConfigs() config /*influxdata.HTTPConfig*/ {
 		brokerURL:  mainflux.Env(envBrokerURL, defBrokerURL),
 		logLevel:   mainflux.Env(envLogLevel, defLogLevel),
 		port:       mainflux.Env(envPort, defPort),
-		dbName:     mainflux.Env(envDB, defDB),
 		dbHost:     mainflux.Env(envDBHost, defDBHost),
 		dbPort:     mainflux.Env(envDBPort, defDBPort),
 		dbUser:     mainflux.Env(envDBUser, defDBUser),
@@ -143,15 +140,8 @@ func loadConfigs() config /*influxdata.HTTPConfig*/ {
 		dbBucket:   mainflux.Env(envDBBucket, defDBBucket),
 		dbOrg:      mainflux.Env(envDBOrg, defDBOrg),
 		dbToken:    mainflux.Env(envDBToken, defDBToken),
-		dbUrl:      mainflux.Env(envDBUrl, defDBUrl),
 	}
-	/*
-		clientCfg := influxdata.HTTPConfig{
-			Addr:     fmt.Sprintf("http://%s:%s", cfg.dbHost, cfg.dbPort),
-			Username: cfg.dbUser,
-			Password: cfg.dbPass,
-		}
-	*/
+	cfg.dbUrl = fmt.Sprintf("http://%s:%s", cfg.dbHost, cfg.dbPort)
 	return cfg //, clientCfg
 }
 

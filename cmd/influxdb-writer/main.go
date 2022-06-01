@@ -13,9 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/consumers"
 	"github.com/mainflux/mainflux/consumers/writers/api"
@@ -91,7 +90,6 @@ func main() {
 		logger.Error(fmt.Sprintf("Failed to create InfluxDB client: %s", err))
 		os.Exit(1)
 	}
-	println("Connected to InfluxDB")
 	defer client.Close()
 
 	repo := influxdb.New(client, repoCfg)

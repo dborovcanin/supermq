@@ -6,24 +6,52 @@
 
 package options
 
-// DeleteOptions represents all possible options to the DeleteOne() and DeleteMany() functions.
+// DeleteOptions represents options that can be used to configure DeleteOne and DeleteMany operations.
 type DeleteOptions struct {
-	Collation *Collation // Specifies a collation
+	// Specifies a collation to use for string comparisons during the operation. This option is only valid for MongoDB
+	// versions >= 3.4. For previous server versions, the driver will return an error if this option is used. The
+	// default value is nil, which means the default collation of the collection will be used.
+	Collation *Collation
+
+	// The index to use for the operation. This should either be the index name as a string or the index specification
+	// as a document. This option is only valid for MongoDB versions >= 4.4. Server versions >= 3.4 will return an error
+	// if this option is specified. For server versions < 3.4, the driver will return a client-side error if this option
+	// is specified. The driver will return an error if this option is specified during an unacknowledged write
+	// operation. The driver will return an error if the hint parameter is a multi-key map. The default value is nil,
+	// which means that no hint will be sent.
+	Hint interface{}
+
+	// Specifies parameters for the delete expression. This option is only valid for MongoDB versions >= 5.0. Older
+	// servers will report an error for using this option. This must be a document mapping parameter names to values.
+	// Values must be constant or closed expressions that do not reference document fields. Parameters can then be
+	// accessed as variables in an aggregate expression context (e.g. "$$var").
+	Let interface{}
 }
 
-// Delete returns a pointer to a new DeleteOptions
+// Delete creates a new DeleteOptions instance.
 func Delete() *DeleteOptions {
 	return &DeleteOptions{}
 }
 
-// SetCollation specifies a collation
-// Valid for servers >= 3.4.
+// SetCollation sets the value for the Collation field.
 func (do *DeleteOptions) SetCollation(c *Collation) *DeleteOptions {
 	do.Collation = c
 	return do
 }
 
-// MergeDeleteOptions combines the argued DeleteOptions into a single DeleteOptions in a last-one-wins fashion
+// SetHint sets the value for the Hint field.
+func (do *DeleteOptions) SetHint(hint interface{}) *DeleteOptions {
+	do.Hint = hint
+	return do
+}
+
+// SetLet sets the value for the Let field.
+func (do *DeleteOptions) SetLet(let interface{}) *DeleteOptions {
+	do.Let = let
+	return do
+}
+
+// MergeDeleteOptions combines the given DeleteOptions instances into a single DeleteOptions in a last-one-wins fashion.
 func MergeDeleteOptions(opts ...*DeleteOptions) *DeleteOptions {
 	dOpts := Delete()
 	for _, do := range opts {
@@ -32,6 +60,12 @@ func MergeDeleteOptions(opts ...*DeleteOptions) *DeleteOptions {
 		}
 		if do.Collation != nil {
 			dOpts.Collation = do.Collation
+		}
+		if do.Hint != nil {
+			dOpts.Hint = do.Hint
+		}
+		if do.Let != nil {
+			dOpts.Let = do.Let
 		}
 	}
 

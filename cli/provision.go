@@ -9,27 +9,27 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/docker/docker/pkg/namesgenerator"
-	mfxsdk "github.com/mainflux/mainflux/sdk/go"
+	mfxsdk "github.com/mainflux/mainflux/pkg/sdk/go"
 	"github.com/spf13/cobra"
 )
-
-var errMalformedCSV = errors.New("malformed CSV")
 
 const jsonExt = ".json"
 const csvExt = ".csv"
 
 var cmdProvision = []cobra.Command{
-	cobra.Command{
-		Use:   "things",
-		Short: "things <things_file> <user_token>",
+	{
+		Use:   "things <things_file> <user_token>",
+		Short: "Provision things",
 		Long:  `Bulk create things`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -53,13 +53,13 @@ var cmdProvision = []cobra.Command{
 			logJSON(things)
 		},
 	},
-	cobra.Command{
-		Use:   "channels",
-		Short: "channels <channels_file> <user_token>",
+	{
+		Use:   "channels <channels_file> <user_token>",
+		Short: "Provision channels",
 		Long:  `Bulk create channels`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -78,13 +78,13 @@ var cmdProvision = []cobra.Command{
 			logJSON(channels)
 		},
 	},
-	cobra.Command{
-		Use:   "connect",
-		Short: "connect <connections_file> <user_token>",
+	{
+		Use:   "connect <connections_file> <user_token>",
+		Short: "Provision connections",
 		Long:  `Bulk connect things to channels`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -101,7 +101,7 @@ var cmdProvision = []cobra.Command{
 			}
 		},
 	},
-	cobra.Command{
+	{
 		Use:   "test",
 		Short: "test",
 		Long: `Provisions test setup: one test user, two things and two channels. \
@@ -114,17 +114,18 @@ var cmdProvision = []cobra.Command{
 			channels := []mfxsdk.Channel{}
 
 			if len(args) != 0 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
+			rand.Seed(time.Now().UnixNano())
 			un := fmt.Sprintf("%s@email.com", namesgenerator.GetRandomName(0))
 			// Create test user
 			user := mfxsdk.User{
 				Email:    un,
-				Password: "123",
+				Password: "12345678",
 			}
-			if err := sdk.CreateUser(user); err != nil {
+			if _, err := sdk.CreateUser("", user); err != nil {
 				logError(err)
 				return
 			}
@@ -168,21 +169,22 @@ var cmdProvision = []cobra.Command{
 			}
 
 			// Connect things to channels - first thing to both channels, second only to first
-			for i := 0; i < numThings; i++ {
-				if err := sdk.ConnectThing(things[i].ID, channels[i].ID, ut); err != nil {
-					logError(err)
-					return
-				}
+			conIDs := mfxsdk.ConnectionIDs{
+				ChannelIDs: []string{channels[0].ID, channels[1].ID},
+				ThingIDs:   []string{things[0].ID},
+			}
+			if err := sdk.Connect(conIDs, ut); err != nil {
+				logError(err)
+				return
+			}
 
-				if i%2 == 0 {
-					if i+1 >= len(channels) {
-						break
-					}
-					if err := sdk.ConnectThing(things[i].ID, channels[i+1].ID, ut); err != nil {
-						logError(err)
-						return
-					}
-				}
+			conIDs = mfxsdk.ConnectionIDs{
+				ChannelIDs: []string{channels[0].ID},
+				ThingIDs:   []string{things[1].ID},
+			}
+			if err := sdk.Connect(conIDs, ut); err != nil {
+				logError(err)
+				return
 			}
 
 			logJSON(user, ut, things, channels)
@@ -193,7 +195,7 @@ var cmdProvision = []cobra.Command{
 // NewProvisionCmd returns provision command.
 func NewProvisionCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "provision",
+		Use:   "provision [things | channels | connect | test]",
 		Short: "Provision things and channels from a config file",
 		Long:  `Provision things and channels: use json or csv file to bulk provision things and channels`,
 	}

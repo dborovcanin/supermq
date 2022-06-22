@@ -12,6 +12,10 @@ networks:
   docker_mainflux-base-net:
     external: true
 
+volumes:
+  mainflux-opcua-adapter-volume:
+  mainflux-opcua-redis-volume:
+
 services:
   opcua-redis:
     image: redis:5.0-alpine
@@ -19,18 +23,17 @@ services:
     restart: on-failure
     networks:
       - docker_mainflux-base-net
+    volumes:
+      - mainflux-opcua-redis-volume:/data
 
   opcua-adapter:
-    image: mainflux/opcua:latest
+    image: mainflux/opcua:${MF_RELEASE_TAG}
     container_name: mainflux-opcua
     restart: on-failure
     environment:
       MF_OPCUA_ADAPTER_HTTP_PORT: ${MF_OPCUA_ADAPTER_HTTP_PORT}
       MF_OPCUA_ADAPTER_LOG_LEVEL: ${MF_OPCUA_ADAPTER_LOG_LEVEL}
       MF_NATS_URL: ${MF_NATS_URL}
-      MF_OPCUA_ADAPTER_SERVER_URI: ${MF_OPCUA_ADAPTER_SERVER_URI}
-      MF_OPCUA_ADAPTER_NODE_NAMESPACE: ${MF_OPCUA_ADAPTER_NODE_NAMESPACE}
-      MF_OPCUA_ADAPTER_NODE_IDENTIFIER: ${MF_OPCUA_ADAPTER_NODE_IDENTIFIER}
       MF_OPCUA_ADAPTER_POLICY: ${MF_OPCUA_ADAPTER_POLICY}
       MF_OPCUA_ADAPTER_MODE: ${MF_OPCUA_ADAPTER_MODE}
       MF_OPCUA_ADAPTER_CERT_FILE: ${MF_OPCUA_ADAPTER_CERT_FILE}
@@ -47,4 +50,4 @@ services:
     networks:
       - docker_mainflux-base-net
     volumes:
-      - ./nodes.csv:/config/nodes.csv
+      - mainflux-opcua-adapter-volume:/store

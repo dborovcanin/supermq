@@ -7,11 +7,15 @@ package mat
 import (
 	"gonum.org/v1/gonum/blas"
 	"gonum.org/v1/gonum/blas/blas64"
+	"gonum.org/v1/gonum/lapack"
+	"gonum.org/v1/gonum/lapack/lapack64"
 )
 
 var (
 	symBandDense *SymBandDense
 	_            Matrix           = symBandDense
+	_            allMatrix        = symBandDense
+	_            denseMatrix      = symBandDense
 	_            Symmetric        = symBandDense
 	_            Banded           = symBandDense
 	_            SymBanded        = symBandDense
@@ -32,8 +36,8 @@ type SymBandDense struct {
 type SymBanded interface {
 	Banded
 
-	// Symmetric returns the number of rows/columns in the matrix.
-	Symmetric() int
+	// SymmetricDim returns the number of rows/columns in the matrix.
+	SymmetricDim() int
 
 	// SymBand returns the number of rows/columns in the matrix, and the size of
 	// the bandwidth.
@@ -111,8 +115,8 @@ func (s *SymBandDense) Dims() (r, c int) {
 	return s.mat.N, s.mat.N
 }
 
-// Symmetric returns the size of the receiver.
-func (s *SymBandDense) Symmetric() int {
+// SymmetricDim returns the size of the receiver.
+func (s *SymBandDense) SymmetricDim() int {
 	return s.mat.N
 }
 
@@ -155,6 +159,26 @@ func (s *SymBandDense) SetRawSymBand(mat blas64.SymmetricBand) {
 		panic("mat: blas64.SymmetricBand does not have blas.Upper storage")
 	}
 	s.mat = mat
+}
+
+// IsEmpty returns whether the receiver is empty. Empty matrices can be the
+// receiver for size-restricted operations. The receiver can be emptied using
+// Reset.
+func (s *SymBandDense) IsEmpty() bool {
+	return s.mat.Stride == 0
+}
+
+// Reset empties the matrix so that it can be reused as the
+// receiver of a dimensionally restricted operation.
+//
+// Reset should not be used when the matrix shares backing data.
+// See the Reseter interface for more information.
+func (s *SymBandDense) Reset() {
+	s.mat.N = 0
+	s.mat.K = 0
+	s.mat.Stride = 0
+	s.mat.Uplo = 0
+	s.mat.Data = s.mat.Data[:0]
 }
 
 // Zero sets all of the matrix elements to zero.
@@ -220,12 +244,64 @@ func (s *SymBandDense) DoColNonZero(j int, fn func(i, j int, v float64)) {
 	}
 }
 
-// Trace returns the trace.
+// Norm returns the specified norm of the receiver. Valid norms are:
+//  1 - The maximum absolute column sum
+//  2 - The Frobenius norm, the square root of the sum of the squares of the elements
+//  Inf - The maximum absolute row sum
+//
+// Norm will panic with ErrNormOrder if an illegal norm is specified and with
+// ErrZeroLength if the matrix has zero size.
+func (s *SymBandDense) Norm(norm float64) float64 {
+	if s.IsEmpty() {
+		panic(ErrZeroLength)
+	}
+	lnorm := normLapack(norm, false)
+	if lnorm == lapack.MaxColumnSum || lnorm == lapack.MaxRowSum {
+		work := getFloat64s(s.mat.N, false)
+		defer putFloat64s(work)
+		return lapack64.Lansb(lnorm, s.mat, work)
+	}
+	return lapack64.Lansb(lnorm, s.mat, nil)
+}
+
+// Trace returns the trace of the matrix.
+//
+// Trace will panic with ErrZeroLength if the matrix has zero size.
 func (s *SymBandDense) Trace() float64 {
+	if s.IsEmpty() {
+		panic(ErrZeroLength)
+	}
 	rb := s.RawSymBand()
 	var tr float64
 	for i := 0; i < rb.N; i++ {
 		tr += rb.Data[i*rb.Stride]
 	}
 	return tr
+}
+
+// MulVecTo computes S⋅x storing the result into dst.
+func (s *SymBandDense) MulVecTo(dst *VecDense, _ bool, x Vector) {
+	n := s.mat.N
+	if x.Len() != n {
+		panic(ErrShape)
+	}
+	dst.reuseAsNonZeroed(n)
+
+	xMat, _ := untransposeExtract(x)
+	if xVec, ok := xMat.(*VecDense); ok {
+		if dst != xVec {
+			dst.checkOverlap(xVec.mat)
+			blas64.Sbmv(1, s.mat, xVec.mat, 0, dst.mat)
+		} else {
+			xCopy := getVecDenseWorkspace(n, false)
+			xCopy.CloneFromVec(xVec)
+			blas64.Sbmv(1, s.mat, xCopy.mat, 0, dst.mat)
+			putVecDenseWorkspace(xCopy)
+		}
+	} else {
+		xCopy := getVecDenseWorkspace(n, false)
+		xCopy.CloneFromVec(x)
+		blas64.Sbmv(1, s.mat, xCopy.mat, 0, dst.mat)
+		putVecDenseWorkspace(xCopy)
+	}
 }

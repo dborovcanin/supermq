@@ -18,14 +18,16 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/docker/docker/pkg/namesgenerator"
-	sdk "github.com/mainflux/mainflux/sdk/go"
+	sdk "github.com/mainflux/mainflux/pkg/sdk/go"
 )
 
-const defPass = "123"
+const (
+	defPass      = "12345678"
+	defReaderURL = "http://localhost:8905"
+)
 
 // MfConn - structure describing Mainflux connection set
 type MfConn struct {
@@ -51,20 +53,16 @@ type Config struct {
 // Provision - function that does actual provisiong
 func Provision(conf Config) {
 	const (
-		rsaBits   = 4096
-		daysValid = "2400h"
+		rsaBits = 4096
+		ttl     = "2400h"
 	)
 
 	msgContentType := string(sdk.CTJSONSenML)
 	sdkConf := sdk.Config{
-		BaseURL:           conf.Host,
-		ReaderURL:         "http://localhost:8905",
-		ReaderPrefix:      "",
-		UsersPrefix:       "",
-		ThingsPrefix:      "",
-		HTTPAdapterPrefix: "http",
-		MsgContentType:    sdk.ContentType(msgContentType),
-		TLSVerification:   false,
+		ThingsURL:       conf.Host,
+		ReaderURL:       defReaderURL,
+		MsgContentType:  sdk.ContentType(msgContentType),
+		TLSVerification: false,
 	}
 
 	s := sdk.NewSDK(sdkConf)
@@ -80,7 +78,7 @@ func Provision(conf Config) {
 	}
 
 	// Create new user
-	if err := s.CreateUser(user); err != nil {
+	if _, err := s.CreateUser("", user); err != nil {
 		log.Fatalf("Unable to create new user: %s", err.Error())
 		return
 
@@ -120,31 +118,37 @@ func Provision(conf Config) {
 	}
 
 	//  Create things and channels
-	things := make([]*sdk.Thing, conf.Num)
-	channels := make([]*string, conf.Num)
+	things := make([]sdk.Thing, conf.Num)
+	channels := make([]sdk.Channel, conf.Num)
+	cIDs := []string{}
+	tIDs := []string{}
 
 	fmt.Println("# List of things that can be connected to MQTT broker")
 
 	for i := 0; i < conf.Num; i++ {
-		tid, err := s.CreateThing(sdk.Thing{Name: fmt.Sprintf("%s-thing-%d", conf.Prefix, i)}, token)
-		if err != nil {
-			log.Fatalf("Failed to create the thing: %s", err.Error())
-		}
+		things[i] = sdk.Thing{Name: fmt.Sprintf("%s-thing-%d", conf.Prefix, i)}
+		channels[i] = sdk.Channel{Name: fmt.Sprintf("%s-channel-%d", conf.Prefix, i)}
+	}
 
-		thing, err := s.Thing(tid, token)
-		things[i] = &thing
+	things, err = s.CreateThings(things, token)
+	if err != nil {
+		log.Fatalf("Failed to create the things: %s", err.Error())
+	}
 
-		if err != nil {
-			log.Fatalf("Failed to fetch the thing: %s", err.Error())
-		}
+	channels, err = s.CreateChannels(channels, token)
+	if err != nil {
+		log.Fatalf("Failed to create the chennels: %s", err.Error())
+	}
 
-		cid, err := s.CreateChannel(sdk.Channel{Name: fmt.Sprintf("%s-channel-%d", conf.Prefix, i)}, token)
-		if err != nil {
-			log.Fatalf("Failed to create the channel: %s", err.Error())
-		}
+	for _, t := range things {
+		tIDs = append(tIDs, t.ID)
+	}
 
-		channels[i] = &cid
+	for _, c := range channels {
+		cIDs = append(cIDs, c.ID)
+	}
 
+	for i := 0; i < conf.Num; i++ {
 		cert := ""
 		key := ""
 
@@ -153,7 +157,7 @@ func Provision(conf Config) {
 			priv, err = rsa.GenerateKey(rand.Reader, rsaBits)
 
 			notBefore := time.Now()
-			validFor, err := time.ParseDuration(daysValid)
+			validFor, err := time.ParseDuration(ttl)
 			if err != nil {
 				log.Fatalf("Failed to set date %v", validFor)
 			}
@@ -169,7 +173,7 @@ func Provision(conf Config) {
 				SerialNumber: serialNumber,
 				Subject: pkix.Name{
 					Organization:       []string{"Mainflux"},
-					CommonName:         thing.Key,
+					CommonName:         things[i].Key,
 					OrganizationalUnit: []string{"mainflux"},
 				},
 				NotBefore: notBefore,
@@ -203,7 +207,7 @@ func Provision(conf Config) {
 		}
 
 		// Print output
-		fmt.Printf("[[things]]\nthing_id = \"%s\"\nthing_key = \"%s\"\n", tid, thing.Key)
+		fmt.Printf("[[things]]\nthing_id = \"%s\"\nthing_key = \"%s\"\n", things[i].ID, things[i].Key)
 		if conf.SSL {
 			fmt.Printf("mtls_cert = \"\"\"%s\"\"\"\n", cert)
 			fmt.Printf("mtls_key = \"\"\"%s\"\"\"\n", key)
@@ -211,25 +215,19 @@ func Provision(conf Config) {
 		fmt.Println("")
 	}
 
-	var wg sync.WaitGroup
 	fmt.Printf("# List of channels that things can publish to\n" +
 		"# each channel is connected to each thing from things list\n")
 	for i := 0; i < conf.Num; i++ {
-		// Creating a new routine for each connect
-		// might be heavy on the network.
-		go func(wg *sync.WaitGroup, i int) {
-			wg.Add(1)
-			defer wg.Done()
-
-			for j := 0; j < conf.Num; j++ {
-				if err := s.ConnectThing(things[j].ID, *channels[i], token); err != nil {
-					log.Fatalf("Failed to connect thing %s to channel %s: %s", things[j].ID, *channels[i], err)
-				}
-			}
-		}(&wg, i)
-		fmt.Printf("[[channels]]\nchannel_id = \"%s\"\n\n", *channels[i])
+		fmt.Printf("[[channels]]\nchannel_id = \"%s\"\n\n", cIDs[i])
 	}
-	wg.Wait()
+
+	conIDs := sdk.ConnectionIDs{
+		ChannelIDs: cIDs,
+		ThingIDs:   tIDs,
+	}
+	if err := s.Connect(conIDs, token); err != nil {
+		log.Fatalf("Failed to connect things %s to channels %s: %s", conIDs.ThingIDs, conIDs.ChannelIDs, err)
+	}
 }
 
 func publicKey(priv interface{}) interface{} {

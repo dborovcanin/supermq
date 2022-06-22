@@ -4,6 +4,7 @@
 package bootstrap_test
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -20,7 +21,9 @@ import (
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/bootstrap"
 	"github.com/mainflux/mainflux/bootstrap/mocks"
-	mfsdk "github.com/mainflux/mainflux/sdk/go"
+	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
+	mfsdk "github.com/mainflux/mainflux/pkg/sdk/go"
 	"github.com/mainflux/mainflux/things"
 	httpapi "github.com/mainflux/mainflux/things/api/things/http"
 	"github.com/stretchr/testify/assert"
@@ -32,8 +35,6 @@ const (
 	invalidToken = "invalidToken"
 	email        = "test@example.com"
 	unknown      = "unknown"
-	unknownID    = "1"
-	unknownKey   = "2"
 	channelsNum  = 3
 )
 
@@ -54,17 +55,17 @@ var (
 	}
 )
 
-func newService(users mainflux.UsersServiceClient, url string) bootstrap.Service {
-	things := mocks.NewConfigsRepository(map[string]string{unknownID: unknownKey})
+func newService(auth mainflux.AuthServiceClient, url string) bootstrap.Service {
+	things := mocks.NewConfigsRepository()
 	config := mfsdk.Config{
-		BaseURL: url,
+		ThingsURL: url,
 	}
 
 	sdk := mfsdk.NewSDK(config)
-	return bootstrap.New(users, things, sdk, encKey)
+	return bootstrap.New(auth, things, sdk, encKey)
 }
 
-func newThingsService(users mainflux.UsersServiceClient) things.Service {
+func newThingsService(auth mainflux.AuthServiceClient) things.Service {
 	channels := make(map[string]things.Channel, channelsNum)
 	for i := 0; i < channelsNum; i++ {
 		id := strconv.Itoa(i + 1)
@@ -75,11 +76,12 @@ func newThingsService(users mainflux.UsersServiceClient) things.Service {
 		}
 	}
 
-	return mocks.NewThingsService(map[string]things.Thing{}, channels, users)
+	return mocks.NewThingsService(map[string]things.Thing{}, channels, auth)
 }
 
 func newThingsServer(svc things.Service) *httptest.Server {
-	mux := httpapi.MakeHandler(mocktracer.New(), svc)
+	logger := logger.NewMock()
+	mux := httpapi.MakeHandler(mocktracer.New(), svc, logger)
 	return httptest.NewServer(mux)
 }
 
@@ -99,7 +101,7 @@ func enc(in []byte) ([]byte, error) {
 }
 
 func TestAdd(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
@@ -115,84 +117,84 @@ func TestAdd(t *testing.T) {
 	cases := []struct {
 		desc   string
 		config bootstrap.Config
-		key    string
+		token  string
 		err    error
 	}{
 		{
 			desc:   "add a new config",
 			config: config,
-			key:    validToken,
+			token:  validToken,
 			err:    nil,
 		},
 		{
 			desc:   "add a config with an invalid ID",
 			config: neID,
-			key:    validToken,
-			err:    bootstrap.ErrNotFound,
+			token:  validToken,
+			err:    errors.ErrNotFound,
 		},
 		{
 			desc:   "add a config with wrong credentials",
 			config: config,
-			key:    invalidToken,
-			err:    bootstrap.ErrUnauthorizedAccess,
+			token:  invalidToken,
+			err:    errors.ErrAuthentication,
 		},
 		{
 			desc:   "add a config with invalid list of channels",
 			config: wrongChannels,
-			key:    validToken,
-			err:    bootstrap.ErrMalformedEntity,
+			token:  validToken,
+			err:    errors.ErrMalformedEntity,
 		},
 	}
 
 	for _, tc := range cases {
-		_, err := svc.Add(tc.key, tc.config)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		_, err := svc.Add(context.Background(), tc.token, tc.config)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestView(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
 
-	saved, err := svc.Add(validToken, config)
+	saved, err := svc.Add(context.Background(), validToken, config)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	cases := []struct {
-		desc string
-		id   string
-		key  string
-		err  error
+		desc  string
+		id    string
+		token string
+		err   error
 	}{
 		{
-			desc: "view an existing config",
-			id:   saved.MFThing,
-			key:  validToken,
-			err:  nil,
+			desc:  "view an existing config",
+			id:    saved.MFThing,
+			token: validToken,
+			err:   nil,
 		},
 		{
-			desc: "view a non-existing config",
-			id:   unknown,
-			key:  validToken,
-			err:  bootstrap.ErrNotFound,
+			desc:  "view a non-existing config",
+			id:    unknown,
+			token: validToken,
+			err:   errors.ErrNotFound,
 		},
 		{
-			desc: "view a config with wrong credentials",
-			id:   config.MFThing,
-			key:  invalidToken,
-			err:  bootstrap.ErrUnauthorizedAccess,
+			desc:  "view a config with wrong credentials",
+			id:    config.MFThing,
+			token: invalidToken,
+			err:   errors.ErrAuthentication,
 		},
 	}
 
 	for _, tc := range cases {
-		_, err := svc.View(tc.key, tc.id)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		_, err := svc.View(context.Background(), tc.token, tc.id)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestUpdate(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
@@ -201,7 +203,7 @@ func TestUpdate(t *testing.T) {
 	ch := channel
 	ch.ID = "2"
 	c.MFChannels = append(c.MFChannels, ch)
-	saved, err := svc.Add(validToken, c)
+	saved, err := svc.Add(context.Background(), validToken, c)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	modifiedCreated := saved
@@ -214,37 +216,37 @@ func TestUpdate(t *testing.T) {
 	cases := []struct {
 		desc   string
 		config bootstrap.Config
-		key    string
+		token  string
 		err    error
 	}{
 		{
 			desc:   "update a config with state Created",
 			config: modifiedCreated,
-			key:    validToken,
+			token:  validToken,
 			err:    nil,
 		},
 		{
 			desc:   "update a non-existing config",
 			config: nonExisting,
-			key:    validToken,
-			err:    bootstrap.ErrNotFound,
+			token:  validToken,
+			err:    errors.ErrNotFound,
 		},
 		{
 			desc:   "update a config with wrong credentials",
 			config: saved,
-			key:    invalidToken,
-			err:    bootstrap.ErrUnauthorizedAccess,
+			token:  invalidToken,
+			err:    errors.ErrAuthentication,
 		},
 	}
 
 	for _, tc := range cases {
-		err := svc.Update(tc.key, tc.config)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.Update(context.Background(), tc.token, tc.config)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestUpdateCert(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
@@ -253,12 +255,12 @@ func TestUpdateCert(t *testing.T) {
 	ch := channel
 	ch.ID = "2"
 	c.MFChannels = append(c.MFChannels, ch)
-	saved, err := svc.Add(validToken, c)
+	saved, err := svc.Add(context.Background(), validToken, c)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	cases := []struct {
 		desc       string
-		key        string
+		token      string
 		thingKey   string
 		clientCert string
 		clientKey  string
@@ -271,7 +273,7 @@ func TestUpdateCert(t *testing.T) {
 			clientCert: "newCert",
 			clientKey:  "newKey",
 			caCert:     "newCert",
-			key:        validToken,
+			token:      validToken,
 			err:        nil,
 		},
 		{
@@ -281,8 +283,8 @@ func TestUpdateCert(t *testing.T) {
 			clientKey:  "newKey",
 			caCert:     "newCert",
 
-			key: validToken,
-			err: bootstrap.ErrNotFound,
+			token: validToken,
+			err:   errors.ErrNotFound,
 		},
 		{
 			desc:       "update config cert with wrong credentials",
@@ -290,19 +292,19 @@ func TestUpdateCert(t *testing.T) {
 			clientCert: "newCert",
 			clientKey:  "newKey",
 			caCert:     "newCert",
-			key:        invalidToken,
-			err:        bootstrap.ErrUnauthorizedAccess,
+			token:      invalidToken,
+			err:        errors.ErrAuthentication,
 		},
 	}
 
 	for _, tc := range cases {
-		err := svc.UpdateCert(tc.key, tc.thingKey, tc.clientCert, tc.clientKey, tc.caCert)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.UpdateCert(context.Background(), tc.token, tc.thingKey, tc.clientCert, tc.clientKey, tc.caCert)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestUpdateConnections(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
@@ -311,15 +313,15 @@ func TestUpdateConnections(t *testing.T) {
 	ch := channel
 	ch.ID = "2"
 	c.MFChannels = append(c.MFChannels, ch)
-	created, err := svc.Add(validToken, c)
+	created, err := svc.Add(context.Background(), validToken, c)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	externalID, err := uuid.NewV4()
 	require.Nil(t, err, fmt.Sprintf("Got unexpected error: %s.\n", err))
 	c.ExternalID = externalID.String()
-	active, err := svc.Add(validToken, c)
+	active, err := svc.Add(context.Background(), validToken, c)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
-	err = svc.ChangeState(validToken, active.MFThing, bootstrap.Active)
+	err = svc.ChangeState(context.Background(), validToken, active.MFThing, bootstrap.Active)
 	require.Nil(t, err, fmt.Sprintf("Changing state expected to succeed: %s.\n", err))
 
 	nonExisting := config
@@ -327,56 +329,56 @@ func TestUpdateConnections(t *testing.T) {
 
 	cases := []struct {
 		desc        string
-		key         string
+		token       string
 		id          string
 		connections []string
 		err         error
 	}{
 		{
 			desc:        "update connections for config with state Inactive",
-			key:         validToken,
+			token:       validToken,
 			id:          created.MFThing,
 			connections: []string{"2"},
 			err:         nil,
 		},
 		{
 			desc:        "update connections for config with state Active",
-			key:         validToken,
+			token:       validToken,
 			id:          active.MFThing,
 			connections: []string{"3"},
 			err:         nil,
 		},
 		{
 			desc:        "update connections for non-existing config",
-			key:         validToken,
+			token:       validToken,
 			id:          "",
 			connections: []string{"3"},
-			err:         bootstrap.ErrNotFound,
+			err:         errors.ErrNotFound,
 		},
 		{
 			desc:        "update connections with invalid channels",
-			key:         validToken,
+			token:       validToken,
 			id:          created.MFThing,
 			connections: []string{"wrong"},
-			err:         bootstrap.ErrMalformedEntity,
+			err:         errors.ErrMalformedEntity,
 		},
 		{
 			desc:        "update connections a config with wrong credentials",
-			key:         invalidToken,
+			token:       invalidToken,
 			id:          created.MFKey,
 			connections: []string{"2", "3"},
-			err:         bootstrap.ErrUnauthorizedAccess,
+			err:         errors.ErrAuthentication,
 		},
 	}
 
 	for _, tc := range cases {
-		err := svc.UpdateConnections(tc.key, tc.id, tc.connections)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.UpdateConnections(context.Background(), tc.token, tc.id, tc.connections)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestList(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
@@ -390,19 +392,14 @@ func TestList(t *testing.T) {
 		c.ExternalID = id.String()
 		c.ExternalKey = id.String()
 		c.Name = fmt.Sprintf("%s-%d", config.Name, i)
-		s, err := svc.Add(validToken, c)
+		s, err := svc.Add(context.Background(), validToken, c)
 		saved = append(saved, s)
 		require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 	}
 	// Set one Thing to the different state
-	err := svc.ChangeState(validToken, "42", bootstrap.Active)
+	err := svc.ChangeState(context.Background(), validToken, "42", bootstrap.Active)
 	require.Nil(t, err, fmt.Sprintf("Changing config state expected to succeed: %s.\n", err))
 	saved[41].State = bootstrap.Active
-
-	unknownConfig := bootstrap.Config{
-		ExternalID:  unknownID,
-		ExternalKey: unknownKey,
-	}
 
 	cases := []struct {
 		desc   string
@@ -410,7 +407,7 @@ func TestList(t *testing.T) {
 		filter bootstrap.Filter
 		offset uint64
 		limit  uint64
-		key    string
+		token  string
 		err    error
 	}{
 		{
@@ -422,7 +419,7 @@ func TestList(t *testing.T) {
 				Configs: saved[0:10],
 			},
 			filter: bootstrap.Filter{},
-			key:    validToken,
+			token:  validToken,
 			offset: 0,
 			limit:  10,
 			err:    nil,
@@ -436,19 +433,19 @@ func TestList(t *testing.T) {
 				Configs: saved[95:96],
 			},
 			filter: bootstrap.Filter{PartialMatch: map[string]string{"name": "95"}},
-			key:    validToken,
+			token:  validToken,
 			offset: 0,
 			limit:  100,
 			err:    nil,
 		},
 		{
-			desc:   "list configs unauthorized",
+			desc:   "list configs with invalid token",
 			config: bootstrap.ConfigsPage{},
 			filter: bootstrap.Filter{},
-			key:    invalidToken,
+			token:  invalidToken,
 			offset: 0,
 			limit:  10,
-			err:    bootstrap.ErrUnauthorizedAccess,
+			err:    errors.ErrAuthentication,
 		},
 		{
 			desc: "list last page",
@@ -459,7 +456,7 @@ func TestList(t *testing.T) {
 				Configs: saved[95:],
 			},
 			filter: bootstrap.Filter{},
-			key:    validToken,
+			token:  validToken,
 			offset: 95,
 			limit:  10,
 			err:    nil,
@@ -473,89 +470,75 @@ func TestList(t *testing.T) {
 				Configs: []bootstrap.Config{saved[41]},
 			},
 			filter: bootstrap.Filter{FullMatch: map[string]string{"state": bootstrap.Active.String()}},
-			key:    validToken,
+			token:  validToken,
 			offset: 35,
 			limit:  20,
 			err:    nil,
 		},
-		{
-			desc: "list unknown configs",
-			config: bootstrap.ConfigsPage{
-				Total:   1,
-				Offset:  0,
-				Limit:   20,
-				Configs: []bootstrap.Config{unknownConfig},
-			},
-			filter: bootstrap.Filter{Unknown: true},
-			key:    validToken,
-			offset: 0,
-			limit:  20,
-			err:    nil,
-		},
 	}
 
 	for _, tc := range cases {
-		result, err := svc.List(tc.key, tc.filter, tc.offset, tc.limit)
+		result, err := svc.List(context.Background(), tc.token, tc.filter, tc.offset, tc.limit)
 		assert.ElementsMatch(t, tc.config.Configs, result.Configs, fmt.Sprintf("%s: expected %v got %v", tc.desc, tc.config.Configs, result.Configs))
 		assert.Equal(t, tc.config.Total, result.Total, fmt.Sprintf("%s: expected %v got %v", tc.desc, tc.config.Total, result.Total))
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestRemove(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
 
-	saved, err := svc.Add(validToken, config)
+	saved, err := svc.Add(context.Background(), validToken, config)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	cases := []struct {
-		desc string
-		id   string
-		key  string
-		err  error
+		desc  string
+		id    string
+		token string
+		err   error
 	}{
 		{
-			desc: "view a config with wrong credentials",
-			id:   saved.MFThing,
-			key:  invalidToken,
-			err:  bootstrap.ErrUnauthorizedAccess,
+			desc:  "view a config with wrong credentials",
+			id:    saved.MFThing,
+			token: invalidToken,
+			err:   errors.ErrAuthentication,
 		},
 		{
-			desc: "remove an existing config",
-			id:   saved.MFThing,
-			key:  validToken,
-			err:  nil,
+			desc:  "remove an existing config",
+			id:    saved.MFThing,
+			token: validToken,
+			err:   nil,
 		},
 		{
-			desc: "remove removed config",
-			id:   saved.MFThing,
-			key:  validToken,
-			err:  nil,
+			desc:  "remove removed config",
+			id:    saved.MFThing,
+			token: validToken,
+			err:   nil,
 		},
 		{
-			desc: "remove non-existing config",
-			id:   unknown,
-			key:  validToken,
-			err:  nil,
+			desc:  "remove non-existing config",
+			id:    unknown,
+			token: validToken,
+			err:   nil,
 		},
 	}
 
 	for _, tc := range cases {
-		err := svc.Remove(tc.key, tc.id)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.Remove(context.Background(), tc.token, tc.id)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestBootstrap(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
 
-	saved, err := svc.Add(validToken, config)
+	saved, err := svc.Add(context.Background(), validToken, config)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	e, err := enc([]byte(saved.ExternalKey))
@@ -574,7 +557,7 @@ func TestBootstrap(t *testing.T) {
 			config:      bootstrap.Config{},
 			externalID:  "invalid",
 			externalKey: saved.ExternalKey,
-			err:         bootstrap.ErrNotFound,
+			err:         errors.ErrNotFound,
 			encrypted:   false,
 		},
 		{
@@ -582,7 +565,7 @@ func TestBootstrap(t *testing.T) {
 			config:      bootstrap.Config{},
 			externalID:  saved.ExternalID,
 			externalKey: "invalid",
-			err:         bootstrap.ErrNotFound,
+			err:         bootstrap.ErrExternalKey,
 			encrypted:   false,
 		},
 		{
@@ -604,78 +587,78 @@ func TestBootstrap(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		config, err := svc.Bootstrap(tc.externalKey, tc.externalID, tc.encrypted)
+		config, err := svc.Bootstrap(context.Background(), tc.externalKey, tc.externalID, tc.encrypted)
 		assert.Equal(t, tc.config, config, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.config, config))
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestChangeState(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
 
-	saved, err := svc.Add(validToken, config)
+	saved, err := svc.Add(context.Background(), validToken, config)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	cases := []struct {
 		desc  string
 		state bootstrap.State
 		id    string
-		key   string
+		token string
 		err   error
 	}{
 		{
 			desc:  "change state with wrong credentials",
 			state: bootstrap.Active,
 			id:    saved.MFThing,
-			key:   invalidToken,
-			err:   bootstrap.ErrUnauthorizedAccess,
+			token: invalidToken,
+			err:   errors.ErrAuthentication,
 		},
 		{
 			desc:  "change state of non-existing config",
 			state: bootstrap.Active,
 			id:    unknown,
-			key:   validToken,
-			err:   bootstrap.ErrNotFound,
+			token: validToken,
+			err:   errors.ErrNotFound,
 		},
 		{
 			desc:  "change state to Active",
 			state: bootstrap.Active,
 			id:    saved.MFThing,
-			key:   validToken,
+			token: validToken,
 			err:   nil,
 		},
 		{
 			desc:  "change state to current state",
 			state: bootstrap.Active,
 			id:    saved.MFThing,
-			key:   validToken,
+			token: validToken,
 			err:   nil,
 		},
 		{
 			desc:  "change state to Inactive",
 			state: bootstrap.Inactive,
 			id:    saved.MFThing,
-			key:   validToken,
+			token: validToken,
 			err:   nil,
 		},
 	}
 
 	for _, tc := range cases {
-		err := svc.ChangeState(tc.key, tc.id, tc.state)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.ChangeState(context.Background(), tc.token, tc.id, tc.state)
+		assert.True(t, errors.Contains(err, tc.err), err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestUpdateChannelHandler(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
 
-	_, err := svc.Add(validToken, config)
+	_, err := svc.Add(context.Background(), validToken, config)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 	ch := bootstrap.Channel{
 		ID:       channel.ID,
@@ -701,18 +684,18 @@ func TestUpdateChannelHandler(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		err := svc.UpdateChannelHandler(tc.channel)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.UpdateChannelHandler(context.Background(), tc.channel)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestRemoveChannelHandler(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
 
-	_, err := svc.Add(validToken, config)
+	_, err := svc.Add(context.Background(), validToken, config)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	cases := []struct {
@@ -733,18 +716,18 @@ func TestRemoveChannelHandler(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		err := svc.RemoveChannelHandler(tc.id)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.RemoveChannelHandler(context.Background(), tc.id)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestRemoveCoinfigHandler(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
 
-	saved, err := svc.Add(validToken, config)
+	saved, err := svc.Add(context.Background(), validToken, config)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	cases := []struct {
@@ -765,18 +748,18 @@ func TestRemoveCoinfigHandler(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		err := svc.RemoveConfigHandler(tc.id)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.RemoveConfigHandler(context.Background(), tc.id)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestDisconnectThingsHandler(t *testing.T) {
-	users := mocks.NewUsersService(map[string]string{validToken: email})
+	users := mocks.NewAuthClient(map[string]string{validToken: email})
 
 	server := newThingsServer(newThingsService(users))
 	svc := newService(users, server.URL)
 
-	saved, err := svc.Add(validToken, config)
+	saved, err := svc.Add(context.Background(), validToken, config)
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	cases := []struct {
@@ -800,7 +783,7 @@ func TestDisconnectThingsHandler(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		err := svc.DisconnectThingHandler(tc.channelID, tc.thingID)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := svc.DisconnectThingHandler(context.Background(), tc.channelID, tc.thingID)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }

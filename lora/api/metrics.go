@@ -1,6 +1,8 @@
 // Copyright (c) Mainflux
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build !test
+
 package api
 
 import (
@@ -28,65 +30,83 @@ func MetricsMiddleware(svc lora.Service, counter metrics.Counter, latency metric
 	}
 }
 
-func (mm *metricsMiddleware) CreateThing(mfxDevID string, loraDevEUI string) error {
+func (mm *metricsMiddleware) CreateThing(ctx context.Context, thingID string, loraDevEUI string) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "create_thing").Add(1)
 		mm.latency.With("method", "create_thing").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.CreateThing(mfxDevID, loraDevEUI)
+	return mm.svc.CreateThing(ctx, thingID, loraDevEUI)
 }
 
-func (mm *metricsMiddleware) UpdateThing(mfxDevID string, loraDevEUI string) error {
+func (mm *metricsMiddleware) UpdateThing(ctx context.Context, thingID string, loraDevEUI string) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "update_thing").Add(1)
 		mm.latency.With("method", "update_thing").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.UpdateThing(mfxDevID, loraDevEUI)
+	return mm.svc.UpdateThing(ctx, thingID, loraDevEUI)
 }
 
-func (mm *metricsMiddleware) RemoveThing(mfxDevID string) error {
+func (mm *metricsMiddleware) RemoveThing(ctx context.Context, thingID string) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "remove_thing").Add(1)
 		mm.latency.With("method", "remove_thing").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.RemoveThing(mfxDevID)
+	return mm.svc.RemoveThing(ctx, thingID)
 }
 
-func (mm *metricsMiddleware) CreateChannel(mfxChanID string, loraApp string) error {
+func (mm *metricsMiddleware) CreateChannel(ctx context.Context, chanID, loraApp string) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "create_channel").Add(1)
 		mm.latency.With("method", "create_channel").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.CreateChannel(mfxChanID, loraApp)
+	return mm.svc.CreateChannel(ctx, chanID, loraApp)
 }
 
-func (mm *metricsMiddleware) UpdateChannel(mfxChanID string, loraApp string) error {
+func (mm *metricsMiddleware) UpdateChannel(ctx context.Context, chanID, loraApp string) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "update_channel").Add(1)
 		mm.latency.With("method", "update_channel").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.UpdateChannel(mfxChanID, loraApp)
+	return mm.svc.UpdateChannel(ctx, chanID, loraApp)
 }
 
-func (mm *metricsMiddleware) RemoveChannel(mfxChanID string) error {
+func (mm *metricsMiddleware) RemoveChannel(ctx context.Context, chanID string) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "remove_channel").Add(1)
 		mm.latency.With("method", "remove_channel").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.RemoveChannel(mfxChanID)
+	return mm.svc.RemoveChannel(ctx, chanID)
 }
 
-func (mm *metricsMiddleware) Publish(ctx context.Context, token string, m lora.Message) error {
+func (mm *metricsMiddleware) ConnectThing(ctx context.Context, chanID, thingID string) error {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "connect_thing").Add(1)
+		mm.latency.With("method", "connect_thing").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return mm.svc.ConnectThing(ctx, chanID, thingID)
+}
+
+func (mm *metricsMiddleware) DisconnectThing(ctx context.Context, chanID, thingID string) error {
+	defer func(begin time.Time) {
+		mm.counter.With("method", "disconnect_thing").Add(1)
+		mm.latency.With("method", "disconnect_thing").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return mm.svc.DisconnectThing(ctx, chanID, thingID)
+}
+
+func (mm *metricsMiddleware) Publish(ctx context.Context, msg lora.Message) error {
 	defer func(begin time.Time) {
 		mm.counter.With("method", "publish").Add(1)
 		mm.latency.With("method", "publish").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return mm.svc.Publish(ctx, token, m)
+	return mm.svc.Publish(ctx, msg)
 }

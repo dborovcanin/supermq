@@ -10,11 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Keep struct names exported, otherwise Viper unmarshaling won't work
-type mqttBrokerCfg struct {
-	URL string `toml:"url" mapstructure:"url"`
-}
-
 func main() {
 	pconf := provision.Config{}
 
@@ -22,7 +17,7 @@ func main() {
 		Use:   "provision",
 		Short: "provision is provisioning tool for Mainflux",
 		Long: `Tool for provisioning series of Mainflux channels and things and connecting them together.
-Complete documentation is available at https://mainflux.readthedocs.io`,
+Complete documentation is available at https://docs.mainflux.io`,
 		Run: func(cmd *cobra.Command, args []string) {
 			provision.Provision(pconf)
 		},
@@ -30,6 +25,7 @@ Complete documentation is available at https://mainflux.readthedocs.io`,
 
 	// Root Flags
 	rootCmd.PersistentFlags().StringVarP(&pconf.Host, "host", "", "https://localhost", "address for mainflux instance")
+	rootCmd.PersistentFlags().StringVarP(&pconf.Prefix, "prefix", "", "", "name prefix for things and channels")
 	rootCmd.PersistentFlags().StringVarP(&pconf.Username, "username", "u", "", "mainflux user")
 	rootCmd.PersistentFlags().StringVarP(&pconf.Password, "password", "p", "", "mainflux users password")
 	rootCmd.PersistentFlags().IntVarP(&pconf.Num, "num", "", 10, "number of channels and things to create and connect")

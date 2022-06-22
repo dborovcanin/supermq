@@ -5,12 +5,12 @@ package email
 
 import (
 	"bytes"
-	"fmt"
-	"html/template"
-	"net/smtp"
+	"net/mail"
+	"strconv"
+	"text/template"
 
-	"github.com/mainflux/mainflux/errors"
-	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
+	"gopkg.in/gomail.v2"
 )
 
 var (
@@ -21,7 +21,7 @@ var (
 	errSendMail             = errors.New("Sending e-mail failed")
 )
 
-type emailTemplate struct {
+type email struct {
 	To      []string
 	From    string
 	Subject string
@@ -32,7 +32,6 @@ type emailTemplate struct {
 
 // Config email agent configuration.
 type Config struct {
-	Driver      string
 	Host        string
 	Port        string
 	Username    string
@@ -45,35 +44,37 @@ type Config struct {
 // Agent for mailing
 type Agent struct {
 	conf *Config
-	auth smtp.Auth
-	addr string
-	log  logger.Logger
 	tmpl *template.Template
+	dial *gomail.Dialer
 }
 
 // New creates new email agent
-func New(c *Config) (*Agent, errors.Error) {
+func New(c *Config) (*Agent, error) {
 	a := &Agent{}
 	a.conf = c
-	a.auth = smtp.PlainAuth("", c.Username, c.Password, c.Host)
-	a.addr = fmt.Sprintf("%s:%s", c.Host, c.Port)
+	port, err := strconv.Atoi(c.Port)
+	if err != nil {
+		return a, err
+	}
+	d := gomail.NewDialer(c.Host, port, c.Username, c.Password)
+	a.dial = d
 
 	tmpl, err := template.ParseFiles(c.Template)
 	if err != nil {
-		return nil, errors.Wrap(errParseTemplate, err)
+		return a, errors.Wrap(errParseTemplate, err)
 	}
 	a.tmpl = tmpl
 	return a, nil
 }
 
 // Send sends e-mail
-func (a *Agent) Send(To []string, From, Subject, Header, Content, Footer string) errors.Error {
+func (a *Agent) Send(To []string, From, Subject, Header, Content, Footer string) error {
 	if a.tmpl == nil {
 		return errMissingEmailTemplate
 	}
 
-	email := new(bytes.Buffer)
-	tmpl := emailTemplate{
+	buff := new(bytes.Buffer)
+	e := email{
 		To:      To,
 		From:    From,
 		Subject: Subject,
@@ -82,14 +83,21 @@ func (a *Agent) Send(To []string, From, Subject, Header, Content, Footer string)
 		Footer:  Footer,
 	}
 	if From == "" {
-		tmpl.From = a.conf.FromName
+		from := mail.Address{Name: a.conf.FromName, Address: a.conf.FromAddress}
+		e.From = from.String()
 	}
 
-	if err := a.tmpl.Execute(email, tmpl); err != nil {
+	if err := a.tmpl.Execute(buff, e); err != nil {
 		return errors.Wrap(errExecTemplate, err)
 	}
 
-	if err := smtp.SendMail(a.addr, a.auth, a.conf.FromAddress, To, email.Bytes()); err != nil {
+	m := gomail.NewMessage()
+	m.SetHeader("From", e.From)
+	m.SetHeader("To", To...)
+	m.SetHeader("Subject", Subject)
+	m.SetBody("text/plain", buff.String())
+
+	if err := a.dial.DialAndSend(m); err != nil {
 		return errors.Wrap(errSendMail, err)
 	}
 

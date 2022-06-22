@@ -43,14 +43,15 @@ func Connect(cfg Config) (*sqlx.DB, error) {
 }
 
 func migrateDB(db *sqlx.DB) error {
+
 	migrations := &migrate.MemoryMigrationSource{
 		Migrations: []*migrate.Migration{
 			{
 				Id: "users_1",
 				Up: []string{
 					`CREATE TABLE IF NOT EXISTS users (
-						email	 VARCHAR(254) PRIMARY KEY,
-						password CHAR(60)	  NOT NULL
+					 email    VARCHAR(254) PRIMARY KEY,
+					 password CHAR(60)     NOT  NULL
 					)`,
 				},
 				Down: []string{"DROP TABLE users"},
@@ -59,6 +60,22 @@ func migrateDB(db *sqlx.DB) error {
 				Id: "users_2",
 				Up: []string{
 					`ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS metadata JSONB`,
+				},
+			},
+			{
+				Id: "users_3",
+				Up: []string{
+					`CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+					 ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS
+					 id UUID NOT NULL DEFAULT gen_random_uuid()`,
+				},
+			},
+			{
+				Id: "users_4",
+				Up: []string{
+					`ALTER TABLE IF EXISTS users DROP CONSTRAINT users_pkey`,
+					`ALTER TABLE IF EXISTS users ADD CONSTRAINT users_email_key UNIQUE (email)`,
+					`ALTER TABLE IF EXISTS users ADD PRIMARY KEY (id)`,
 				},
 			},
 		},

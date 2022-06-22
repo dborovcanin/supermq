@@ -9,7 +9,7 @@ that can be used by Mainflux MQTT benchmarking tool (`mqtt-bench`).
 ```
 ./provision --help
 Tool for provisioning series of Mainflux channels and things and connecting them together.
-Complete documentation is available at https://mainflux.readthedocs.io
+Complete documentation is available at https://docs.mainflux.io
 
 Usage:
   provision [flags]
@@ -23,10 +23,11 @@ Flags:
   -p, --password string   mainflux users password
       --ssl               create certificates for mTLS access
   -u, --username string   mainflux user
+      --prefix string     name prefix for things and channels
 ```
 
 Example:
-``` 
+```
 ./provision -u test@mainflux.com -p test1234 --host https://142.93.118.47
 ```
 
@@ -38,7 +39,7 @@ If you want to create a list of channels with certificates:
 ```
 
 >`ca.crt` and `ca.key` are used for creating things certificate and for HTTPS,
-> if you are provisioning on remote server you will have to get these files to your local 
+> if you are provisioning on remote server you will have to get these files to your local
 > directory so that you can create certificates for things
 
 

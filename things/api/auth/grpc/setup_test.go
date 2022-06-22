@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/things"
 	grpcapi "github.com/mainflux/mainflux/things/api/auth/grpc"
 	"github.com/mainflux/mainflux/things/mocks"
@@ -41,13 +42,14 @@ func startServer() {
 }
 
 func newService(tokens map[string]string) things.Service {
-	users := mocks.NewUsersService(tokens)
+	policies := []mocks.MockSubjectSet{{Object: "users", Relation: "member"}}
+	auth := mocks.NewAuthService(tokens, map[string][]mocks.MockSubjectSet{email: policies})
 	conns := make(chan mocks.Connection)
 	thingsRepo := mocks.NewThingRepository(conns)
 	channelsRepo := mocks.NewChannelRepository(thingsRepo, conns)
 	chanCache := mocks.NewChannelCache()
 	thingCache := mocks.NewThingCache()
-	idp := mocks.NewIdentityProvider()
+	idProvider := uuid.NewMock()
 
-	return things.New(users, thingsRepo, channelsRepo, chanCache, thingCache, idp)
+	return things.New(auth, thingsRepo, channelsRepo, chanCache, thingCache, idProvider)
 }

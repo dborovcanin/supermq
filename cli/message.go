@@ -5,16 +5,14 @@ package cli
 
 import "github.com/spf13/cobra"
 
-const contentTypeSenml = "application/senml+json"
-
 var cmdMessages = []cobra.Command{
-	cobra.Command{
-		Use:   "send",
-		Short: "send <channel_id>[.<subtopic>...] <JSON_string> <thing_key>",
+	{
+		Use:   "send <channel_id.subtopic> <JSON_string> <thing_key>",
+		Short: "Send messages",
 		Long:  `Sends message on the channel`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -26,13 +24,13 @@ var cmdMessages = []cobra.Command{
 			logOK()
 		},
 	},
-	cobra.Command{
-		Use:   "read",
-		Short: "read <channel_id>[.<subtopic>...] <thing_key>",
+	{
+		Use:   "read <channel_id.subtopic> <thing_key>",
+		Short: "Read messages",
 		Long:  `Reads all channel messages`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -50,12 +48,9 @@ var cmdMessages = []cobra.Command{
 // NewMessagesCmd returns messages command.
 func NewMessagesCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "messages",
+		Use:   "messages [send | read]",
 		Short: "Send or read messages",
 		Long:  `Send or read messages using the http-adapter and the configured database reader`,
-		Run: func(cmd *cobra.Command, args []string) {
-			logUsage("messages [send | read]")
-		},
 	}
 
 	for i := range cmdMessages {

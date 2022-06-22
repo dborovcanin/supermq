@@ -14,10 +14,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/mainflux/mainflux/users/postgres"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	dockertest "github.com/ory/dockertest/v3"
 )
-
-const wrong string = "wrong-value"
 
 var db *sqlx.DB
 
@@ -32,7 +30,7 @@ func TestMain(m *testing.M) {
 		"POSTGRES_PASSWORD=test",
 		"POSTGRES_DB=test",
 	}
-	container, err := pool.Run("postgres", "10.2-alpine", cfg)
+	container, err := pool.Run("postgres", "13.3-alpine", cfg)
 	if err != nil {
 		log.Fatalf("Could not start container: %s", err)
 	}
@@ -65,10 +63,11 @@ func TestMain(m *testing.M) {
 	if db, err = postgres.Connect(dbConfig); err != nil {
 		log.Fatalf("Could not setup test DB connection: %s", err)
 	}
-	defer db.Close()
 
 	code := m.Run()
 
+	// Defers will not be run when using os.Exit
+	db.Close()
 	if err := pool.Purge(container); err != nil {
 		log.Fatalf("Could not purge container: %s", err)
 	}

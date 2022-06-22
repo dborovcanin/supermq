@@ -6,14 +6,14 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
-	"strconv"
-	"time"
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/go-zoo/bone"
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/internal/apiutil"
+	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/readers"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc/codes"
@@ -21,21 +21,37 @@ import (
 )
 
 const (
-	contentType = "application/json"
-	defLimit    = 10
-	defOffset   = 0
+	contentType    = "application/json"
+	offsetKey      = "offset"
+	limitKey       = "limit"
+	formatKey      = "format"
+	subtopicKey    = "subtopic"
+	publisherKey   = "publisher"
+	protocolKey    = "protocol"
+	nameKey        = "name"
+	valueKey       = "v"
+	stringValueKey = "vs"
+	dataValueKey   = "vd"
+	boolValueKey   = "vb"
+	comparatorKey  = "comparator"
+	fromKey        = "from"
+	toKey          = "to"
+	defLimit       = 10
+	defOffset      = 0
+	defFormat      = "messages"
 )
 
 var (
-	errInvalidRequest     = errors.New("received invalid request")
-	errUnauthorizedAccess = errors.New("missing or invalid credentials provided")
-	auth                  mainflux.ThingsServiceClient
-	queryFields           = []string{"subtopic", "publisher", "protocol", "name", "value", "v", "vs", "vb", "vd"}
+	errThingAccess = errors.New("thing has no permission")
+	errUserAccess  = errors.New("user has no permission")
+	thingsAuth     mainflux.ThingsServiceClient
+	usersAuth      mainflux.AuthServiceClient
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc readers.MessageRepository, tc mainflux.ThingsServiceClient, svcName string) http.Handler {
-	auth = tc
+func MakeHandler(svc readers.MessageRepository, tc mainflux.ThingsServiceClient, ac mainflux.AuthServiceClient, svcName string, logger logger.Logger) http.Handler {
+	thingsAuth = tc
+	usersAuth = ac
 
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(encodeError),
@@ -43,50 +59,111 @@ func MakeHandler(svc readers.MessageRepository, tc mainflux.ThingsServiceClient,
 
 	mux := bone.New()
 	mux.Get("/channels/:chanID/messages", kithttp.NewServer(
-		listMessagesEndpoint(svc),
+		listMessagesEndpoint(svc, tc, ac),
 		decodeList,
 		encodeResponse,
 		opts...,
 	))
 
-	mux.GetFunc("/version", mainflux.Version(svcName))
+	mux.GetFunc("/health", mainflux.Health(svcName))
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return mux
 }
 
-func decodeList(_ context.Context, r *http.Request) (interface{}, error) {
-	chanID := bone.GetValue(r, "chanID")
-	if chanID == "" {
-		return nil, errInvalidRequest
-	}
-
-	if err := authorize(r, chanID); err != nil {
-		return nil, err
-	}
-
-	offset, err := getQuery(r, "offset", defOffset)
+func decodeList(ctx context.Context, r *http.Request) (interface{}, error) {
+	offset, err := apiutil.ReadUintQuery(r, offsetKey, defOffset)
 	if err != nil {
 		return nil, err
 	}
 
-	limit, err := getQuery(r, "limit", defLimit)
+	limit, err := apiutil.ReadUintQuery(r, limitKey, defLimit)
 	if err != nil {
 		return nil, err
 	}
 
-	query := map[string]string{}
-	for _, name := range queryFields {
-		if value := bone.GetQuery(r, name); len(value) == 1 {
-			query[name] = value[0]
-		}
+	format, err := apiutil.ReadStringQuery(r, formatKey, defFormat)
+	if err != nil {
+		return nil, err
+	}
+
+	subtopic, err := apiutil.ReadStringQuery(r, subtopicKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	publisher, err := apiutil.ReadStringQuery(r, publisherKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	protocol, err := apiutil.ReadStringQuery(r, protocolKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	name, err := apiutil.ReadStringQuery(r, nameKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := apiutil.ReadFloatQuery(r, valueKey, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	comparator, err := apiutil.ReadStringQuery(r, comparatorKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	vs, err := apiutil.ReadStringQuery(r, stringValueKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	vd, err := apiutil.ReadStringQuery(r, dataValueKey, "")
+	if err != nil {
+		return nil, err
+	}
+
+	from, err := apiutil.ReadFloatQuery(r, fromKey, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	to, err := apiutil.ReadFloatQuery(r, toKey, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	req := listMessagesReq{
-		chanID: chanID,
-		offset: offset,
-		limit:  limit,
-		query:  query,
+		chanID: bone.GetValue(r, "chanID"),
+		token:  apiutil.ExtractBearerToken(r),
+		key:    apiutil.ExtractThingKey(r),
+		pageMeta: readers.PageMetadata{
+			Offset:      offset,
+			Limit:       limit,
+			Format:      format,
+			Subtopic:    subtopic,
+			Publisher:   publisher,
+			Protocol:    protocol,
+			Name:        name,
+			Value:       v,
+			Comparator:  comparator,
+			StringValue: vs,
+			DataValue:   vd,
+			From:        from,
+			To:          to,
+		},
+	}
+
+	vb, err := apiutil.ReadBoolQuery(r, boolValueKey, false)
+	if err != nil && err != errors.ErrNotFoundParam {
+		return nil, err
+	}
+	if err == nil {
+		req.pageMeta.BoolValue = vb
 	}
 
 	return req, nil
@@ -111,52 +188,56 @@ func encodeResponse(_ context.Context, w http.ResponseWriter, response interface
 }
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
-	switch err {
-	case nil:
-	case errInvalidRequest:
+	switch {
+	case errors.Contains(err, nil):
+	case errors.Contains(err, errors.ErrInvalidQueryParams),
+		errors.Contains(err, errors.ErrMalformedEntity),
+		err == apiutil.ErrMissingID,
+		err == apiutil.ErrLimitSize,
+		err == apiutil.ErrOffsetSize,
+		err == apiutil.ErrInvalidComparator:
 		w.WriteHeader(http.StatusBadRequest)
-	case errUnauthorizedAccess:
-		w.WriteHeader(http.StatusForbidden)
+	case errors.Contains(err, errors.ErrAuthentication),
+		err == apiutil.ErrBearerToken:
+		w.WriteHeader(http.StatusUnauthorized)
+	case errors.Contains(err, readers.ErrReadMessages):
+		w.WriteHeader(http.StatusInternalServerError)
+
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-}
 
-func authorize(r *http.Request, chanID string) error {
-	token := r.Header.Get("Authorization")
-	if token == "" {
-		return errUnauthorizedAccess
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	_, err := auth.CanAccessByKey(ctx, &mainflux.AccessByKeyReq{Token: token, ChanID: chanID})
-	if err != nil {
-		e, ok := status.FromError(err)
-		if ok && e.Code() == codes.PermissionDenied {
-			return errUnauthorizedAccess
+	if errorVal, ok := err.(errors.Error); ok {
+		w.Header().Set("Content-Type", contentType)
+		if err := json.NewEncoder(w).Encode(apiutil.ErrorRes{Err: errorVal.Msg()}); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 		}
-		return err
 	}
-
-	return nil
 }
 
-func getQuery(req *http.Request, name string, fallback uint64) (uint64, error) {
-	vals := bone.GetQuery(req, name)
-	if len(vals) == 0 {
-		return fallback, nil
+func authorize(ctx context.Context, req listMessagesReq, tc mainflux.ThingsServiceClient, ac mainflux.AuthServiceClient) (err error) {
+	switch {
+	case req.token != "":
+		user, err := usersAuth.Identify(ctx, &mainflux.Token{Value: req.token})
+		if err != nil {
+			e, ok := status.FromError(err)
+			if ok && e.Code() == codes.PermissionDenied {
+				return errors.Wrap(errUserAccess, err)
+			}
+			return err
+		}
+		if _, err = thingsAuth.IsChannelOwner(ctx, &mainflux.ChannelOwnerReq{Owner: user.Email, ChanID: req.chanID}); err != nil {
+			e, ok := status.FromError(err)
+			if ok && e.Code() == codes.PermissionDenied {
+				return errors.Wrap(errUserAccess, err)
+			}
+			return err
+		}
+		return nil
+	default:
+		if _, err := thingsAuth.CanAccessByKey(ctx, &mainflux.AccessByKeyReq{Token: req.key, ChanID: req.chanID}); err != nil {
+			return errors.Wrap(errThingAccess, err)
+		}
+		return nil
 	}
-
-	if len(vals) > 1 {
-		return 0, errInvalidRequest
-	}
-
-	val, err := strconv.ParseUint(vals[0], 10, 64)
-	if err != nil {
-		return 0, errInvalidRequest
-	}
-
-	return uint64(val), nil
 }

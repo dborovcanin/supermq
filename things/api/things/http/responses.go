@@ -18,8 +18,11 @@ var (
 	_ mainflux.Response = (*channelRes)(nil)
 	_ mainflux.Response = (*viewChannelRes)(nil)
 	_ mainflux.Response = (*channelsPageRes)(nil)
-	_ mainflux.Response = (*connectionRes)(nil)
-	_ mainflux.Response = (*disconnectionRes)(nil)
+	_ mainflux.Response = (*connectThingRes)(nil)
+	_ mainflux.Response = (*connectRes)(nil)
+	_ mainflux.Response = (*disconnectThingRes)(nil)
+	_ mainflux.Response = (*disconnectRes)(nil)
+	_ mainflux.Response = (*shareThingRes)(nil)
 )
 
 type removeRes struct{}
@@ -65,6 +68,20 @@ func (res thingRes) Headers() map[string]string {
 
 func (res thingRes) Empty() bool {
 	return true
+}
+
+type shareThingRes struct{}
+
+func (res shareThingRes) Code() int {
+	return http.StatusOK
+}
+
+func (res shareThingRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res shareThingRes) Empty() bool {
+	return false
 }
 
 type thingsRes struct {
@@ -213,47 +230,61 @@ func (res channelsPageRes) Empty() bool {
 	return false
 }
 
-type connectionRes struct{}
+type connectThingRes struct{}
 
-func (res connectionRes) Code() int {
+func (res connectThingRes) Code() int {
 	return http.StatusOK
 }
 
-func (res connectionRes) Headers() map[string]string {
+func (res connectThingRes) Headers() map[string]string {
 	return map[string]string{
 		"Warning-Deprecated": "This endpoint will be depreciated in v1.0.0. It will be replaced with the bulk endpoint found at /connect.",
 	}
 }
 
-func (res connectionRes) Empty() bool {
+func (res connectThingRes) Empty() bool {
 	return true
 }
 
-type createConnectionsRes struct{}
+type connectRes struct{}
 
-func (res createConnectionsRes) Code() int {
+func (res connectRes) Code() int {
 	return http.StatusOK
 }
 
-func (res createConnectionsRes) Headers() map[string]string {
+func (res connectRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
-func (res createConnectionsRes) Empty() bool {
+func (res connectRes) Empty() bool {
 	return true
 }
 
-type disconnectionRes struct{}
+type disconnectRes struct{}
 
-func (res disconnectionRes) Code() int {
-	return http.StatusNoContent
+func (res disconnectRes) Code() int {
+	return http.StatusOK
 }
 
-func (res disconnectionRes) Headers() map[string]string {
+func (res disconnectRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
-func (res disconnectionRes) Empty() bool {
+func (res disconnectRes) Empty() bool {
+	return true
+}
+
+type disconnectThingRes struct{}
+
+func (res disconnectThingRes) Code() int {
+	return http.StatusNoContent
+}
+
+func (res disconnectThingRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res disconnectThingRes) Empty() bool {
 	return true
 }
 
@@ -261,4 +292,6 @@ type pageRes struct {
 	Total  uint64 `json:"total"`
 	Offset uint64 `json:"offset"`
 	Limit  uint64 `json:"limit"`
+	Order  string `json:"order"`
+	Dir    string `json:"direction"`
 }

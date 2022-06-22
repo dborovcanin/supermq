@@ -4,30 +4,36 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/mainflux/mainflux/cli"
-	"github.com/mainflux/mainflux/sdk/go"
+	sdk "github.com/mainflux/mainflux/pkg/sdk/go"
 	"github.com/spf13/cobra"
 )
+
+const defURL string = "http://localhost"
 
 func main() {
 	msgContentType := string(sdk.CTJSONSenML)
 	sdkConf := sdk.Config{
-		BaseURL:           "http://localhost",
-		ReaderURL:         "http://localhost:8905",
-		ReaderPrefix:      "",
-		UsersPrefix:       "",
-		ThingsPrefix:      "",
-		HTTPAdapterPrefix: "http",
-		MsgContentType:    sdk.ContentType(msgContentType),
-		TLSVerification:   false,
+		AuthURL:         defURL,
+		ThingsURL:       defURL,
+		UsersURL:        defURL,
+		ReaderURL:       defURL,
+		HTTPAdapterURL:  fmt.Sprintf("%s/http", defURL),
+		BootstrapURL:    defURL,
+		CertsURL:        defURL,
+		MsgContentType:  sdk.ContentType(msgContentType),
+		TLSVerification: false,
 	}
 
 	// Root
 	var rootCmd = &cobra.Command{
 		Use: "mainflux-cli",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			cli.ParseConfig()
+
 			sdkConf.MsgContentType = sdk.ContentType(msgContentType)
 			s := sdk.NewSDK(sdkConf)
 			cli.SetSDK(s)
@@ -35,60 +41,84 @@ func main() {
 	}
 
 	// API commands
-	versionCmd := cli.NewVersionCmd()
+	healthCmd := cli.NewHealthCmd()
 	usersCmd := cli.NewUsersCmd()
 	thingsCmd := cli.NewThingsCmd()
+	groupsCmd := cli.NewGroupsCmd()
 	channelsCmd := cli.NewChannelsCmd()
 	messagesCmd := cli.NewMessagesCmd()
 	provisionCmd := cli.NewProvisionCmd()
+	bootstrapCmd := cli.NewBootstrapCmd()
+	certsCmd := cli.NewCertsCmd()
+	keysCmd := cli.NewKeysCmd()
 
 	// Root Commands
-	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(healthCmd)
 	rootCmd.AddCommand(usersCmd)
+	rootCmd.AddCommand(groupsCmd)
 	rootCmd.AddCommand(thingsCmd)
 	rootCmd.AddCommand(channelsCmd)
 	rootCmd.AddCommand(messagesCmd)
 	rootCmd.AddCommand(provisionCmd)
+	rootCmd.AddCommand(bootstrapCmd)
+	rootCmd.AddCommand(certsCmd)
+	rootCmd.AddCommand(keysCmd)
 
 	// Root Flags
 	rootCmd.PersistentFlags().StringVarP(
-		&sdkConf.BaseURL,
-		"mainflux-url",
-		"m",
-		sdkConf.BaseURL,
-		"Mainflux host URL",
-	)
-
-	rootCmd.PersistentFlags().StringVarP(
-		&sdkConf.UsersPrefix,
-		"users-prefix",
-		"u",
-		sdkConf.UsersPrefix,
-		"Mainflux users service prefix",
-	)
-
-	rootCmd.PersistentFlags().StringVarP(
-		&sdkConf.ThingsPrefix,
-		"things-prefix",
-		"t",
-		sdkConf.ThingsPrefix,
-		"Mainflux things service prefix",
-	)
-
-	rootCmd.PersistentFlags().StringVarP(
-		&sdkConf.HTTPAdapterPrefix,
-		"http-prefix",
+		&sdkConf.AuthURL,
+		"auth-url",
 		"a",
-		sdkConf.HTTPAdapterPrefix,
-		"Mainflux http adapter prefix",
+		sdkConf.AuthURL,
+		"Auth service URL",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.BootstrapURL,
+		"bootstrap-url",
+		"b",
+		sdkConf.BootstrapURL,
+		"Bootstrap service URL",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.CertsURL,
+		"certs-url",
+		"s",
+		sdkConf.CertsURL,
+		"Certs service URL",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.ThingsURL,
+		"things-url",
+		"t",
+		sdkConf.ThingsURL,
+		"Things service URL",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.UsersURL,
+		"users-url",
+		"u",
+		sdkConf.UsersURL,
+		"Users service URL",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.HTTPAdapterURL,
+		"http-url",
+		"p",
+		sdkConf.HTTPAdapterURL,
+		"HTTP adapter URL",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
 		&msgContentType,
 		"content-type",
-		"c",
+		"y",
 		msgContentType,
-		"Mainflux message content type",
+		"Message content type",
 	)
 
 	rootCmd.PersistentFlags().BoolVarP(
@@ -99,13 +129,29 @@ func main() {
 		"Do not check for TLS cert",
 	)
 
+	rootCmd.PersistentFlags().StringVarP(
+		&cli.ConfigPath,
+		"config",
+		"c",
+		cli.ConfigPath,
+		"Config path",
+	)
+
+	rootCmd.PersistentFlags().BoolVarP(
+		&cli.RawOutput,
+		"raw",
+		"r",
+		cli.RawOutput,
+		"Enables raw output mode for easier parsing of output",
+	)
+
 	// Client and Channels Flags
 	rootCmd.PersistentFlags().UintVarP(
 		&cli.Limit,
 		"limit",
 		"l",
 		100,
-		"limit query parameter",
+		"Limit query parameter",
 	)
 
 	rootCmd.PersistentFlags().UintVarP(
@@ -113,7 +159,7 @@ func main() {
 		"offset",
 		"o",
 		0,
-		"offset query parameter",
+		"Offset query parameter",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
@@ -121,7 +167,23 @@ func main() {
 		"name",
 		"n",
 		"",
-		"name query parameter",
+		"Name query parameter",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&cli.Email,
+		"email",
+		"e",
+		"",
+		"Email query parameter",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&cli.Metadata,
+		"metadata",
+		"m",
+		"",
+		"Metadata query parameter",
 	)
 
 	if err := rootCmd.Execute(); err != nil {

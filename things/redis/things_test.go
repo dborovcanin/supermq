@@ -8,16 +8,19 @@ import (
 	"fmt"
 	"testing"
 
-	r "github.com/go-redis/redis"
+	r "github.com/go-redis/redis/v8"
+	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/things/redis"
-	"github.com/mainflux/mainflux/things/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+var idProvider = uuid.New()
+
 func TestThingSave(t *testing.T) {
 	thingCache := redis.NewThingCache(redisClient)
-	key, err := uuid.New().ID()
+	key, err := idProvider.ID()
 	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 	id := "123"
 	id2 := "124"
@@ -55,7 +58,7 @@ func TestThingSave(t *testing.T) {
 func TestThingID(t *testing.T) {
 	thingCache := redis.NewThingCache(redisClient)
 
-	key, err := uuid.New().ID()
+	key, err := idProvider.ID()
 	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 	id := "123"
 	err = thingCache.Save(context.Background(), key, id)
@@ -81,14 +84,14 @@ func TestThingID(t *testing.T) {
 	for desc, tc := range cases {
 		cacheID, err := thingCache.ID(context.Background(), tc.key)
 		assert.Equal(t, tc.ID, cacheID, fmt.Sprintf("%s: expected %s got %s\n", desc, tc.ID, cacheID))
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
 	}
 }
 
 func TestThingRemove(t *testing.T) {
 	thingCache := redis.NewThingCache(redisClient)
 
-	key, err := uuid.New().ID()
+	key, err := idProvider.ID()
 	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 	id := "123"
 	id2 := "321"
@@ -107,13 +110,13 @@ func TestThingRemove(t *testing.T) {
 		{
 			desc: "Remove non-existing thing from cache",
 			ID:   id2,
-			err:  r.Nil,
+			err:  nil,
 		},
 	}
 
 	for _, tc := range cases {
 		err := thingCache.Remove(context.Background(), tc.ID)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 
 }

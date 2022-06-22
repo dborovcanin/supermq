@@ -21,24 +21,24 @@ function cleanup {
 ###
 # NATS
 ###
-gnatsd &
+nats-server &
 counter=1
-until nc -zv localhost 4222 1>/dev/null 2>&1; 
+until fuser 4222/tcp 1>/dev/null 2>&1;
 do
     sleep 0.5
     ((counter++))
     if [ ${counter} -gt 10 ]
     then
-        echo -ne "gnatsd failed to start in 5 sec, exiting"
+        echo "NATS failed to start in 5 sec, exiting"
         exit 1
     fi
-    echo -ne "Waiting for gnatsd"
+    echo "Waiting for NATS server"
 done
 
 ###
 # Users
 ###
-MF_USERS_LOG_LEVEL=info MF_EMAIL_TEMPLATE=../docker/users/emailer/templates/email.tmpl $BUILD_DIR/mainflux-users &
+MF_USERS_LOG_LEVEL=info MF_USERS_ADMIN_EMAIL=admin@mainflux.com MF_USERS_ADMIN_PASSWORD=12345678 MF_EMAIL_TEMPLATE=../docker/templates/users.tmpl $BUILD_DIR/mainflux-users &
 
 ###
 # Things
@@ -48,26 +48,22 @@ MF_THINGS_LOG_LEVEL=info MF_THINGS_HTTP_PORT=8182 MF_THINGS_AUTH_GRPC_PORT=8183 
 ###
 # HTTP
 ###
-MF_HTTP_ADAPTER_LOG_LEVEL=info MF_HTTP_ADAPTER_PORT=8185 MF_THINGS_URL=localhost:8183 $BUILD_DIR/mainflux-http &
-
-###
-# WS
-###
-MF_WS_ADAPTER_LOG_LEVEL=info MF_WS_ADAPTER_PORT=8186 MF_THINGS_URL=localhost:8183 $BUILD_DIR/mainflux-ws &
+MF_HTTP_ADAPTER_LOG_LEVEL=info MF_HTTP_ADAPTER_PORT=8185 MF_THINGS_AUTH_GRPC_URL=localhost:8183 $BUILD_DIR/mainflux-http &
 
 ###
 # MQTT
 ###
-# Switch to top dir to find *.proto stuff when running MQTT broker
-
-cd ..
-MF_MQTT_ADAPTER_LOG_LEVEL=info MF_THINGS_URL=localhost:8183 node mqtt/aedes/mqtt.js &
-cd -
+MF_MQTT_ADAPTER_LOG_LEVEL=info MF_THINGS_AUTH_GRPC_URL=localhost:8183 $BUILD_DIR/mainflux-mqtt &
 
 ###
 # CoAP
 ###
-MF_COAP_ADAPTER_LOG_LEVEL=info MF_COAP_ADAPTER_PORT=5683 MF_THINGS_URL=localhost:8183 $BUILD_DIR/mainflux-coap &
+MF_COAP_ADAPTER_LOG_LEVEL=info MF_COAP_ADAPTER_PORT=5683 MF_THINGS_AUTH_GRPC_URL=localhost:8183 $BUILD_DIR/mainflux-coap &
+
+###
+# AUTH
+###
+MF_AUTH_LOG_LEVEL=debug MF_AUTH_HTTP_PORT=8189 MF_AUTH_GRPC_PORT=8181 MF_AUTH_DB_PORT=5432 MF_AUTH_DB_USER=mainflux MF_AUTH_DB_PASS=mainflux MF_AUTH_DB=auth MF_AUTH_SECRET=secret MF_AUTH_LOGIN_TOKEN_DURATION=10h $BUILD_DIR/mainflux-auth &
 
 trap cleanup EXIT
 

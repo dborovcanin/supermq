@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/things"
 )
 
@@ -20,6 +21,7 @@ func createThingEndpoint(svc things.Service) endpoint.Endpoint {
 
 		th := things.Thing{
 			Key:      req.Key,
+			ID:       req.ID,
 			Name:     req.Name,
 			Metadata: req.Metadata,
 		}
@@ -48,8 +50,10 @@ func createThingsEndpoint(svc things.Service) endpoint.Endpoint {
 		ths := []things.Thing{}
 		for _, tReq := range req.Things {
 			th := things.Thing{
-				Name: tReq.Name,
-				Key:  tReq.Key,
+				Name:     tReq.Name,
+				Key:      tReq.Key,
+				ID:       tReq.ID,
+				Metadata: tReq.Metadata,
 			}
 			ths = append(ths, th)
 		}
@@ -75,6 +79,21 @@ func createThingsEndpoint(svc things.Service) endpoint.Endpoint {
 		}
 
 		return res, nil
+	}
+}
+
+func shareThingEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(shareThingReq)
+		if err := req.validate(); err != nil {
+			return nil, err
+		}
+
+		if err := svc.ShareThing(ctx, req.token, req.thingID, req.Policies, req.UserIDs); err != nil {
+			return nil, err
+		}
+
+		return shareThingRes{}, nil
 	}
 }
 
@@ -150,7 +169,7 @@ func listThingsEndpoint(svc things.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		page, err := svc.ListThings(ctx, req.token, req.offset, req.limit, req.name, req.metadata)
+		page, err := svc.ListThings(ctx, req.token, req.pageMetadata)
 		if err != nil {
 			return nil, err
 		}
@@ -160,6 +179,8 @@ func listThingsEndpoint(svc things.Service) endpoint.Endpoint {
 				Total:  page.Total,
 				Offset: page.Offset,
 				Limit:  page.Limit,
+				Order:  page.Order,
+				Dir:    page.Dir,
 			},
 			Things: []viewThingRes{},
 		}
@@ -186,7 +207,7 @@ func listThingsByChannelEndpoint(svc things.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		page, err := svc.ListThingsByChannel(ctx, req.token, req.id, req.offset, req.limit)
+		page, err := svc.ListThingsByChannel(ctx, req.token, req.id, req.pageMetadata)
 		if err != nil {
 			return nil, err
 		}
@@ -219,7 +240,7 @@ func removeThingEndpoint(svc things.Service) endpoint.Endpoint {
 		req := request.(viewResourceReq)
 
 		err := req.validate()
-		if err == things.ErrNotFound {
+		if err == errors.ErrNotFound {
 			return removeRes{}, nil
 		}
 
@@ -243,7 +264,11 @@ func createChannelEndpoint(svc things.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		ch := things.Channel{Name: req.Name, Metadata: req.Metadata}
+		ch := things.Channel{
+			Name:     req.Name,
+			ID:       req.ID,
+			Metadata: req.Metadata}
+
 		saved, err := svc.CreateChannels(ctx, req.token, ch)
 		if err != nil {
 			return nil, err
@@ -270,6 +295,7 @@ func createChannelsEndpoint(svc things.Service) endpoint.Endpoint {
 			ch := things.Channel{
 				Metadata: cReq.Metadata,
 				Name:     cReq.Name,
+				ID:       cReq.ID,
 			}
 			chs = append(chs, ch)
 		}
@@ -354,7 +380,7 @@ func listChannelsEndpoint(svc things.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		page, err := svc.ListChannels(ctx, req.token, req.offset, req.limit, req.name, req.metadata)
+		page, err := svc.ListChannels(ctx, req.token, req.pageMetadata)
 		if err != nil {
 			return nil, err
 		}
@@ -364,6 +390,8 @@ func listChannelsEndpoint(svc things.Service) endpoint.Endpoint {
 				Total:  page.Total,
 				Offset: page.Offset,
 				Limit:  page.Limit,
+				Order:  page.Order,
+				Dir:    page.Dir,
 			},
 			Channels: []viewChannelRes{},
 		}
@@ -391,7 +419,7 @@ func listChannelsByThingEndpoint(svc things.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		page, err := svc.ListChannelsByThing(ctx, req.token, req.id, req.offset, req.limit)
+		page, err := svc.ListChannelsByThing(ctx, req.token, req.id, req.pageMetadata)
 		if err != nil {
 			return nil, err
 		}
@@ -423,7 +451,7 @@ func removeChannelEndpoint(svc things.Service) endpoint.Endpoint {
 		req := request.(viewResourceReq)
 
 		if err := req.validate(); err != nil {
-			if err == things.ErrNotFound {
+			if err == errors.ErrNotFound {
 				return removeRes{}, nil
 			}
 			return nil, err
@@ -437,9 +465,9 @@ func removeChannelEndpoint(svc things.Service) endpoint.Endpoint {
 	}
 }
 
-func connectEndpoint(svc things.Service) endpoint.Endpoint {
+func connectThingEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		cr := request.(connectionReq)
+		cr := request.(connectThingReq)
 
 		if err := cr.validate(); err != nil {
 			return nil, err
@@ -449,13 +477,13 @@ func connectEndpoint(svc things.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return connectionRes{}, nil
+		return connectThingRes{}, nil
 	}
 }
 
-func createConnectionsEndpoint(svc things.Service) endpoint.Endpoint {
+func connectEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		cr := request.(createConnectionsReq)
+		cr := request.(connectReq)
 
 		if err := cr.validate(); err != nil {
 			return nil, err
@@ -465,22 +493,75 @@ func createConnectionsEndpoint(svc things.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return createConnectionsRes{}, nil
+		return connectRes{}, nil
 	}
 }
 
 func disconnectEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		cr := request.(connectionReq)
-
+		cr := request.(connectReq)
 		if err := cr.validate(); err != nil {
 			return nil, err
 		}
 
-		if err := svc.Disconnect(ctx, cr.token, cr.chanID, cr.thingID); err != nil {
+		if err := svc.Disconnect(ctx, cr.token, cr.ChannelIDs, cr.ThingIDs); err != nil {
 			return nil, err
 		}
 
-		return disconnectionRes{}, nil
+		return disconnectRes{}, nil
 	}
+}
+
+func disconnectThingEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(connectThingReq)
+
+		if err := req.validate(); err != nil {
+			return nil, err
+		}
+
+		if err := svc.Disconnect(ctx, req.token, []string{req.chanID}, []string{req.thingID}); err != nil {
+			return nil, err
+		}
+
+		return disconnectThingRes{}, nil
+	}
+}
+
+func listMembersEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(listThingsGroupReq)
+		if err := req.validate(); err != nil {
+			return thingsPageRes{}, errors.Wrap(errors.ErrMalformedEntity, err)
+		}
+
+		page, err := svc.ListMembers(ctx, req.token, req.groupID, req.pageMetadata)
+		if err != nil {
+			return thingsPageRes{}, err
+		}
+
+		return buildThingsResponse(page), nil
+	}
+}
+
+func buildThingsResponse(up things.Page) thingsPageRes {
+	res := thingsPageRes{
+		pageRes: pageRes{
+			Total:  up.Total,
+			Offset: up.Offset,
+			Limit:  up.Limit,
+		},
+		Things: []viewThingRes{},
+	}
+	for _, th := range up.Things {
+		view := viewThingRes{
+			ID:       th.ID,
+			Key:      th.Key,
+			Owner:    th.Owner,
+			Metadata: th.Metadata,
+			Name:     th.Name,
+		}
+		res.Things = append(res.Things, view)
+	}
+	return res
 }

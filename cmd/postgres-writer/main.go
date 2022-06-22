@@ -4,44 +4,43 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
+	"time"
 
-	"github.com/BurntSushi/toml"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/jmoiron/sqlx"
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/consumers"
+	"github.com/mainflux/mainflux/consumers/writers/api"
+	"github.com/mainflux/mainflux/consumers/writers/postgres"
 	"github.com/mainflux/mainflux/logger"
-	"github.com/mainflux/mainflux/transformers/senml"
-	"github.com/mainflux/mainflux/writers"
-	"github.com/mainflux/mainflux/writers/api"
-	"github.com/mainflux/mainflux/writers/postgres"
-	nats "github.com/nats-io/go-nats"
+	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/messaging/nats"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	svcName = "postgres-writer"
-	sep     = ","
+	svcName      = "postgres-writer"
+	stopWaitTime = 5 * time.Second
 
-	defNatsURL       = nats.DefaultURL
 	defLogLevel      = "error"
-	defPort          = "9104"
-	defDBHost        = "postgres"
+	defNatsURL       = "nats://localhost:4222"
+	defPort          = "8180"
+	defDBHost        = "localhost"
 	defDBPort        = "5432"
 	defDBUser        = "mainflux"
 	defDBPass        = "mainflux"
-	defDBName        = "messages"
+	defDB            = "mainflux"
 	defDBSSLMode     = "disable"
 	defDBSSLCert     = ""
 	defDBSSLKey      = ""
 	defDBSSLRootCert = ""
-	defChanCfgPath   = "/config/channels.toml"
+	defConfigPath    = "/config.toml"
 
 	envNatsURL       = "MF_NATS_URL"
 	envLogLevel      = "MF_POSTGRES_WRITER_LOG_LEVEL"
@@ -50,64 +49,73 @@ const (
 	envDBPort        = "MF_POSTGRES_WRITER_DB_PORT"
 	envDBUser        = "MF_POSTGRES_WRITER_DB_USER"
 	envDBPass        = "MF_POSTGRES_WRITER_DB_PASS"
-	envDBName        = "MF_POSTGRES_WRITER_DB_NAME"
+	envDB            = "MF_POSTGRES_WRITER_DB"
 	envDBSSLMode     = "MF_POSTGRES_WRITER_DB_SSL_MODE"
 	envDBSSLCert     = "MF_POSTGRES_WRITER_DB_SSL_CERT"
 	envDBSSLKey      = "MF_POSTGRES_WRITER_DB_SSL_KEY"
 	envDBSSLRootCert = "MF_POSTGRES_WRITER_DB_SSL_ROOT_CERT"
-	envChanCfgPath   = "MF_POSTGRES_WRITER_CHANNELS_CONFIG"
+	envConfigPath    = "MF_POSTGRES_WRITER_CONFIG_PATH"
 )
 
 type config struct {
-	natsURL  string
-	logLevel string
-	port     string
-	dbConfig postgres.Config
-	channels map[string]bool
+	natsURL    string
+	logLevel   string
+	port       string
+	configPath string
+	dbConfig   postgres.Config
 }
 
 func main() {
 	cfg := loadConfig()
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 
 	logger, err := logger.New(os.Stdout, cfg.logLevel)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 
-	nc := connectToNATS(cfg.natsURL, logger)
-	defer nc.Close()
+	pubSub, err := nats.NewPubSub(cfg.natsURL, "", logger)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to connect to NATS: %s", err))
+		os.Exit(1)
+	}
+	defer pubSub.Close()
 
 	db := connectToDB(cfg.dbConfig, logger)
 	defer db.Close()
 
 	repo := newService(db, logger)
-	st := senml.New()
-	if err = writers.Start(nc, repo, st, svcName, cfg.channels, logger); err != nil {
+
+	if err = consumers.Start(svcName, pubSub, repo, cfg.configPath, logger); err != nil {
 		logger.Error(fmt.Sprintf("Failed to create Postgres writer: %s", err))
 	}
 
-	errs := make(chan error, 2)
+	g.Go(func() error {
+		return startHTTPServer(ctx, cfg.port, logger)
+	})
 
-	go startHTTPServer(cfg.port, errs, logger)
+	g.Go(func() error {
+		if sig := errors.SignalHandler(ctx); sig != nil {
+			cancel()
+			logger.Info(fmt.Sprintf("Postgres writer service shutdown by signal: %s", sig))
+		}
+		return nil
+	})
 
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
+	if err := g.Wait(); err != nil {
+		logger.Error(fmt.Sprintf("Postgres writer service terminated: %s", err))
+	}
 
-	err = <-errs
-	logger.Error(fmt.Sprintf("Postgres writer service terminated: %s", err))
 }
 
 func loadConfig() config {
-	chanCfgPath := mainflux.Env(envChanCfgPath, defChanCfgPath)
 	dbConfig := postgres.Config{
 		Host:        mainflux.Env(envDBHost, defDBHost),
 		Port:        mainflux.Env(envDBPort, defDBPort),
 		User:        mainflux.Env(envDBUser, defDBUser),
 		Pass:        mainflux.Env(envDBPass, defDBPass),
-		Name:        mainflux.Env(envDBName, defDBName),
+		Name:        mainflux.Env(envDB, defDB),
 		SSLMode:     mainflux.Env(envDBSSLMode, defDBSSLMode),
 		SSLCert:     mainflux.Env(envDBSSLCert, defDBSSLCert),
 		SSLKey:      mainflux.Env(envDBSSLKey, defDBSSLKey),
@@ -115,49 +123,12 @@ func loadConfig() config {
 	}
 
 	return config{
-		natsURL:  mainflux.Env(envNatsURL, defNatsURL),
-		logLevel: mainflux.Env(envLogLevel, defLogLevel),
-		port:     mainflux.Env(envPort, defPort),
-		dbConfig: dbConfig,
-		channels: loadChansConfig(chanCfgPath),
+		natsURL:    mainflux.Env(envNatsURL, defNatsURL),
+		logLevel:   mainflux.Env(envLogLevel, defLogLevel),
+		port:       mainflux.Env(envPort, defPort),
+		configPath: mainflux.Env(envConfigPath, defConfigPath),
+		dbConfig:   dbConfig,
 	}
-}
-
-type channels struct {
-	List []string `toml:"filter"`
-}
-
-type chanConfig struct {
-	Channels channels `toml:"channels"`
-}
-
-func loadChansConfig(chanConfigPath string) map[string]bool {
-	data, err := ioutil.ReadFile(chanConfigPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var chanCfg chanConfig
-	if err := toml.Unmarshal(data, &chanCfg); err != nil {
-		log.Fatal(err)
-	}
-
-	chans := map[string]bool{}
-	for _, ch := range chanCfg.Channels.List {
-		chans[ch] = true
-	}
-
-	return chans
-}
-
-func connectToNATS(url string, logger logger.Logger) *nats.Conn {
-	nc, err := nats.Connect(url)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to connect to NATS: %s", err))
-		os.Exit(1)
-	}
-
-	return nc
 }
 
 func connectToDB(dbConfig postgres.Config, logger logger.Logger) *sqlx.DB {
@@ -169,7 +140,7 @@ func connectToDB(dbConfig postgres.Config, logger logger.Logger) *sqlx.DB {
 	return db
 }
 
-func newService(db *sqlx.DB, logger logger.Logger) writers.MessageRepository {
+func newService(db *sqlx.DB, logger logger.Logger) consumers.Consumer {
 	svc := postgres.New(db)
 	svc = api.LoggingMiddleware(svc, logger)
 	svc = api.MetricsMiddleware(
@@ -191,8 +162,27 @@ func newService(db *sqlx.DB, logger logger.Logger) writers.MessageRepository {
 	return svc
 }
 
-func startHTTPServer(port string, errs chan error, logger logger.Logger) {
+func startHTTPServer(ctx context.Context, port string, logger logger.Logger) error {
 	p := fmt.Sprintf(":%s", port)
+	errCh := make(chan error)
+	server := &http.Server{Addr: p, Handler: api.MakeHandler(svcName)}
+
 	logger.Info(fmt.Sprintf("Postgres writer service started, exposed port %s", port))
-	errs <- http.ListenAndServe(p, api.MakeHandler(svcName))
+	go func() {
+		errCh <- server.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), stopWaitTime)
+		defer cancelShutdown()
+		if err := server.Shutdown(ctxShutdown); err != nil {
+			logger.Error(fmt.Sprintf("Postgres writer service error occurred during shutdown at %s: %s", p, err))
+			return fmt.Errorf("postgres writer service occurred during shutdown at %s: %w", p, err)
+		}
+		logger.Info(fmt.Sprintf("Postgres writer service  shutdown of http at %s", p))
+		return nil
+	case err := <-errCh:
+		return err
+	}
 }

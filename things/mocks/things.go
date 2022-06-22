@@ -6,11 +6,10 @@ package mocks
 import (
 	"context"
 	"fmt"
-	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/things"
 )
 
@@ -51,12 +50,14 @@ func (trm *thingRepositoryMock) Save(_ context.Context, ths ...things.Thing) ([]
 	for i := range ths {
 		for _, th := range trm.things {
 			if th.Key == ths[i].Key {
-				return []things.Thing{}, things.ErrConflict
+				return []things.Thing{}, errors.ErrConflict
 			}
 		}
 
 		trm.counter++
-		ths[i].ID = strconv.FormatUint(trm.counter, 10)
+		if ths[i].ID == "" {
+			ths[i].ID = fmt.Sprintf("%03d", trm.counter)
+		}
 		trm.things[key(ths[i].Owner, ths[i].ID)] = ths[i]
 	}
 
@@ -70,7 +71,7 @@ func (trm *thingRepositoryMock) Update(_ context.Context, thing things.Thing) er
 	dbKey := key(thing.Owner, thing.ID)
 
 	if _, ok := trm.things[dbKey]; !ok {
-		return things.ErrNotFound
+		return errors.ErrNotFound
 	}
 
 	trm.things[dbKey] = thing
@@ -84,7 +85,7 @@ func (trm *thingRepositoryMock) UpdateKey(_ context.Context, owner, id, val stri
 
 	for _, th := range trm.things {
 		if th.Key == val {
-			return things.ErrConflict
+			return errors.ErrConflict
 		}
 	}
 
@@ -92,7 +93,7 @@ func (trm *thingRepositoryMock) UpdateKey(_ context.Context, owner, id, val stri
 
 	th, ok := trm.things[dbKey]
 	if !ok {
-		return things.ErrNotFound
+		return errors.ErrNotFound
 	}
 
 	th.Key = val
@@ -109,83 +110,136 @@ func (trm *thingRepositoryMock) RetrieveByID(_ context.Context, owner, id string
 		return c, nil
 	}
 
-	return things.Thing{}, things.ErrNotFound
+	return things.Thing{}, errors.ErrNotFound
 }
 
-func (trm *thingRepositoryMock) RetrieveAll(_ context.Context, owner string, offset, limit uint64, name string, metadata things.Metadata) (things.ThingsPage, error) {
+func (trm *thingRepositoryMock) RetrieveAll(_ context.Context, owner string, pm things.PageMetadata) (things.Page, error) {
 	trm.mu.Lock()
 	defer trm.mu.Unlock()
 
-	items := make([]things.Thing, 0)
-
-	if offset < 0 || limit <= 0 {
-		return things.ThingsPage{}, nil
+	if pm.Limit < 0 {
+		return things.Page{}, nil
 	}
 
-	first := uint64(offset) + 1
-	last := first + uint64(limit)
+	first := uint64(pm.Offset) + 1
+	last := first + uint64(pm.Limit)
+
+	var ths []things.Thing
 
 	// This obscure way to examine map keys is enforced by the key structure
 	// itself (see mocks/commons.go).
 	prefix := fmt.Sprintf("%s-", owner)
 	for k, v := range trm.things {
-		id, _ := strconv.ParseUint(v.ID, 10, 64)
+		id := parseID(v.ID)
 		if strings.HasPrefix(k, prefix) && id >= first && id < last {
-			items = append(items, v)
+			ths = append(ths, v)
 		}
 	}
 
-	sort.SliceStable(items, func(i, j int) bool {
-		return items[i].ID < items[j].ID
-	})
+	// Sort Things list
+	ths = sortThings(pm, ths)
 
-	page := things.ThingsPage{
-		Things: items,
+	page := things.Page{
+		Things: ths,
 		PageMetadata: things.PageMetadata{
 			Total:  trm.counter,
-			Offset: offset,
-			Limit:  limit,
+			Offset: pm.Offset,
+			Limit:  pm.Limit,
 		},
 	}
 
 	return page, nil
 }
 
-func (trm *thingRepositoryMock) RetrieveByChannel(_ context.Context, owner, chanID string, offset, limit uint64) (things.ThingsPage, error) {
+func (trm *thingRepositoryMock) RetrieveByIDs(_ context.Context, thingIDs []string, pm things.PageMetadata) (things.Page, error) {
 	trm.mu.Lock()
 	defer trm.mu.Unlock()
 
 	items := make([]things.Thing, 0)
 
-	if offset < 0 || limit <= 0 {
-		return things.ThingsPage{}, nil
+	if pm.Limit == 0 {
+		return things.Page{}, nil
 	}
 
-	first := uint64(offset) + 1
-	last := first + uint64(limit)
+	first := uint64(pm.Offset) + 1
+	last := first + uint64(pm.Limit)
 
-	ths, ok := trm.tconns[chanID]
-	if !ok {
-		return things.ThingsPage{}, nil
-	}
-
-	for _, v := range ths {
-		id, _ := strconv.ParseUint(v.ID, 10, 64)
-		if id >= first && id < last {
-			items = append(items, v)
+	// This obscure way to examine map keys is enforced by the key structure
+	// itself (see mocks/commons.go).
+	for _, id := range thingIDs {
+		suffix := fmt.Sprintf("-%s", id)
+		for k, v := range trm.things {
+			id := parseID(v.ID)
+			if strings.HasSuffix(k, suffix) && id >= first && id < last {
+				items = append(items, v)
+			}
 		}
 	}
 
-	sort.SliceStable(items, func(i, j int) bool {
-		return items[i].ID < items[j].ID
-	})
+	items = sortThings(pm, items)
 
-	page := things.ThingsPage{
+	page := things.Page{
 		Things: items,
 		PageMetadata: things.PageMetadata{
 			Total:  trm.counter,
-			Offset: offset,
-			Limit:  limit,
+			Offset: pm.Offset,
+			Limit:  pm.Limit,
+		},
+	}
+
+	return page, nil
+}
+
+func (trm *thingRepositoryMock) RetrieveByChannel(_ context.Context, owner, chID string, pm things.PageMetadata) (things.Page, error) {
+	trm.mu.Lock()
+	defer trm.mu.Unlock()
+
+	if pm.Limit <= 0 {
+		return things.Page{}, nil
+	}
+
+	first := uint64(pm.Offset) + 1
+	last := first + uint64(pm.Limit)
+
+	var ths []things.Thing
+
+	// Append connected or not connected channels
+	switch pm.Disconnected {
+	case false:
+		for _, co := range trm.tconns[chID] {
+			id := parseID(co.ID)
+			if id >= first && id < last {
+				ths = append(ths, co)
+			}
+		}
+	default:
+		for _, th := range trm.things {
+			conn := false
+			id := parseID(th.ID)
+			if id >= first && id < last {
+				for _, co := range trm.tconns[chID] {
+					if th.ID == co.ID {
+						conn = true
+					}
+				}
+
+				// Append if not found in connections list
+				if !conn {
+					ths = append(ths, th)
+				}
+			}
+		}
+	}
+
+	// Sort Things by Channel list
+	ths = sortThings(pm, ths)
+
+	page := things.Page{
+		Things: ths,
+		PageMetadata: things.PageMetadata{
+			Total:  trm.counter,
+			Offset: pm.Offset,
+			Limit:  pm.Limit,
 		},
 	}
 
@@ -209,7 +263,7 @@ func (trm *thingRepositoryMock) RetrieveByKey(_ context.Context, key string) (st
 		}
 	}
 
-	return "", things.ErrNotFound
+	return "", errors.ErrNotFound
 }
 
 func (trm *thingRepositoryMock) connect(conn Connection) {
@@ -259,7 +313,7 @@ func (tcm *thingCacheMock) ID(_ context.Context, key string) (string, error) {
 
 	id, ok := tcm.things[key]
 	if !ok {
-		return "", things.ErrNotFound
+		return "", errors.ErrNotFound
 	}
 
 	return id, nil
@@ -276,5 +330,5 @@ func (tcm *thingCacheMock) Remove(_ context.Context, id string) error {
 		}
 	}
 
-	return things.ErrNotFound
+	return nil
 }

@@ -4,6 +4,7 @@
 package grpc
 
 import (
+	"context"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -12,7 +13,6 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/mainflux/mainflux"
 	opentracing "github.com/opentracing/opentracing-go"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
@@ -22,6 +22,7 @@ type grpcClient struct {
 	timeout        time.Duration
 	canAccessByKey endpoint.Endpoint
 	canAccessByID  endpoint.Endpoint
+	isChannelOwner endpoint.Endpoint
 	identify       endpoint.Endpoint
 }
 
@@ -47,6 +48,14 @@ func NewClient(conn *grpc.ClientConn, tracer opentracing.Tracer, timeout time.Du
 			decodeEmptyResponse,
 			empty.Empty{},
 		).Endpoint()),
+		isChannelOwner: kitot.TraceClient(tracer, "is_channel_owner")(kitgrpc.NewClient(
+			conn,
+			svcName,
+			"IsChannelOwner",
+			encodeIsChannelOwner,
+			decodeEmptyResponse,
+			empty.Empty{},
+		).Endpoint()),
 		identify: kitot.TraceClient(tracer, "identify")(kitgrpc.NewClient(
 			conn,
 			svcName,
@@ -62,7 +71,7 @@ func (client grpcClient) CanAccessByKey(ctx context.Context, req *mainflux.Acces
 	ctx, cancel := context.WithTimeout(ctx, client.timeout)
 	defer cancel()
 
-	ar := AccessByKeyReq{
+	ar := accessByKeyReq{
 		thingKey: req.GetToken(),
 		chanID:   req.GetChanID(),
 	}
@@ -72,12 +81,23 @@ func (client grpcClient) CanAccessByKey(ctx context.Context, req *mainflux.Acces
 	}
 
 	ir := res.(identityRes)
-	return &mainflux.ThingID{Value: ir.id}, ir.err
+	return &mainflux.ThingID{Value: ir.id}, nil
 }
 
 func (client grpcClient) CanAccessByID(ctx context.Context, req *mainflux.AccessByIDReq, _ ...grpc.CallOption) (*empty.Empty, error) {
 	ar := accessByIDReq{thingID: req.GetThingID(), chanID: req.GetChanID()}
 	res, err := client.canAccessByID(ctx, ar)
+	if err != nil {
+		return nil, err
+	}
+
+	er := res.(emptyRes)
+	return &empty.Empty{}, er.err
+}
+
+func (client grpcClient) IsChannelOwner(ctx context.Context, req *mainflux.ChannelOwnerReq, _ ...grpc.CallOption) (*empty.Empty, error) {
+	ar := channelOwnerReq{owner: req.GetOwner(), chanID: req.GetChanID()}
+	res, err := client.isChannelOwner(ctx, ar)
 	if err != nil {
 		return nil, err
 	}
@@ -96,17 +116,22 @@ func (client grpcClient) Identify(ctx context.Context, req *mainflux.Token, _ ..
 	}
 
 	ir := res.(identityRes)
-	return &mainflux.ThingID{Value: ir.id}, ir.err
+	return &mainflux.ThingID{Value: ir.id}, nil
 }
 
 func encodeCanAccessByKeyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(AccessByKeyReq)
+	req := grpcReq.(accessByKeyReq)
 	return &mainflux.AccessByKeyReq{Token: req.thingKey, ChanID: req.chanID}, nil
 }
 
 func encodeCanAccessByIDRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(accessByIDReq)
 	return &mainflux.AccessByIDReq{ThingID: req.thingID, ChanID: req.chanID}, nil
+}
+
+func encodeIsChannelOwner(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(channelOwnerReq)
+	return &mainflux.ChannelOwnerReq{Owner: req.owner, ChanID: req.chanID}, nil
 }
 
 func encodeIdentifyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -116,7 +141,7 @@ func encodeIdentifyRequest(_ context.Context, grpcReq interface{}) (interface{},
 
 func decodeIdentityResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(*mainflux.ThingID)
-	return identityRes{id: res.GetValue(), err: nil}, nil
+	return identityRes{id: res.GetValue()}, nil
 }
 
 func decodeEmptyResponse(_ context.Context, _ interface{}) (interface{}, error) {

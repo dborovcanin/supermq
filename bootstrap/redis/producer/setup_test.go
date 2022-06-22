@@ -4,18 +4,14 @@
 package producer_test
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"testing"
 
-	"github.com/go-redis/redis"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
-)
-
-const (
-	wrongID    = 0
-	wrongValue = "wrong-value"
+	"github.com/go-redis/redis/v8"
+	dockertest "github.com/ory/dockertest/v3"
 )
 
 var redisClient *redis.Client
@@ -38,7 +34,7 @@ func TestMain(m *testing.M) {
 			DB:       0,
 		})
 
-		return redisClient.Ping().Err()
+		return redisClient.Ping(context.Background()).Err()
 	}); err != nil {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}

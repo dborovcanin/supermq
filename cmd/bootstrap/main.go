@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"crypto/aes"
 	"encoding/hex"
 	"fmt"
@@ -11,26 +12,26 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 
+	authapi "github.com/mainflux/mainflux/auth/api/grpc"
 	rediscons "github.com/mainflux/mainflux/bootstrap/redis/consumer"
 	redisprod "github.com/mainflux/mainflux/bootstrap/redis/producer"
 	"github.com/mainflux/mainflux/logger"
 	opentracing "github.com/opentracing/opentracing-go"
+	"golang.org/x/sync/errgroup"
 
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
-	r "github.com/go-redis/redis"
+	r "github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/bootstrap"
 	api "github.com/mainflux/mainflux/bootstrap/api"
 	"github.com/mainflux/mainflux/bootstrap/postgres"
 	mflog "github.com/mainflux/mainflux/logger"
-	mfsdk "github.com/mainflux/mainflux/sdk/go"
-	usersapi "github.com/mainflux/mainflux/users/api/grpc"
+	"github.com/mainflux/mainflux/pkg/errors"
+	mfsdk "github.com/mainflux/mainflux/pkg/sdk/go"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	jconfig "github.com/uber/jaeger-client-go/config"
 	"google.golang.org/grpc"
@@ -38,12 +39,16 @@ import (
 )
 
 const (
+	stopWaitTime  = 5 * time.Second
+	httpProtocol  = "http"
+	httpsProtocol = "https"
+
 	defLogLevel       = "error"
 	defDBHost         = "localhost"
 	defDBPort         = "5432"
 	defDBUser         = "mainflux"
 	defDBPass         = "mainflux"
-	defDBName         = "bootstrap"
+	defDB             = "bootstrap"
 	defDBSSLMode      = "disable"
 	defDBSSLCert      = ""
 	defDBSSLKey       = ""
@@ -56,7 +61,6 @@ const (
 	defServerKey      = ""
 	defBaseURL        = "http://localhost"
 	defThingsPrefix   = ""
-	defUsersURL       = "localhost:8181"
 	defThingsESURL    = "localhost:6379"
 	defThingsESPass   = ""
 	defThingsESDB     = "0"
@@ -65,14 +69,15 @@ const (
 	defESDB           = "0"
 	defESConsumerName = "bootstrap"
 	defJaegerURL      = ""
-	defUsersTimeout   = "1" // in seconds
+	defAuthURL        = "localhost:8181"
+	defAuthTimeout    = "1s"
 
 	envLogLevel       = "MF_BOOTSTRAP_LOG_LEVEL"
 	envDBHost         = "MF_BOOTSTRAP_DB_HOST"
 	envDBPort         = "MF_BOOTSTRAP_DB_PORT"
 	envDBUser         = "MF_BOOTSTRAP_DB_USER"
 	envDBPass         = "MF_BOOTSTRAP_DB_PASS"
-	envDBName         = "MF_BOOTSTRAP_DB"
+	envDB             = "MF_BOOTSTRAP_DB"
 	envDBSSLMode      = "MF_BOOTSTRAP_DB_SSL_MODE"
 	envDBSSLCert      = "MF_BOOTSTRAP_DB_SSL_CERT"
 	envDBSSLKey       = "MF_BOOTSTRAP_DB_SSL_KEY"
@@ -85,7 +90,6 @@ const (
 	envServerKey      = "MF_BOOTSTRAP_SERVER_KEY"
 	envBaseURL        = "MF_SDK_BASE_URL"
 	envThingsPrefix   = "MF_SDK_THINGS_PREFIX"
-	envUsersURL       = "MF_USERS_URL"
 	envThingsESURL    = "MF_THINGS_ES_URL"
 	envThingsESPass   = "MF_THINGS_ES_PASS"
 	envThingsESDB     = "MF_THINGS_ES_DB"
@@ -94,7 +98,8 @@ const (
 	envESDB           = "MF_BOOTSTRAP_ES_DB"
 	envESConsumerName = "MF_BOOTSTRAP_EVENT_CONSUMER"
 	envJaegerURL      = "MF_JAEGER_URL"
-	envUsersTimeout   = "MF_BOOTSTRAP_USERS_TIMEOUT"
+	envAuthURL        = "MF_AUTH_GRPC_URL"
+	envAuthTimeout    = "MF_AUTH_GRPC_TIMEOUT"
 )
 
 type config struct {
@@ -108,7 +113,6 @@ type config struct {
 	serverKey      string
 	baseURL        string
 	thingsPrefix   string
-	usersURL       string
 	esThingsURL    string
 	esThingsPass   string
 	esThingsDB     string
@@ -117,11 +121,14 @@ type config struct {
 	esDB           string
 	esConsumerName string
 	jaegerURL      string
-	usersTimeout   time.Duration
+	authURL        string
+	authTimeout    time.Duration
 }
 
 func main() {
 	cfg := loadConfig()
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 
 	logger, err := mflog.New(os.Stdout, cfg.logLevel)
 	if err != nil {
@@ -131,32 +138,39 @@ func main() {
 	db := connectToDB(cfg.dbConfig, logger)
 	defer db.Close()
 
-	conn := connectToUsers(cfg, logger)
-	defer conn.Close()
-
 	thingsESConn := connectToRedis(cfg.esThingsURL, cfg.esThingsPass, cfg.esThingsDB, logger)
 	defer thingsESConn.Close()
 
 	esClient := connectToRedis(cfg.esURL, cfg.esPass, cfg.esDB, logger)
 	defer esClient.Close()
 
-	usersTracer, usersCloser := initJaeger("users", cfg.jaegerURL, logger)
-	defer usersCloser.Close()
+	authTracer, authCloser := initJaeger("auth", cfg.jaegerURL, logger)
+	defer authCloser.Close()
 
-	svc := newService(conn, usersTracer, db, logger, esClient, cfg)
-	errs := make(chan error, 2)
+	authConn := connectToAuth(cfg, logger)
+	defer authConn.Close()
 
-	go startHTTPServer(svc, cfg, logger, errs)
+	auth := authapi.NewClient(authTracer, authConn, cfg.authTimeout)
+
+	svc := newService(auth, db, logger, esClient, cfg)
+
+	g.Go(func() error {
+		return startHTTPServer(ctx, svc, cfg, logger)
+	})
+
 	go subscribeToThingsES(svc, thingsESConn, cfg.esConsumerName, logger)
 
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
+	g.Go(func() error {
+		if sig := errors.SignalHandler(ctx); sig != nil {
+			cancel()
+			logger.Info(fmt.Sprintf("Bootstrap service shutdown by signal: %s", sig))
+		}
+		return nil
+	})
 
-	err = <-errs
-	logger.Error(fmt.Sprintf("Bootstrap service terminated: %s", err))
+	if err := g.Wait(); err != nil {
+		logger.Error(fmt.Sprintf("Bootstrap service terminated: %s", err))
+	}
 }
 
 func loadConfig() config {
@@ -169,16 +183,16 @@ func loadConfig() config {
 		Port:        mainflux.Env(envDBPort, defDBPort),
 		User:        mainflux.Env(envDBUser, defDBUser),
 		Pass:        mainflux.Env(envDBPass, defDBPass),
-		Name:        mainflux.Env(envDBName, defDBName),
+		Name:        mainflux.Env(envDB, defDB),
 		SSLMode:     mainflux.Env(envDBSSLMode, defDBSSLMode),
 		SSLCert:     mainflux.Env(envDBSSLCert, defDBSSLCert),
 		SSLKey:      mainflux.Env(envDBSSLKey, defDBSSLKey),
 		SSLRootCert: mainflux.Env(envDBSSLRootCert, defDBSSLRootCert),
 	}
 
-	timeout, err := strconv.ParseInt(mainflux.Env(envUsersTimeout, defUsersTimeout), 10, 64)
+	authTimeout, err := time.ParseDuration(mainflux.Env(envAuthTimeout, defAuthTimeout))
 	if err != nil {
-		log.Fatalf("Invalid %s value: %s", envUsersTimeout, err.Error())
+		log.Fatalf("Invalid %s value: %s", envAuthTimeout, err.Error())
 	}
 	encKey, err := hex.DecodeString(mainflux.Env(envEncryptKey, defEncryptKey))
 	if err != nil {
@@ -202,7 +216,6 @@ func loadConfig() config {
 		serverKey:      mainflux.Env(envServerKey, defServerKey),
 		baseURL:        mainflux.Env(envBaseURL, defBaseURL),
 		thingsPrefix:   mainflux.Env(envThingsPrefix, defThingsPrefix),
-		usersURL:       mainflux.Env(envUsersURL, defUsersURL),
 		esThingsURL:    mainflux.Env(envThingsESURL, defThingsESURL),
 		esThingsPass:   mainflux.Env(envThingsESPass, defThingsESPass),
 		esThingsDB:     mainflux.Env(envThingsESDB, defThingsESDB),
@@ -211,7 +224,8 @@ func loadConfig() config {
 		esDB:           mainflux.Env(envESDB, defESDB),
 		esConsumerName: mainflux.Env(envESConsumerName, defESConsumerName),
 		jaegerURL:      mainflux.Env(envJaegerURL, defJaegerURL),
-		usersTimeout:   time.Duration(timeout) * time.Second,
+		authURL:        mainflux.Env(envAuthURL, defAuthURL),
+		authTimeout:    authTimeout,
 	}
 }
 
@@ -262,18 +276,16 @@ func initJaeger(svcName, url string, logger logger.Logger) (opentracing.Tracer, 
 	return tracer, closer
 }
 
-func newService(conn *grpc.ClientConn, usersTracer opentracing.Tracer, db *sqlx.DB, logger mflog.Logger, esClient *r.Client, cfg config) bootstrap.Service {
+func newService(auth mainflux.AuthServiceClient, db *sqlx.DB, logger mflog.Logger, esClient *r.Client, cfg config) bootstrap.Service {
 	thingsRepo := postgres.NewConfigRepository(db, logger)
 
 	config := mfsdk.Config{
-		BaseURL:      cfg.baseURL,
-		ThingsPrefix: cfg.thingsPrefix,
+		ThingsURL: cfg.baseURL,
 	}
 
 	sdk := mfsdk.NewSDK(config)
-	users := usersapi.NewClient(usersTracer, conn, cfg.usersTimeout)
 
-	svc := bootstrap.New(users, thingsRepo, sdk, cfg.encKey)
+	svc := bootstrap.New(auth, thingsRepo, sdk, cfg.encKey)
 	svc = redisprod.NewEventStoreMiddleware(svc, esClient)
 	svc = api.NewLoggingMiddleware(svc, logger)
 	svc = api.MetricsMiddleware(
@@ -294,7 +306,7 @@ func newService(conn *grpc.ClientConn, usersTracer opentracing.Tracer, db *sqlx.
 	return svc
 }
 
-func connectToUsers(cfg config, logger mflog.Logger) *grpc.ClientConn {
+func connectToAuth(cfg config, logger logger.Logger) *grpc.ClientConn {
 	var opts []grpc.DialOption
 	if cfg.clientTLS {
 		if cfg.caCerts != "" {
@@ -310,31 +322,55 @@ func connectToUsers(cfg config, logger mflog.Logger) *grpc.ClientConn {
 		logger.Info("gRPC communication is not encrypted")
 	}
 
-	conn, err := grpc.Dial(cfg.usersURL, opts...)
+	conn, err := grpc.Dial(cfg.authURL, opts...)
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to connect to users service: %s", err))
+		logger.Error(fmt.Sprintf("Failed to connect to auth service: %s", err))
 		os.Exit(1)
 	}
 
 	return conn
 }
 
-func startHTTPServer(svc bootstrap.Service, cfg config, logger mflog.Logger, errs chan error) {
+func startHTTPServer(ctx context.Context, svc bootstrap.Service, cfg config, logger mflog.Logger) error {
 	p := fmt.Sprintf(":%s", cfg.httpPort)
-	if cfg.serverCert != "" || cfg.serverKey != "" {
+	server := &http.Server{Addr: p, Handler: api.MakeHandler(svc, bootstrap.NewConfigReader(cfg.encKey), logger)}
+	errCh := make(chan error)
+	protocol := httpProtocol
+	switch {
+	case cfg.serverCert != "" || cfg.serverKey != "":
 		logger.Info(fmt.Sprintf("Bootstrap service started using https on port %s with cert %s key %s",
 			cfg.httpPort, cfg.serverCert, cfg.serverKey))
-		errs <- http.ListenAndServeTLS(p, cfg.serverCert, cfg.serverKey, api.MakeHandler(svc, bootstrap.NewConfigReader(cfg.encKey)))
-		return
+		go func() {
+			errCh <- server.ListenAndServeTLS(cfg.serverCert, cfg.serverKey)
+		}()
+		protocol = httpsProtocol
+
+	default:
+		logger.Info(fmt.Sprintf("Bootstrap service started using http on port %s", cfg.httpPort))
+		go func() {
+			errCh <- server.ListenAndServe()
+		}()
 	}
-	logger.Info(fmt.Sprintf("Bootstrap service started using http on port %s", cfg.httpPort))
-	errs <- http.ListenAndServe(p, api.MakeHandler(svc, bootstrap.NewConfigReader(cfg.encKey)))
+
+	select {
+	case <-ctx.Done():
+		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), stopWaitTime)
+		defer cancelShutdown()
+		if err := server.Shutdown(ctxShutdown); err != nil {
+			logger.Error(fmt.Sprintf("Bootstrap %s service error occurred during shutdown at %s: %s", protocol, p, err))
+			return fmt.Errorf("bootstrap %s service error occurred during shutdown at %s: %w", protocol, p, err)
+		}
+		logger.Info(fmt.Sprintf("Bootstrap %s service shutdown of http at %s", protocol, p))
+		return nil
+	case err := <-errCh:
+		return err
+	}
 }
 
 func subscribeToThingsES(svc bootstrap.Service, client *r.Client, consumer string, logger mflog.Logger) {
 	eventStore := rediscons.NewEventStore(svc, client, consumer, logger)
 	logger.Info("Subscribed to Redis Event Store")
-	if err := eventStore.Subscribe("mainflux.things"); err != nil {
-		logger.Warn(fmt.Sprintf("Botstrap service failed to subscribe to event sourcing: %s", err))
+	if err := eventStore.Subscribe(context.Background(), "mainflux.things"); err != nil {
+		logger.Warn(fmt.Sprintf("Bootstrap service failed to subscribe to event sourcing: %s", err))
 	}
 }

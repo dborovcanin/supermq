@@ -4,94 +4,101 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
+	"time"
 
-	"github.com/BurntSushi/toml"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gocql/gocql"
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/consumers"
+	"github.com/mainflux/mainflux/consumers/writers/api"
+	"github.com/mainflux/mainflux/consumers/writers/cassandra"
 	"github.com/mainflux/mainflux/logger"
-	"github.com/mainflux/mainflux/transformers/senml"
-	"github.com/mainflux/mainflux/writers"
-	"github.com/mainflux/mainflux/writers/api"
-	"github.com/mainflux/mainflux/writers/cassandra"
-	nats "github.com/nats-io/go-nats"
+	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/messaging/nats"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	svcName = "cassandra-writer"
-	sep     = ","
+	svcName      = "cassandra-writer"
+	sep          = ","
+	stopWaitTime = 5 * time.Second
 
-	defNatsURL     = nats.DefaultURL
-	defLogLevel    = "error"
-	defPort        = "8180"
-	defCluster     = "127.0.0.1"
-	defKeyspace    = "mainflux"
-	defDBUsername  = ""
-	defDBPassword  = ""
-	defDBPort      = "9042"
-	defChanCfgPath = "/config/channels.toml"
+	defNatsURL    = "nats://localhost:4222"
+	defLogLevel   = "error"
+	defPort       = "8180"
+	defCluster    = "127.0.0.1"
+	defKeyspace   = "mainflux"
+	defDBUser     = "mainflux"
+	defDBPass     = "mainflux"
+	defDBPort     = "9042"
+	defConfigPath = "/config.toml"
 
-	envNatsURL     = "MF_NATS_URL"
-	envLogLevel    = "MF_CASSANDRA_WRITER_LOG_LEVEL"
-	envPort        = "MF_CASSANDRA_WRITER_PORT"
-	envCluster     = "MF_CASSANDRA_WRITER_DB_CLUSTER"
-	envKeyspace    = "MF_CASSANDRA_WRITER_DB_KEYSPACE"
-	envDBUsername  = "MF_CASSANDRA_WRITER_DB_USERNAME"
-	envDBPassword  = "MF_CASSANDRA_WRITER_DB_PASSWORD"
-	envDBPort      = "MF_CASSANDRA_WRITER_DB_PORT"
-	envChanCfgPath = "MF_CASSANDRA_WRITER_CHANNELS_CONFIG"
+	envNatsURL    = "MF_NATS_URL"
+	envLogLevel   = "MF_CASSANDRA_WRITER_LOG_LEVEL"
+	envPort       = "MF_CASSANDRA_WRITER_PORT"
+	envCluster    = "MF_CASSANDRA_WRITER_DB_CLUSTER"
+	envKeyspace   = "MF_CASSANDRA_WRITER_DB_KEYSPACE"
+	envDBUser     = "MF_CASSANDRA_WRITER_DB_USER"
+	envDBPass     = "MF_CASSANDRA_WRITER_DB_PASS"
+	envDBPort     = "MF_CASSANDRA_WRITER_DB_PORT"
+	envConfigPath = "MF_CASSANDRA_WRITER_CONFIG_PATH"
 )
 
 type config struct {
-	natsURL  string
-	logLevel string
-	port     string
-	dbCfg    cassandra.DBConfig
-	channels map[string]bool
+	natsURL    string
+	logLevel   string
+	port       string
+	configPath string
+	dbCfg      cassandra.DBConfig
 }
 
 func main() {
 	cfg := loadConfig()
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 
 	logger, err := logger.New(os.Stdout, cfg.logLevel)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 
-	nc := connectToNATS(cfg.natsURL, logger)
-	defer nc.Close()
+	pubSub, err := nats.NewPubSub(cfg.natsURL, "", logger)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to connect to NATS: %s", err))
+		os.Exit(1)
+	}
+	defer pubSub.Close()
 
 	session := connectToCassandra(cfg.dbCfg, logger)
 	defer session.Close()
 
 	repo := newService(session, logger)
-	st := senml.New()
-	if err := writers.Start(nc, repo, st, svcName, cfg.channels, logger); err != nil {
+
+	if err := consumers.Start(svcName, pubSub, repo, cfg.configPath, logger); err != nil {
 		logger.Error(fmt.Sprintf("Failed to create Cassandra writer: %s", err))
 	}
 
-	errs := make(chan error, 2)
+	go startHTTPServer(ctx, cfg.port, logger)
 
-	go startHTTPServer(cfg.port, errs, logger)
+	g.Go(func() error {
+		if sig := errors.SignalHandler(ctx); sig != nil {
+			cancel()
+			logger.Info(fmt.Sprintf("Cassandra writer service shutdown by signal: %s", sig))
+		}
+		return nil
+	})
 
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
-
-	err = <-errs
-	logger.Error(fmt.Sprintf("Cassandra writer service terminated: %s", err))
+	if err := g.Wait(); err != nil {
+		logger.Error(fmt.Sprintf("Cassandra writer service terminated: %s", err))
+	}
 }
 
 func loadConfig() config {
@@ -103,56 +110,18 @@ func loadConfig() config {
 	dbCfg := cassandra.DBConfig{
 		Hosts:    strings.Split(mainflux.Env(envCluster, defCluster), sep),
 		Keyspace: mainflux.Env(envKeyspace, defKeyspace),
-		Username: mainflux.Env(envDBUsername, defDBUsername),
-		Password: mainflux.Env(envDBPassword, defDBPassword),
+		User:     mainflux.Env(envDBUser, defDBUser),
+		Pass:     mainflux.Env(envDBPass, defDBPass),
 		Port:     dbPort,
 	}
 
-	chanCfgPath := mainflux.Env(envChanCfgPath, defChanCfgPath)
 	return config{
-		natsURL:  mainflux.Env(envNatsURL, defNatsURL),
-		logLevel: mainflux.Env(envLogLevel, defLogLevel),
-		port:     mainflux.Env(envPort, defPort),
-		dbCfg:    dbCfg,
-		channels: loadChansConfig(chanCfgPath),
+		natsURL:    mainflux.Env(envNatsURL, defNatsURL),
+		logLevel:   mainflux.Env(envLogLevel, defLogLevel),
+		port:       mainflux.Env(envPort, defPort),
+		configPath: mainflux.Env(envConfigPath, defConfigPath),
+		dbCfg:      dbCfg,
 	}
-}
-
-type channels struct {
-	List []string `toml:"filter"`
-}
-
-type chanConfig struct {
-	Channels channels `toml:"channels"`
-}
-
-func loadChansConfig(chanConfigPath string) map[string]bool {
-	data, err := ioutil.ReadFile(chanConfigPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var chanCfg chanConfig
-	if err := toml.Unmarshal(data, &chanCfg); err != nil {
-		log.Fatal(err)
-	}
-
-	chans := map[string]bool{}
-	for _, ch := range chanCfg.Channels.List {
-		chans[ch] = true
-	}
-
-	return chans
-}
-
-func connectToNATS(url string, logger logger.Logger) *nats.Conn {
-	nc, err := nats.Connect(url)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to connect to NATS: %s", err))
-		os.Exit(1)
-	}
-
-	return nc
 }
 
 func connectToCassandra(dbCfg cassandra.DBConfig, logger logger.Logger) *gocql.Session {
@@ -165,7 +134,7 @@ func connectToCassandra(dbCfg cassandra.DBConfig, logger logger.Logger) *gocql.S
 	return session
 }
 
-func newService(session *gocql.Session, logger logger.Logger) writers.MessageRepository {
+func newService(session *gocql.Session, logger logger.Logger) consumers.Consumer {
 	repo := cassandra.New(session)
 	repo = api.LoggingMiddleware(repo, logger)
 	repo = api.MetricsMiddleware(
@@ -187,8 +156,26 @@ func newService(session *gocql.Session, logger logger.Logger) writers.MessageRep
 	return repo
 }
 
-func startHTTPServer(port string, errs chan error, logger logger.Logger) {
+func startHTTPServer(ctx context.Context, port string, logger logger.Logger) error {
 	p := fmt.Sprintf(":%s", port)
+	errCh := make(chan error)
+	server := &http.Server{Addr: p, Handler: api.MakeHandler(svcName)}
 	logger.Info(fmt.Sprintf("Cassandra writer service started, exposed port %s", port))
-	errs <- http.ListenAndServe(p, api.MakeHandler(svcName))
+	go func() {
+		errCh <- server.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), stopWaitTime)
+		defer cancelShutdown()
+		if err := server.Shutdown(ctxShutdown); err != nil {
+			logger.Error(fmt.Sprintf("Cassandra writer  service error occurred during shutdown at %s: %s", p, err))
+			return fmt.Errorf("cassandra writer service error occurred during shutdown at %s: %w", p, err)
+		}
+		logger.Info(fmt.Sprintf("Cassandra writer service shutdown of http at %s", p))
+		return nil
+	case err := <-errCh:
+		return err
+	}
 }

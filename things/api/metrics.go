@@ -1,7 +1,7 @@
 // Copyright (c) Mainflux
 // SPDX-License-Identifier: Apache-2.0
 
-// +build !test
+//go:build !test
 
 package api
 
@@ -21,8 +21,7 @@ type metricsMiddleware struct {
 	svc     things.Service
 }
 
-// MetricsMiddleware instruments core service by tracking request count and
-// latency.
+// MetricsMiddleware instruments core service by tracking request count and latency.
 func MetricsMiddleware(svc things.Service, counter metrics.Counter, latency metrics.Histogram) things.Service {
 	return &metricsMiddleware{
 		counter: counter,
@@ -49,6 +48,15 @@ func (ms *metricsMiddleware) UpdateThing(ctx context.Context, token string, thin
 	return ms.svc.UpdateThing(ctx, token, thing)
 }
 
+func (ms *metricsMiddleware) ShareThing(ctx context.Context, token, thingID string, actions, userIDs []string) error {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "share_thing").Add(1)
+		ms.latency.With("method", "share_thing").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.ShareThing(ctx, token, thingID, actions, userIDs)
+}
+
 func (ms *metricsMiddleware) UpdateKey(ctx context.Context, token, id, key string) error {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "update_key").Add(1)
@@ -67,22 +75,22 @@ func (ms *metricsMiddleware) ViewThing(ctx context.Context, token, id string) (t
 	return ms.svc.ViewThing(ctx, token, id)
 }
 
-func (ms *metricsMiddleware) ListThings(ctx context.Context, token string, offset, limit uint64, name string, metadata things.Metadata) (things.ThingsPage, error) {
+func (ms *metricsMiddleware) ListThings(ctx context.Context, token string, pm things.PageMetadata) (things.Page, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_things").Add(1)
 		ms.latency.With("method", "list_things").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return ms.svc.ListThings(ctx, token, offset, limit, name, metadata)
+	return ms.svc.ListThings(ctx, token, pm)
 }
 
-func (ms *metricsMiddleware) ListThingsByChannel(ctx context.Context, token, id string, offset, limit uint64) (things.ThingsPage, error) {
+func (ms *metricsMiddleware) ListThingsByChannel(ctx context.Context, token, chID string, pm things.PageMetadata) (things.Page, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_things_by_channel").Add(1)
 		ms.latency.With("method", "list_things_by_channel").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return ms.svc.ListThingsByChannel(ctx, token, id, offset, limit)
+	return ms.svc.ListThingsByChannel(ctx, token, chID, pm)
 }
 
 func (ms *metricsMiddleware) RemoveThing(ctx context.Context, token, id string) error {
@@ -121,22 +129,22 @@ func (ms *metricsMiddleware) ViewChannel(ctx context.Context, token, id string) 
 	return ms.svc.ViewChannel(ctx, token, id)
 }
 
-func (ms *metricsMiddleware) ListChannels(ctx context.Context, token string, offset, limit uint64, name string, metadata things.Metadata) (things.ChannelsPage, error) {
+func (ms *metricsMiddleware) ListChannels(ctx context.Context, token string, pm things.PageMetadata) (things.ChannelsPage, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_channels").Add(1)
 		ms.latency.With("method", "list_channels").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return ms.svc.ListChannels(ctx, token, offset, limit, name, metadata)
+	return ms.svc.ListChannels(ctx, token, pm)
 }
 
-func (ms *metricsMiddleware) ListChannelsByThing(ctx context.Context, token, id string, offset, limit uint64) (things.ChannelsPage, error) {
+func (ms *metricsMiddleware) ListChannelsByThing(ctx context.Context, token, thID string, pm things.PageMetadata) (things.ChannelsPage, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_channels_by_thing").Add(1)
 		ms.latency.With("method", "list_channels_by_thing").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return ms.svc.ListChannelsByThing(ctx, token, id, offset, limit)
+	return ms.svc.ListChannelsByThing(ctx, token, thID, pm)
 }
 
 func (ms *metricsMiddleware) RemoveChannel(ctx context.Context, token, id string) error {
@@ -157,13 +165,13 @@ func (ms *metricsMiddleware) Connect(ctx context.Context, token string, chIDs, t
 	return ms.svc.Connect(ctx, token, chIDs, thIDs)
 }
 
-func (ms *metricsMiddleware) Disconnect(ctx context.Context, token, chanID, thingID string) error {
+func (ms *metricsMiddleware) Disconnect(ctx context.Context, token string, chIDs, thIDs []string) error {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "disconnect").Add(1)
 		ms.latency.With("method", "disconnect").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return ms.svc.Disconnect(ctx, token, chanID, thingID)
+	return ms.svc.Disconnect(ctx, token, chIDs, thIDs)
 }
 
 func (ms *metricsMiddleware) CanAccessByKey(ctx context.Context, id, key string) (string, error) {
@@ -184,6 +192,15 @@ func (ms *metricsMiddleware) CanAccessByID(ctx context.Context, chanID, thingID 
 	return ms.svc.CanAccessByID(ctx, chanID, thingID)
 }
 
+func (ms *metricsMiddleware) IsChannelOwner(ctx context.Context, owner, chanID string) error {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "is_channel_owner").Add(1)
+		ms.latency.With("method", "is_channel_owner").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.IsChannelOwner(ctx, owner, chanID)
+}
+
 func (ms *metricsMiddleware) Identify(ctx context.Context, key string) (string, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "identify").Add(1)
@@ -191,4 +208,13 @@ func (ms *metricsMiddleware) Identify(ctx context.Context, key string) (string, 
 	}(time.Now())
 
 	return ms.svc.Identify(ctx, key)
+}
+
+func (ms *metricsMiddleware) ListMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (tp things.Page, err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "list_members").Add(1)
+		ms.latency.With("method", "list_members").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.ListMembers(ctx, token, groupID, pm)
 }

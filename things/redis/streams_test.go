@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
-	r "github.com/go-redis/redis"
+	r "github.com/go-redis/redis/v8"
+	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/things"
 	"github.com/mainflux/mainflux/things/mocks"
 	"github.com/mainflux/mainflux/things/redis"
@@ -22,6 +24,7 @@ import (
 const (
 	streamID        = "mainflux.things"
 	email           = "user@example.com"
+	adminEmail      = "admin@example.com"
 	token           = "token"
 	thingPrefix     = "thing."
 	thingCreate     = thingPrefix + "create"
@@ -37,19 +40,22 @@ const (
 )
 
 func newService(tokens map[string]string) things.Service {
-	users := mocks.NewUsersService(tokens)
+	userPolicy := mocks.MockSubjectSet{Object: "users", Relation: "member"}
+	adminPolicy := mocks.MockSubjectSet{Object: "authorities", Relation: "member"}
+	auth := mocks.NewAuthService(tokens, map[string][]mocks.MockSubjectSet{
+		adminEmail: {userPolicy, adminPolicy}, email: {userPolicy}})
 	conns := make(chan mocks.Connection)
 	thingsRepo := mocks.NewThingRepository(conns)
 	channelsRepo := mocks.NewChannelRepository(thingsRepo, conns)
 	chanCache := mocks.NewChannelCache()
 	thingCache := mocks.NewThingCache()
-	idp := mocks.NewIdentityProvider()
+	idProvider := uuid.NewMock()
 
-	return things.New(users, thingsRepo, channelsRepo, chanCache, thingCache, idp)
+	return things.New(auth, thingsRepo, channelsRepo, chanCache, thingCache, idProvider)
 }
 
 func TestCreateThings(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	svc = redis.NewEventStoreMiddleware(svc, redisClient)
@@ -70,7 +76,7 @@ func TestCreateThings(t *testing.T) {
 			key: token,
 			err: nil,
 			event: map[string]interface{}{
-				"id":        "1",
+				"id":        "123e4567-e89b-12d3-a456-000000000001",
 				"name":      "a",
 				"owner":     email,
 				"metadata":  "{\"test\":\"test\"}",
@@ -81,7 +87,7 @@ func TestCreateThings(t *testing.T) {
 			desc:  "create things with invalid credentials",
 			ths:   []things.Thing{{Name: "a", Metadata: map[string]interface{}{"test": "test"}}},
 			key:   "",
-			err:   things.ErrUnauthorizedAccess,
+			err:   errors.ErrAuthentication,
 			event: nil,
 		},
 	}
@@ -89,9 +95,9 @@ func TestCreateThings(t *testing.T) {
 	lastID := "0"
 	for _, tc := range cases {
 		_, err := svc.CreateThings(context.Background(), tc.key, tc.ths...)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
-		streams := redisClient.XRead(&r.XReadArgs{
+		streams := redisClient.XRead(context.Background(), &r.XReadArgs{
 			Streams: []string{streamID, lastID},
 			Count:   1,
 			Block:   time.Second,
@@ -109,7 +115,7 @@ func TestCreateThings(t *testing.T) {
 }
 
 func TestUpdateThing(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing without sending event.
@@ -148,9 +154,8 @@ func TestUpdateThing(t *testing.T) {
 	lastID := "0"
 	for _, tc := range cases {
 		err := svc.UpdateThing(context.Background(), tc.key, tc.thing)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-
-		streams := redisClient.XRead(&r.XReadArgs{
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		streams := redisClient.XRead(context.Background(), &r.XReadArgs{
 			Streams: []string{streamID, lastID},
 			Count:   1,
 			Block:   time.Second,
@@ -168,7 +173,7 @@ func TestUpdateThing(t *testing.T) {
 }
 
 func TestViewThing(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing without sending event.
@@ -179,12 +184,12 @@ func TestViewThing(t *testing.T) {
 	essvc := redis.NewEventStoreMiddleware(svc, redisClient)
 	esth, eserr := essvc.ViewThing(context.Background(), token, sth.ID)
 	th, err := svc.ViewThing(context.Background(), token, sth.ID)
-	assert.Equal(t, th, esth, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", th, esth))
-	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", err, eserr))
+	assert.Equal(t, th, esth, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", th, esth))
+	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", err, eserr))
 }
 
 func TestListThings(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing without sending event.
@@ -192,14 +197,14 @@ func TestListThings(t *testing.T) {
 	require.Nil(t, err, fmt.Sprintf("unexpected error %s", err))
 
 	essvc := redis.NewEventStoreMiddleware(svc, redisClient)
-	esths, eserr := essvc.ListThings(context.Background(), token, 0, 10, "", nil)
-	ths, err := svc.ListThings(context.Background(), token, 0, 10, "", nil)
-	assert.Equal(t, ths, esths, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", ths, esths))
-	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", err, eserr))
+	esths, eserr := essvc.ListThings(context.Background(), token, things.PageMetadata{Offset: 0, Limit: 10})
+	ths, err := svc.ListThings(context.Background(), token, things.PageMetadata{Offset: 0, Limit: 10})
+	assert.Equal(t, ths, esths, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", ths, esths))
+	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", err, eserr))
 }
 
 func TestListThingsByChannel(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing without sending event.
@@ -213,14 +218,14 @@ func TestListThingsByChannel(t *testing.T) {
 	require.Nil(t, err, fmt.Sprintf("unexpected error %s", err))
 
 	essvc := redis.NewEventStoreMiddleware(svc, redisClient)
-	esths, eserr := essvc.ListThingsByChannel(context.Background(), token, sch.ID, 0, 10)
-	thps, err := svc.ListThingsByChannel(context.Background(), token, sch.ID, 0, 10)
-	assert.Equal(t, thps, esths, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", thps, esths))
-	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", err, eserr))
+	esths, eserr := essvc.ListThingsByChannel(context.Background(), token, sch.ID, things.PageMetadata{Offset: 0, Limit: 10})
+	thps, err := svc.ListThingsByChannel(context.Background(), token, sch.ID, things.PageMetadata{Offset: 0, Limit: 10})
+	assert.Equal(t, thps, esths, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", thps, esths))
+	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", err, eserr))
 }
 
 func TestRemoveThing(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing without sending event.
@@ -251,7 +256,7 @@ func TestRemoveThing(t *testing.T) {
 			desc:  "delete thing with invalid credentials",
 			id:    strconv.FormatUint(math.MaxUint64, 10),
 			key:   "",
-			err:   things.ErrUnauthorizedAccess,
+			err:   errors.ErrAuthentication,
 			event: nil,
 		},
 	}
@@ -259,9 +264,9 @@ func TestRemoveThing(t *testing.T) {
 	lastID := "0"
 	for _, tc := range cases {
 		err := svc.RemoveThing(context.Background(), tc.key, tc.id)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
-		streams := redisClient.XRead(&r.XReadArgs{
+		streams := redisClient.XRead(context.Background(), &r.XReadArgs{
 			Streams: []string{streamID, lastID},
 			Count:   1,
 			Block:   time.Second,
@@ -279,7 +284,7 @@ func TestRemoveThing(t *testing.T) {
 }
 
 func TestCreateChannels(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	svc = redis.NewEventStoreMiddleware(svc, redisClient)
@@ -297,7 +302,7 @@ func TestCreateChannels(t *testing.T) {
 			key:  token,
 			err:  nil,
 			event: map[string]interface{}{
-				"id":        "1",
+				"id":        "123e4567-e89b-12d3-a456-000000000001",
 				"name":      "a",
 				"metadata":  "{\"test\":\"test\"}",
 				"owner":     email,
@@ -308,7 +313,7 @@ func TestCreateChannels(t *testing.T) {
 			desc:  "create channels with invalid credentials",
 			chs:   []things.Channel{{Name: "a", Metadata: map[string]interface{}{"test": "test"}}},
 			key:   "",
-			err:   things.ErrUnauthorizedAccess,
+			err:   errors.ErrAuthentication,
 			event: nil,
 		},
 	}
@@ -316,9 +321,9 @@ func TestCreateChannels(t *testing.T) {
 	lastID := "0"
 	for _, tc := range cases {
 		_, err := svc.CreateChannels(context.Background(), tc.key, tc.chs...)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
-		streams := redisClient.XRead(&r.XReadArgs{
+		streams := redisClient.XRead(context.Background(), &r.XReadArgs{
 			Streams: []string{streamID, lastID},
 			Count:   1,
 			Block:   time.Second,
@@ -336,9 +341,9 @@ func TestCreateChannels(t *testing.T) {
 }
 
 func TestUpdateChannel(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
-	svc := newService(map[string]string{token: email})
+	svc := newService(map[string]string{token: adminEmail})
 	// Create channel without sending event.
 	schs, err := svc.CreateChannels(context.Background(), token, things.Channel{Name: "a"})
 	require.Nil(t, err, fmt.Sprintf("unexpected error %s", err))
@@ -376,7 +381,7 @@ func TestUpdateChannel(t *testing.T) {
 				Name: "c",
 			},
 			key:   token,
-			err:   things.ErrNotFound,
+			err:   errors.ErrNotFound,
 			event: nil,
 		},
 	}
@@ -384,9 +389,9 @@ func TestUpdateChannel(t *testing.T) {
 	lastID := "0"
 	for _, tc := range cases {
 		err := svc.UpdateChannel(context.Background(), tc.key, tc.channel)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
-		streams := redisClient.XRead(&r.XReadArgs{
+		streams := redisClient.XRead(context.Background(), &r.XReadArgs{
 			Streams: []string{streamID, lastID},
 			Count:   1,
 			Block:   time.Second,
@@ -404,7 +409,7 @@ func TestUpdateChannel(t *testing.T) {
 }
 
 func TestViewChannel(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create channel without sending event.
@@ -415,12 +420,12 @@ func TestViewChannel(t *testing.T) {
 	essvc := redis.NewEventStoreMiddleware(svc, redisClient)
 	esch, eserr := essvc.ViewChannel(context.Background(), token, sch.ID)
 	ch, err := svc.ViewChannel(context.Background(), token, sch.ID)
-	assert.Equal(t, ch, esch, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", ch, esch))
-	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", err, eserr))
+	assert.Equal(t, ch, esch, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", ch, esch))
+	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", err, eserr))
 }
 
 func TestListChannels(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing without sending event.
@@ -428,14 +433,14 @@ func TestListChannels(t *testing.T) {
 	require.Nil(t, err, fmt.Sprintf("unexpected error %s", err))
 
 	essvc := redis.NewEventStoreMiddleware(svc, redisClient)
-	eschs, eserr := essvc.ListChannels(context.Background(), token, 0, 10, "", nil)
-	chs, err := svc.ListChannels(context.Background(), token, 0, 10, "", nil)
-	assert.Equal(t, chs, eschs, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", chs, eschs))
-	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", err, eserr))
+	eschs, eserr := essvc.ListChannels(context.Background(), token, things.PageMetadata{Offset: 0, Limit: 10})
+	chs, err := svc.ListChannels(context.Background(), token, things.PageMetadata{Offset: 0, Limit: 10})
+	assert.Equal(t, chs, eschs, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", chs, eschs))
+	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", err, eserr))
 }
 
 func TestListChannelsByThing(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing without sending event.
@@ -449,16 +454,16 @@ func TestListChannelsByThing(t *testing.T) {
 	require.Nil(t, err, fmt.Sprintf("unexpected error %s", err))
 
 	essvc := redis.NewEventStoreMiddleware(svc, redisClient)
-	eschs, eserr := essvc.ListChannelsByThing(context.Background(), token, sth.ID, 0, 10)
-	chps, err := svc.ListChannelsByThing(context.Background(), token, sth.ID, 0, 10)
-	assert.Equal(t, chps, eschs, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", chps, eschs))
-	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behaviour: expected %v got %v", err, eserr))
+	eschs, eserr := essvc.ListChannelsByThing(context.Background(), token, sth.ID, things.PageMetadata{Offset: 0, Limit: 10})
+	chps, err := svc.ListChannelsByThing(context.Background(), token, sth.ID, things.PageMetadata{Offset: 0, Limit: 10})
+	assert.Equal(t, chps, eschs, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", chps, eschs))
+	assert.Equal(t, err, eserr, fmt.Sprintf("event sourcing changed service behavior: expected %v got %v", err, eserr))
 }
 
 func TestRemoveChannel(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
-	svc := newService(map[string]string{token: email})
+	svc := newService(map[string]string{token: adminEmail})
 	// Create channel without sending event.
 	schs, err := svc.CreateChannels(context.Background(), token, things.Channel{Name: "a"})
 	require.Nil(t, err, fmt.Sprintf("unexpected error %s", err))
@@ -487,7 +492,7 @@ func TestRemoveChannel(t *testing.T) {
 			desc:  "create non-existent channel",
 			id:    strconv.FormatUint(math.MaxUint64, 10),
 			key:   "",
-			err:   things.ErrUnauthorizedAccess,
+			err:   errors.ErrAuthentication,
 			event: nil,
 		},
 	}
@@ -495,9 +500,9 @@ func TestRemoveChannel(t *testing.T) {
 	lastID := "0"
 	for _, tc := range cases {
 		err := svc.RemoveChannel(context.Background(), tc.key, tc.id)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
-		streams := redisClient.XRead(&r.XReadArgs{
+		streams := redisClient.XRead(context.Background(), &r.XReadArgs{
 			Streams: []string{streamID, lastID},
 			Count:   1,
 			Block:   time.Second,
@@ -515,7 +520,7 @@ func TestRemoveChannel(t *testing.T) {
 }
 
 func TestConnectEvent(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing and channel that will be connected.
@@ -553,7 +558,7 @@ func TestConnectEvent(t *testing.T) {
 			thingID: strconv.FormatUint(math.MaxUint64, 10),
 			chanID:  sch.ID,
 			key:     token,
-			err:     things.ErrNotFound,
+			err:     errors.ErrNotFound,
 			event:   nil,
 		},
 	}
@@ -563,7 +568,7 @@ func TestConnectEvent(t *testing.T) {
 		err := svc.Connect(context.Background(), tc.key, []string{tc.chanID}, []string{tc.thingID})
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
-		streams := redisClient.XRead(&r.XReadArgs{
+		streams := redisClient.XRead(context.Background(), &r.XReadArgs{
 			Streams: []string{streamID, lastID},
 			Count:   1,
 			Block:   time.Second,
@@ -581,7 +586,7 @@ func TestConnectEvent(t *testing.T) {
 }
 
 func TestDisconnectEvent(t *testing.T) {
-	redisClient.FlushAll().Err()
+	_ = redisClient.FlushAll(context.Background()).Err()
 
 	svc := newService(map[string]string{token: email})
 	// Create thing and channel that will be connected.
@@ -621,17 +626,17 @@ func TestDisconnectEvent(t *testing.T) {
 			thingID: strconv.FormatUint(math.MaxUint64, 10),
 			chanID:  sch.ID,
 			key:     token,
-			err:     things.ErrNotFound,
+			err:     errors.ErrNotFound,
 			event:   nil,
 		},
 	}
 
 	lastID := "0"
 	for _, tc := range cases {
-		err := svc.Disconnect(context.Background(), tc.key, tc.chanID, tc.thingID)
+		err := svc.Disconnect(context.Background(), tc.key, []string{tc.chanID}, []string{tc.thingID})
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
-		streams := redisClient.XRead(&r.XReadArgs{
+		streams := redisClient.XRead(context.Background(), &r.XReadArgs{
 			Streams: []string{streamID, lastID},
 			Count:   1,
 			Block:   time.Second,

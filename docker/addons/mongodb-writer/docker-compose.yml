@@ -20,11 +20,11 @@ volumes:
 
 services:
   mongodb:
-    image: mongo:3.6-jessie
+    image: mongo:4.4.6
     container_name: mainflux-mongodb
     restart: on-failure
     environment:
-      MONGO_INITDB_DATABASE: ${MF_MONGO_WRITER_DB_NAME}
+      MONGO_INITDB_DATABASE: ${MF_MONGO_WRITER_DB}
     ports:
       - ${MF_MONGO_WRITER_DB_PORT}:${MF_MONGO_WRITER_DB_PORT}
     networks:
@@ -34,7 +34,7 @@ services:
       - mainflux-mongodb-configdb-volume:/data/configdb
 
   mongodb-writer:
-    image: mainflux/mongodb-writer:latest
+    image: mainflux/mongodb-writer:${MF_RELEASE_TAG}
     container_name: mainflux-mongodb-writer
     depends_on:
       - mongodb
@@ -43,7 +43,7 @@ services:
       MF_MONGO_WRITER_LOG_LEVEL: ${MF_MONGO_WRITER_LOG_LEVEL}
       MF_NATS_URL: ${MF_NATS_URL}
       MF_MONGO_WRITER_PORT: ${MF_MONGO_WRITER_PORT}
-      MF_MONGO_WRITER_DB_NAME: ${MF_MONGO_WRITER_DB_NAME}
+      MF_MONGO_WRITER_DB: ${MF_MONGO_WRITER_DB}
       MF_MONGO_WRITER_DB_HOST: mongodb
       MF_MONGO_WRITER_DB_PORT: ${MF_MONGO_WRITER_DB_PORT}
     ports:
@@ -51,4 +51,4 @@ services:
     networks:
       - docker_mainflux-base-net
     volumes:
-      - ./channels.toml:/config/channels.toml
+      - ./config.toml:/config.toml

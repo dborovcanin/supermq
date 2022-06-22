@@ -4,17 +4,23 @@
 package postgres
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jmoiron/sqlx" // required for DB access
+	"github.com/lib/pq"
+	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/transformers/senml"
 	"github.com/mainflux/mainflux/readers"
-	"github.com/mainflux/mainflux/transformers/senml"
 )
 
-const errInvalid = "invalid_text_representation"
+const (
+	// Table for SenML messages
+	defTable = "messages"
 
-var errInvalidMessage = errors.New("invalid message representation")
+	// Error code for Undefined table error.
+	undefinedTableCode = "42P01"
+)
 
 var _ readers.MessageRepository = (*postgresRepository)(nil)
 
@@ -29,59 +35,103 @@ func New(db *sqlx.DB) readers.MessageRepository {
 	}
 }
 
-func (tr postgresRepository) ReadAll(chanID string, offset, limit uint64, query map[string]string) (readers.MessagesPage, error) {
-	q := fmt.Sprintf(`SELECT * FROM messages
-    WHERE %s ORDER BY time DESC
-    LIMIT :limit OFFSET :offset;`, fmtCondition(chanID, query))
+func (tr postgresRepository) ReadAll(chanID string, rpm readers.PageMetadata) (readers.MessagesPage, error) {
+	order := "time"
+	format := defTable
+
+	if rpm.Format != "" && rpm.Format != defTable {
+		order = "created"
+		format = rpm.Format
+	}
+
+	q := fmt.Sprintf(`SELECT * FROM %s
+    WHERE %s ORDER BY %s DESC
+	LIMIT :limit OFFSET :offset;`, format, fmtCondition(chanID, rpm), order)
 
 	params := map[string]interface{}{
-		"channel":   chanID,
-		"limit":     limit,
-		"offset":    offset,
-		"subtopic":  query["subtopic"],
-		"publisher": query["publisher"],
-		"name":      query["name"],
-		"protocol":  query["protocol"],
+		"channel":      chanID,
+		"limit":        rpm.Limit,
+		"offset":       rpm.Offset,
+		"subtopic":     rpm.Subtopic,
+		"publisher":    rpm.Publisher,
+		"name":         rpm.Name,
+		"protocol":     rpm.Protocol,
+		"value":        rpm.Value,
+		"bool_value":   rpm.BoolValue,
+		"string_value": rpm.StringValue,
+		"data_value":   rpm.DataValue,
+		"from":         rpm.From,
+		"to":           rpm.To,
 	}
 
 	rows, err := tr.db.NamedQuery(q, params)
 	if err != nil {
-		return readers.MessagesPage{}, err
+		if e, ok := err.(*pq.Error); ok {
+			if e.Code == undefinedTableCode {
+				return readers.MessagesPage{}, nil
+			}
+		}
+		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
 	}
 	defer rows.Close()
 
 	page := readers.MessagesPage{
-		Offset:   offset,
-		Limit:    limit,
-		Messages: []senml.Message{},
+		PageMetadata: rpm,
+		Messages:     []readers.Message{},
 	}
-	for rows.Next() {
-		dbm := dbMessage{Channel: chanID}
-		if err := rows.StructScan(&dbm); err != nil {
-			return readers.MessagesPage{}, err
+	switch format {
+	case defTable:
+		for rows.Next() {
+			msg := senmlMessage{Message: senml.Message{}}
+			if err := rows.StructScan(&msg); err != nil {
+				return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
+			}
+
+			page.Messages = append(page.Messages, msg.Message)
+		}
+	default:
+		for rows.Next() {
+			msg := jsonMessage{}
+			if err := rows.StructScan(&msg); err != nil {
+				return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
+			}
+			m, err := msg.toMap()
+			if err != nil {
+				return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
+			}
+			page.Messages = append(page.Messages, m)
 		}
 
-		msg := toMessage(dbm)
-		page.Messages = append(page.Messages, msg)
 	}
 
-	q = `SELECT COUNT(*) FROM messages WHERE channel = $1;`
-	qParams := []interface{}{chanID}
-
-	if query["subtopic"] != "" {
-		q = `SELECT COUNT(*) FROM messages WHERE channel = $1 AND subtopic = $2;`
-		qParams = append(qParams, query["subtopic"])
+	q = fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s;`, format, fmtCondition(chanID, rpm))
+	rows, err = tr.db.NamedQuery(q, params)
+	if err != nil {
+		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
 	}
+	defer rows.Close()
 
-	if err := tr.db.QueryRow(q, qParams...).Scan(&page.Total); err != nil {
-		return readers.MessagesPage{}, err
+	total := uint64(0)
+	if rows.Next() {
+		if err := rows.Scan(&total); err != nil {
+			return page, err
+		}
 	}
+	page.Total = total
 
 	return page, nil
 }
 
-func fmtCondition(chanID string, query map[string]string) string {
+func fmtCondition(chanID string, rpm readers.PageMetadata) string {
 	condition := `channel = :channel`
+
+	var query map[string]interface{}
+	meta, err := json.Marshal(rpm)
+	if err != nil {
+		return condition
+	}
+	json.Unmarshal(meta, &query)
+
 	for name := range query {
 		switch name {
 		case
@@ -90,51 +140,53 @@ func fmtCondition(chanID string, query map[string]string) string {
 			"name",
 			"protocol":
 			condition = fmt.Sprintf(`%s AND %s = :%s`, condition, name, name)
+		case "v":
+			comparator := readers.ParseValueComparator(query)
+			condition = fmt.Sprintf(`%s AND value %s :value`, condition, comparator)
+		case "vb":
+			condition = fmt.Sprintf(`%s AND bool_value = :bool_value`, condition)
+		case "vs":
+			condition = fmt.Sprintf(`%s AND string_value = :string_value`, condition)
+		case "vd":
+			condition = fmt.Sprintf(`%s AND data_value = :data_value`, condition)
+		case "from":
+			condition = fmt.Sprintf(`%s AND time >= :from`, condition)
+		case "to":
+			condition = fmt.Sprintf(`%s AND time < :to`, condition)
 		}
 	}
 	return condition
 }
 
-type dbMessage struct {
-	ID          string   `db:"id"`
-	Channel     string   `db:"channel"`
-	Subtopic    string   `db:"subtopic"`
-	Publisher   string   `db:"publisher"`
-	Protocol    string   `db:"protocol"`
-	Name        string   `db:"name"`
-	Unit        string   `db:"unit"`
-	Value       *float64 `db:"value"`
-	StringValue *string  `db:"string_value"`
-	BoolValue   *bool    `db:"bool_value"`
-	DataValue   *string  `db:"data_value"`
-	Sum         *float64 `db:"sum"`
-	Time        float64  `db:"time"`
-	UpdateTime  float64  `db:"update_time"`
+type senmlMessage struct {
+	ID string `db:"id"`
+	senml.Message
 }
 
-func toMessage(dbm dbMessage) senml.Message {
-	msg := senml.Message{
-		Channel:    dbm.Channel,
-		Subtopic:   dbm.Subtopic,
-		Publisher:  dbm.Publisher,
-		Protocol:   dbm.Protocol,
-		Name:       dbm.Name,
-		Unit:       dbm.Unit,
-		Time:       dbm.Time,
-		UpdateTime: dbm.UpdateTime,
-		Sum:        dbm.Sum,
-	}
+type jsonMessage struct {
+	ID        string `db:"id"`
+	Channel   string `db:"channel"`
+	Created   int64  `db:"created"`
+	Subtopic  string `db:"subtopic"`
+	Publisher string `db:"publisher"`
+	Protocol  string `db:"protocol"`
+	Payload   []byte `db:"payload"`
+}
 
-	switch {
-	case dbm.Value != nil:
-		msg.Value = dbm.Value
-	case dbm.StringValue != nil:
-		msg.StringValue = dbm.StringValue
-	case dbm.DataValue != nil:
-		msg.DataValue = dbm.DataValue
-	case dbm.BoolValue != nil:
-		msg.BoolValue = dbm.BoolValue
+func (msg jsonMessage) toMap() (map[string]interface{}, error) {
+	ret := map[string]interface{}{
+		"id":        msg.ID,
+		"channel":   msg.Channel,
+		"created":   msg.Created,
+		"subtopic":  msg.Subtopic,
+		"publisher": msg.Publisher,
+		"protocol":  msg.Protocol,
+		"payload":   map[string]interface{}{},
 	}
-
-	return msg
+	pld := make(map[string]interface{})
+	if err := json.Unmarshal(msg.Payload, &pld); err != nil {
+		return nil, err
+	}
+	ret["payload"] = pld
+	return ret, nil
 }

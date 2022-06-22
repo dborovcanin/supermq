@@ -6,8 +6,6 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
 	"strings"
 
@@ -15,18 +13,19 @@ import (
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/go-zoo/bone"
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/internal/apiutil"
+	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/things"
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
 const contentType = "application/json"
 
-var errUnsupportedContentType = errors.New("unsupported content type")
-
 // MakeHandler returns a HTTP handler for auth API endpoints.
-func MakeHandler(tracer opentracing.Tracer, svc things.Service) http.Handler {
+func MakeHandler(tracer opentracing.Tracer, svc things.Service, logger logger.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
-		kithttp.ServerErrorEncoder(encodeError),
+		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, encodeError)),
 	}
 
 	r := bone.New()
@@ -38,14 +37,14 @@ func MakeHandler(tracer opentracing.Tracer, svc things.Service) http.Handler {
 		opts...,
 	))
 
-	r.Post("/channels/:chanId/access-by-key", kithttp.NewServer(
+	r.Post("/identify/channels/:chanId/access-by-key", kithttp.NewServer(
 		kitot.TraceServer(tracer, "can_access_by_key")(canAccessByKeyEndpoint(svc)),
 		decodeCanAccessByKey,
 		encodeResponse,
 		opts...,
 	))
 
-	r.Post("/channels/:chanId/access-by-id", kithttp.NewServer(
+	r.Post("/identify/channels/:chanId/access-by-id", kithttp.NewServer(
 		kitot.TraceServer(tracer, "can_access_by_id")(canAccessByIDEndpoint(svc)),
 		decodeCanAccessByID,
 		encodeResponse,
@@ -57,12 +56,12 @@ func MakeHandler(tracer opentracing.Tracer, svc things.Service) http.Handler {
 
 func decodeIdentify(_ context.Context, r *http.Request) (interface{}, error) {
 	if !strings.Contains(r.Header.Get("Content-Type"), contentType) {
-		return nil, errUnsupportedContentType
+		return nil, errors.ErrUnsupportedContentType
 	}
 
 	req := identifyReq{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, err
+		return nil, errors.Wrap(errors.ErrMalformedEntity, err)
 	}
 
 	return req, nil
@@ -70,14 +69,14 @@ func decodeIdentify(_ context.Context, r *http.Request) (interface{}, error) {
 
 func decodeCanAccessByKey(_ context.Context, r *http.Request) (interface{}, error) {
 	if !strings.Contains(r.Header.Get("Content-Type"), contentType) {
-		return nil, errUnsupportedContentType
+		return nil, errors.ErrUnsupportedContentType
 	}
 
 	req := canAccessByKeyReq{
 		chanID: bone.GetValue(r, "chanId"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, err
+		return nil, errors.Wrap(errors.ErrMalformedEntity, err)
 	}
 
 	return req, nil
@@ -85,27 +84,25 @@ func decodeCanAccessByKey(_ context.Context, r *http.Request) (interface{}, erro
 
 func decodeCanAccessByID(_ context.Context, r *http.Request) (interface{}, error) {
 	if !strings.Contains(r.Header.Get("Content-Type"), contentType) {
-		return nil, errUnsupportedContentType
+		return nil, errors.ErrUnsupportedContentType
 	}
 
 	req := canAccessByIDReq{
 		chanID: bone.GetValue(r, "chanId"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, err
+		return nil, errors.Wrap(errors.ErrMalformedEntity, err)
 	}
 
 	return req, nil
 }
 
 func encodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-	w.Header().Set("Content-Type", contentType)
-
 	if ar, ok := response.(mainflux.Response); ok {
 		for k, v := range ar.Headers() {
 			w.Header().Set(k, v)
 		}
-
+		w.Header().Set("Content-Type", contentType)
 		w.WriteHeader(ar.Code())
 
 		if ar.Empty() {
@@ -117,24 +114,26 @@ func encodeResponse(_ context.Context, w http.ResponseWriter, response interface
 }
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
-	w.Header().Set("Content-Type", contentType)
-
-	switch err {
-	case things.ErrUnauthorizedAccess:
+	switch {
+	case err == apiutil.ErrBearerToken,
+		errors.Contains(err, errors.ErrAuthentication):
+		w.WriteHeader(http.StatusUnauthorized)
+	case errors.Contains(err, errors.ErrNotFound):
+		w.WriteHeader(http.StatusNotFound)
+	case errors.Contains(err, errors.ErrAuthorization):
 		w.WriteHeader(http.StatusForbidden)
-	case errUnsupportedContentType:
+	case errors.Contains(err, errors.ErrUnsupportedContentType):
 		w.WriteHeader(http.StatusUnsupportedMediaType)
-	case io.ErrUnexpectedEOF:
-		w.WriteHeader(http.StatusBadRequest)
-	case io.EOF:
+	case errors.Contains(err, errors.ErrMalformedEntity),
+		err == apiutil.ErrMissingID:
 		w.WriteHeader(http.StatusBadRequest)
 	default:
-		switch err.(type) {
-		case *json.SyntaxError:
-			w.WriteHeader(http.StatusBadRequest)
-		case *json.UnmarshalTypeError:
-			w.WriteHeader(http.StatusBadRequest)
-		default:
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	if errorVal, ok := err.(errors.Error); ok {
+		w.Header().Set("Content-Type", contentType)
+		if err := json.NewEncoder(w).Encode(apiutil.ErrorRes{Err: errorVal.Msg()}); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}

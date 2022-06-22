@@ -4,40 +4,86 @@
 package cli
 
 import (
-	mfxsdk "github.com/mainflux/mainflux/sdk/go"
+	"encoding/json"
+
+	mfxsdk "github.com/mainflux/mainflux/pkg/sdk/go"
 	"github.com/spf13/cobra"
 )
 
 var cmdUsers = []cobra.Command{
-	cobra.Command{
-		Use:   "create",
-		Short: "create <username> <password>",
+	{
+		Use:   "create <username> <password> <user_auth_token>",
+		Short: "Create user",
 		Long:  `Creates new user`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				logUsage(cmd.Short)
+			if len(args) < 2 || len(args) > 3 {
+				logUsage(cmd.Use)
 				return
+			}
+			if len(args) == 2 {
+				args = append(args, "")
 			}
 
 			user := mfxsdk.User{
 				Email:    args[0],
 				Password: args[1],
 			}
-			if err := sdk.CreateUser(user); err != nil {
+			id, err := sdk.CreateUser(args[2], user)
+			if err != nil {
 				logError(err)
 				return
 			}
 
-			logOK()
+			logCreated(id)
 		},
 	},
-	cobra.Command{
-		Use:   "token",
-		Short: "token <username> <password>",
-		Long:  `Creates new token`,
+	{
+		Use:   "get [all | <user_id> ] <user_auth_token>",
+		Short: "Get users",
+		Long: `Get all users or get user by id. Users can be filtered by name or metadata
+		all - lists all users
+		<user_id> - shows user with provided <user_id>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
+				return
+			}
+			metadata, err := convertMetadata(Metadata)
+			if err != nil {
+				logError(err)
+				return
+			}
+			pageMetadata := mfxsdk.PageMetadata{
+				Email:    "",
+				Offset:   uint64(Offset),
+				Limit:    uint64(Limit),
+				Metadata: metadata,
+			}
+			if args[0] == "all" {
+				l, err := sdk.Users(args[1], pageMetadata)
+				if err != nil {
+					logError(err)
+					return
+				}
+				logJSON(l)
+				return
+			}
+			u, err := sdk.User(args[0], args[1])
+			if err != nil {
+				logError(err)
+				return
+			}
+
+			logJSON(u)
+		},
+	},
+	{
+		Use:   "token <username> <password>",
+		Short: "Get token",
+		Long:  `Generate new token`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 2 {
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -52,6 +98,49 @@ var cmdUsers = []cobra.Command{
 			}
 
 			logCreated(token)
+
+		},
+	},
+	{
+		Use:   "update <JSON_string> <user_auth_token>",
+		Short: "Update user",
+		Long:  `Update user metadata`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 2 {
+				logUsage(cmd.Use)
+				return
+			}
+
+			var user mfxsdk.User
+			if err := json.Unmarshal([]byte(args[0]), &user.Metadata); err != nil {
+				logError(err)
+				return
+			}
+
+			if err := sdk.UpdateUser(user, args[1]); err != nil {
+				logError(err)
+				return
+			}
+
+			logOK()
+		},
+	},
+	{
+		Use:   "password <old_password> <password> <user_auth_token>",
+		Short: "Update password",
+		Long:  `Update user password`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 3 {
+				logUsage(cmd.Use)
+				return
+			}
+
+			if err := sdk.UpdatePassword(args[0], args[1], args[2]); err != nil {
+				logError(err)
+				return
+			}
+
+			logOK()
 		},
 	},
 }
@@ -59,12 +148,9 @@ var cmdUsers = []cobra.Command{
 // NewUsersCmd returns users command.
 func NewUsersCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "users",
+		Use:   "users [create | get | update | token | password]",
 		Short: "Users management",
 		Long:  `Users management: create accounts and tokens"`,
-		Run: func(cmd *cobra.Command, args []string) {
-			logUsage("Usage: users [create | token]")
-		},
 	}
 
 	for i := range cmdUsers {

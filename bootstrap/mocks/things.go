@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/things"
 )
 
@@ -19,17 +20,17 @@ type mainfluxThings struct {
 	counter     uint64
 	things      map[string]things.Thing
 	channels    map[string]things.Channel
-	users       mainflux.UsersServiceClient
+	auth        mainflux.AuthServiceClient
 	connections map[string][]string
 }
 
 // NewThingsService returns Mainflux Things service mock.
 // Only methods used by SDK are mocked.
-func NewThingsService(things map[string]things.Thing, channels map[string]things.Channel, users mainflux.UsersServiceClient) things.Service {
+func NewThingsService(things map[string]things.Thing, channels map[string]things.Channel, auth mainflux.AuthServiceClient) things.Service {
 	return &mainfluxThings{
 		things:      things,
 		channels:    channels,
-		users:       users,
+		auth:        auth,
 		connections: make(map[string][]string),
 	}
 }
@@ -38,13 +39,13 @@ func (svc *mainfluxThings) CreateThings(_ context.Context, owner string, ths ...
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.users.Identify(context.Background(), &mainflux.Token{Value: owner})
+	userID, err := svc.auth.Identify(context.Background(), &mainflux.Token{Value: owner})
 	if err != nil {
-		return []things.Thing{}, things.ErrUnauthorizedAccess
+		return []things.Thing{}, errors.ErrAuthentication
 	}
 	for i := range ths {
 		svc.counter++
-		ths[i].Owner = userID.Value
+		ths[i].Owner = userID.Email
 		ths[i].ID = strconv.FormatUint(svc.counter, 10)
 		ths[i].Key = ths[i].ID
 		svc.things[ths[i].ID] = ths[i]
@@ -57,68 +58,69 @@ func (svc *mainfluxThings) ViewThing(_ context.Context, owner, id string) (thing
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.users.Identify(context.Background(), &mainflux.Token{Value: owner})
+	userID, err := svc.auth.Identify(context.Background(), &mainflux.Token{Value: owner})
 	if err != nil {
-		return things.Thing{}, things.ErrUnauthorizedAccess
+		return things.Thing{}, errors.ErrAuthentication
 	}
 
-	if t, ok := svc.things[id]; ok && t.Owner == userID.Value {
+	if t, ok := svc.things[id]; ok && t.Owner == userID.Email {
 		return t, nil
 
 	}
 
-	return things.Thing{}, things.ErrNotFound
+	return things.Thing{}, errors.ErrNotFound
 }
 
 func (svc *mainfluxThings) Connect(_ context.Context, owner string, chIDs, thIDs []string) error {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.users.Identify(context.Background(), &mainflux.Token{Value: owner})
+	userID, err := svc.auth.Identify(context.Background(), &mainflux.Token{Value: owner})
 	if err != nil {
-		return things.ErrUnauthorizedAccess
+		return errors.ErrAuthentication
 	}
 	for _, chID := range chIDs {
-		if svc.channels[chID].Owner != userID.Value {
-			return things.ErrUnauthorizedAccess
+		if svc.channels[chID].Owner != userID.Email {
+			return errors.ErrAuthentication
 		}
-		for _, thID := range thIDs {
-			svc.connections[chID] = append(svc.connections[chID], thID)
-		}
+		svc.connections[chID] = append(svc.connections[chID], thIDs...)
 	}
 
 	return nil
 }
 
-func (svc *mainfluxThings) Disconnect(_ context.Context, owner, chanID, thingID string) error {
+func (svc *mainfluxThings) Disconnect(_ context.Context, owner string, chIDs, thIDs []string) error {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.users.Identify(context.Background(), &mainflux.Token{Value: owner})
-	if err != nil || svc.channels[chanID].Owner != userID.Value {
-		return things.ErrUnauthorizedAccess
+	userID, err := svc.auth.Identify(context.Background(), &mainflux.Token{Value: owner})
+	if err != nil {
+		return errors.ErrAuthentication
 	}
 
-	ids := svc.connections[chanID]
-	i := 0
-	for _, t := range ids {
-		if t == thingID {
-			break
+	for _, chID := range chIDs {
+		if svc.channels[chID].Owner != userID.Email {
+			return errors.ErrAuthentication
 		}
-		i++
-	}
 
-	if i == len(ids) {
-		return things.ErrNotFound
-	}
+		ids := svc.connections[chID]
+		var count int
+		var newConns []string
+		for _, thID := range thIDs {
+			for _, id := range ids {
+				if id == thID {
+					count++
+					continue
+				}
+				newConns = append(newConns, id)
+			}
 
-	var tmp []string
-	if i != len(ids)-2 {
-		tmp = ids[i+1:]
+			if len(newConns)-len(ids) != count {
+				return errors.ErrNotFound
+			}
+			svc.connections[chID] = newConns
+		}
 	}
-	ids = append(ids[:i], tmp...)
-	svc.connections[chanID] = ids
-
 	return nil
 }
 
@@ -126,13 +128,13 @@ func (svc *mainfluxThings) RemoveThing(_ context.Context, owner, id string) erro
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.users.Identify(context.Background(), &mainflux.Token{Value: owner})
+	userID, err := svc.auth.Identify(context.Background(), &mainflux.Token{Value: owner})
 	if err != nil {
-		return things.ErrUnauthorizedAccess
+		return errors.ErrAuthentication
 	}
 
-	if t, ok := svc.things[id]; !ok || t.Owner != userID.Value {
-		return things.ErrNotFound
+	if t, ok := svc.things[id]; !ok || t.Owner != userID.Email {
+		return errors.ErrNotFound
 	}
 
 	delete(svc.things, id)
@@ -156,7 +158,7 @@ func (svc *mainfluxThings) ViewChannel(_ context.Context, owner, id string) (thi
 	if c, ok := svc.channels[id]; ok {
 		return c, nil
 	}
-	return things.Channel{}, things.ErrNotFound
+	return things.Channel{}, errors.ErrNotFound
 }
 
 func (svc *mainfluxThings) UpdateThing(context.Context, string, things.Thing) error {
@@ -167,15 +169,15 @@ func (svc *mainfluxThings) UpdateKey(context.Context, string, string, string) er
 	panic("not implemented")
 }
 
-func (svc *mainfluxThings) ListThings(context.Context, string, uint64, uint64, string, things.Metadata) (things.ThingsPage, error) {
+func (svc *mainfluxThings) ListThings(context.Context, string, things.PageMetadata) (things.Page, error) {
 	panic("not implemented")
 }
 
-func (svc *mainfluxThings) ListChannelsByThing(context.Context, string, string, uint64, uint64) (things.ChannelsPage, error) {
+func (svc *mainfluxThings) ListChannelsByThing(context.Context, string, string, things.PageMetadata) (things.ChannelsPage, error) {
 	panic("not implemented")
 }
 
-func (svc *mainfluxThings) ListThingsByChannel(context.Context, string, string, uint64, uint64) (things.ThingsPage, error) {
+func (svc *mainfluxThings) ListThingsByChannel(context.Context, string, string, things.PageMetadata) (things.Page, error) {
 	panic("not implemented")
 }
 
@@ -183,13 +185,13 @@ func (svc *mainfluxThings) CreateChannels(_ context.Context, owner string, chs .
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.users.Identify(context.Background(), &mainflux.Token{Value: owner})
+	userID, err := svc.auth.Identify(context.Background(), &mainflux.Token{Value: owner})
 	if err != nil {
-		return []things.Channel{}, things.ErrUnauthorizedAccess
+		return []things.Channel{}, errors.ErrAuthentication
 	}
 	for i := range chs {
 		svc.counter++
-		chs[i].Owner = userID.Value
+		chs[i].Owner = userID.Email
 		chs[i].ID = strconv.FormatUint(svc.counter, 10)
 		svc.channels[chs[i].ID] = chs[i]
 	}
@@ -201,7 +203,7 @@ func (svc *mainfluxThings) UpdateChannel(context.Context, string, things.Channel
 	panic("not implemented")
 }
 
-func (svc *mainfluxThings) ListChannels(context.Context, string, uint64, uint64, string, things.Metadata) (things.ChannelsPage, error) {
+func (svc *mainfluxThings) ListChannels(context.Context, string, things.PageMetadata) (things.ChannelsPage, error) {
 	panic("not implemented")
 }
 
@@ -217,7 +219,15 @@ func (svc *mainfluxThings) CanAccessByID(context.Context, string, string) error 
 	panic("not implemented")
 }
 
+func (svc *mainfluxThings) IsChannelOwner(context.Context, string, string) error {
+	panic("not implemented")
+}
+
 func (svc *mainfluxThings) Identify(context.Context, string) (string, error) {
+	panic("not implemented")
+}
+
+func (svc *mainfluxThings) ShareThing(ctx context.Context, token, thingID string, actions, userIDs []string) error {
 	panic("not implemented")
 }
 
@@ -229,4 +239,8 @@ func findIndex(list []string, val string) int {
 	}
 
 	return -1
+}
+
+func (svc *mainfluxThings) ListMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (things.Page, error) {
+	panic("not implemented")
 }

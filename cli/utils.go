@@ -18,6 +18,14 @@ var (
 	Offset uint = 0
 	// Name query parameter
 	Name string = ""
+	// Email query parameter
+	Email string = ""
+	// Metadata query parameter
+	Metadata string = ""
+	// ConfigPath config path parameter
+	ConfigPath string = ""
+	// RawOutput raw output mode
+	RawOutput bool = false
 )
 
 func logJSON(iList ...interface{}) {
@@ -43,7 +51,10 @@ func logUsage(u string) {
 }
 
 func logError(err error) {
-	fmt.Printf("\n%s\n\n", color.RedString(err.Error()))
+	boldRed := color.New(color.FgRed, color.Bold)
+	boldRed.Print("\nerror: ")
+
+	fmt.Printf("%s\n\n", color.RedString(err.Error()))
 }
 
 func logOK() {
@@ -51,5 +62,20 @@ func logOK() {
 }
 
 func logCreated(e string) {
-	fmt.Printf(color.BlueString("\ncreated: %s\n\n"), e)
+	if RawOutput {
+		fmt.Println(e)
+	} else {
+		fmt.Printf(color.BlueString("\ncreated: %s\n\n"), e)
+	}
+}
+
+func convertMetadata(m string) (map[string]interface{}, error) {
+	var metadata map[string]interface{}
+	if m == "" {
+		return nil, nil
+	}
+	if err := json.Unmarshal([]byte(Metadata), &metadata); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }

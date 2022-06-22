@@ -16,20 +16,27 @@ networks:
 
 services:
   influxdb-reader:
-    image: mainflux/influxdb-reader:latest
+    image: mainflux/influxdb-reader:${MF_RELEASE_TAG}
     container_name: mainflux-influxdb-reader
     restart: on-failure
     environment:
       MF_INFLUX_READER_LOG_LEVEL: debug
-      MF_THINGS_URL: things:${MF_THINGS_AUTH_GRPC_PORT}
       MF_INFLUX_READER_PORT: ${MF_INFLUX_READER_PORT}
-      MF_INFLUX_READER_DB_NAME: ${MF_INFLUX_READER_DB_NAME}
-      MF_INFLUX_READER_DB_HOST: mainflux-influxdb
-      MF_INFLUX_READER_DB_PORT: ${MF_INFLUX_READER_DB_PORT}
-      MF_INFLUX_READER_DB_USER: ${MF_INFLUX_READER_DB_USER}
-      MF_INFLUX_READER_DB_PASS: ${MF_INFLUX_READER_DB_PASS}
+      MF_INFLUXDB_DB: ${MF_INFLUXDB_DB}
+      MF_INFLUXDB_HOST: mainflux-influxdb
+      MF_INFLUXDB_PORT: ${MF_INFLUXDB_PORT}
+      MF_INFLUXDB_ADMIN_USER: ${MF_INFLUXDB_ADMIN_USER}
+      MF_INFLUXDB_ADMIN_PASSWORD: ${MF_INFLUXDB_ADMIN_PASSWORD}
+      MF_INFLUX_READER_SERVER_CERT: ${MF_INFLUX_READER_SERVER_CERT}
+      MF_INFLUX_READER_SERVER_KEY: ${MF_INFLUX_READER_SERVER_KEY}
       MF_JAEGER_URL: ${MF_JAEGER_URL}
+      MF_THINGS_AUTH_GRPC_URL: ${MF_THINGS_AUTH_GRPC_URL}
+      MF_THINGS_AUTH_GRPC_TIMEOUT: ${MF_THINGS_AUTH_GRPC_TIMEOUT}
+      MF_AUTH_GRPC_URL: ${MF_AUTH_GRPC_URL}
+      MF_AUTH_GRPC_TIMEOUT : ${MF_AUTH_GRPC_TIMEOUT}
     ports:
       - ${MF_INFLUX_READER_PORT}:${MF_INFLUX_READER_PORT}
     networks:
       - docker_mainflux-base-net
+    volumes:
+      - ../../ssl/certs:/etc/ssl/certs

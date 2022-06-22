@@ -6,71 +6,72 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
+	"time"
 
-	"github.com/BurntSushi/toml"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/consumers"
+	"github.com/mainflux/mainflux/consumers/writers/api"
+	"github.com/mainflux/mainflux/consumers/writers/mongodb"
 	"github.com/mainflux/mainflux/logger"
-	"github.com/mainflux/mainflux/transformers/senml"
-	"github.com/mainflux/mainflux/writers"
-	"github.com/mainflux/mainflux/writers/api"
-	"github.com/mainflux/mainflux/writers/mongodb"
-	nats "github.com/nats-io/go-nats"
+	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/messaging/nats"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
-	svcName = "mongodb-writer"
+	svcName      = "mongodb-writer"
+	stopWaitTime = 5 * time.Second
 
-	defNatsURL     = nats.DefaultURL
-	defLogLevel    = "error"
-	defPort        = "8180"
-	defDBName      = "mainflux"
-	defDBHost      = "localhost"
-	defDBPort      = "27017"
-	defChanCfgPath = "/config/channels.toml"
+	defLogLevel   = "error"
+	defNatsURL    = "nats://localhost:4222"
+	defPort       = "8180"
+	defDB         = "mainflux"
+	defDBHost     = "localhost"
+	defDBPort     = "27017"
+	defConfigPath = "/config.toml"
 
-	envNatsURL     = "MF_NATS_URL"
-	envLogLevel    = "MF_MONGO_WRITER_LOG_LEVEL"
-	envPort        = "MF_MONGO_WRITER_PORT"
-	envDBName      = "MF_MONGO_WRITER_DB_NAME"
-	envDBHost      = "MF_MONGO_WRITER_DB_HOST"
-	envDBPort      = "MF_MONGO_WRITER_DB_PORT"
-	envChanCfgPath = "MF_MONGO_WRITER_CHANNELS_CONFIG"
+	envNatsURL    = "MF_NATS_URL"
+	envLogLevel   = "MF_MONGO_WRITER_LOG_LEVEL"
+	envPort       = "MF_MONGO_WRITER_PORT"
+	envDB         = "MF_MONGO_WRITER_DB"
+	envDBHost     = "MF_MONGO_WRITER_DB_HOST"
+	envDBPort     = "MF_MONGO_WRITER_DB_PORT"
+	envConfigPath = "MF_MONGO_WRITER_CONFIG_PATH"
 )
 
 type config struct {
-	natsURL  string
-	logLevel string
-	port     string
-	dbName   string
-	dbHost   string
-	dbPort   string
-	channels map[string]bool
+	natsURL    string
+	logLevel   string
+	port       string
+	dbName     string
+	dbHost     string
+	dbPort     string
+	configPath string
 }
 
 func main() {
 	cfg := loadConfigs()
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 
 	logger, err := logger.New(os.Stdout, cfg.logLevel)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	nc, err := nats.Connect(cfg.natsURL)
+	pubSub, err := nats.NewPubSub(cfg.natsURL, "", logger)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Failed to connect to NATS: %s", err))
 		os.Exit(1)
 	}
-	defer nc.Close()
+	defer pubSub.Close()
 
 	addr := fmt.Sprintf("mongodb://%s:%s", cfg.dbHost, cfg.dbPort)
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(addr))
@@ -85,63 +86,40 @@ func main() {
 	counter, latency := makeMetrics()
 	repo = api.LoggingMiddleware(repo, logger)
 	repo = api.MetricsMiddleware(repo, counter, latency)
-	st := senml.New()
-	if err := writers.Start(nc, repo, st, svcName, cfg.channels, logger); err != nil {
+
+	if err := consumers.Start(svcName, pubSub, repo, cfg.configPath, logger); err != nil {
 		logger.Error(fmt.Sprintf("Failed to start MongoDB writer: %s", err))
 		os.Exit(1)
 	}
 
-	errs := make(chan error, 2)
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
+	g.Go(func() error {
+		return startHTTPService(ctx, cfg.port, logger)
+	})
 
-	go startHTTPService(cfg.port, logger, errs)
+	g.Go(func() error {
+		if sig := errors.SignalHandler(ctx); sig != nil {
+			cancel()
+			logger.Info(fmt.Sprintf("MongoDB reader service shutdown by signal: %s", sig))
+		}
+		return nil
+	})
 
-	err = <-errs
-	logger.Error(fmt.Sprintf("MongoDB writer service terminated: %s", err))
+	if err := g.Wait(); err != nil {
+		logger.Error(fmt.Sprintf("MongoDB writer service terminated: %s", err))
+	}
+
 }
 
 func loadConfigs() config {
-	chanCfgPath := mainflux.Env(envChanCfgPath, defChanCfgPath)
 	return config{
-		natsURL:  mainflux.Env(envNatsURL, defNatsURL),
-		logLevel: mainflux.Env(envLogLevel, defLogLevel),
-		port:     mainflux.Env(envPort, defPort),
-		dbName:   mainflux.Env(envDBName, defDBName),
-		dbHost:   mainflux.Env(envDBHost, defDBHost),
-		dbPort:   mainflux.Env(envDBPort, defDBPort),
-		channels: loadChansConfig(chanCfgPath),
+		natsURL:    mainflux.Env(envNatsURL, defNatsURL),
+		logLevel:   mainflux.Env(envLogLevel, defLogLevel),
+		port:       mainflux.Env(envPort, defPort),
+		dbName:     mainflux.Env(envDB, defDB),
+		dbHost:     mainflux.Env(envDBHost, defDBHost),
+		dbPort:     mainflux.Env(envDBPort, defDBPort),
+		configPath: mainflux.Env(envConfigPath, defConfigPath),
 	}
-}
-
-type channels struct {
-	List []string `toml:"filter"`
-}
-
-type chanConfig struct {
-	Channels channels `toml:"channels"`
-}
-
-func loadChansConfig(chanConfigPath string) map[string]bool {
-	data, err := ioutil.ReadFile(chanConfigPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var chanCfg chanConfig
-	if err := toml.Unmarshal(data, &chanCfg); err != nil {
-		log.Fatal(err)
-	}
-
-	chans := map[string]bool{}
-	for _, ch := range chanCfg.Channels.List {
-		chans[ch] = true
-	}
-
-	return chans
 }
 
 func makeMetrics() (*kitprometheus.Counter, *kitprometheus.Summary) {
@@ -162,8 +140,29 @@ func makeMetrics() (*kitprometheus.Counter, *kitprometheus.Summary) {
 	return counter, latency
 }
 
-func startHTTPService(port string, logger logger.Logger, errs chan error) {
+func startHTTPService(ctx context.Context, port string, logger logger.Logger) error {
 	p := fmt.Sprintf(":%s", port)
-	logger.Info(fmt.Sprintf("Mongodb writer service started, exposed port %s", p))
-	errs <- http.ListenAndServe(p, api.MakeHandler(svcName))
+	errCh := make(chan error)
+	server := &http.Server{Addr: p, Handler: api.MakeHandler(svcName)}
+
+	logger.Info(fmt.Sprintf("MongoDB writer service started, exposed port %s", p))
+
+	go func() {
+		errCh <- server.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), stopWaitTime)
+		defer cancelShutdown()
+		if err := server.Shutdown(ctxShutdown); err != nil {
+			logger.Error(fmt.Sprintf("MongoDB writer service error occurred during shutdown at %s: %s", p, err))
+			return fmt.Errorf("mongodb writer service occurred during shutdown at %s: %w", p, err)
+		}
+		logger.Info(fmt.Sprintf("MongoDB writer service  shutdown of http at %s", p))
+		return nil
+	case err := <-errCh:
+		return err
+	}
+
 }

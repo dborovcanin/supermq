@@ -5,38 +5,40 @@ package main
 
 import (
 	"context"
-	"encoding/csv"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
+	"time"
 
-	r "github.com/go-redis/redis"
+	r "github.com/go-redis/redis/v8"
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/opcua"
 	"github.com/mainflux/mainflux/opcua/api"
+	"github.com/mainflux/mainflux/opcua/db"
 	"github.com/mainflux/mainflux/opcua/gopcua"
-	pub "github.com/mainflux/mainflux/opcua/nats"
 	"github.com/mainflux/mainflux/opcua/redis"
+	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/messaging/nats"
+	"golang.org/x/sync/errgroup"
 
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
-	nats "github.com/nats-io/go-nats"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 const (
-	defHTTPPort       = "8188"
+	stopWaitTime = 5 * time.Second
+
+	defLogLevel       = "error"
+	defHTTPPort       = "8180"
+	defOPCIntervalMs  = "1000"
 	defOPCPolicy      = ""
 	defOPCMode        = ""
 	defOPCCertFile    = ""
 	defOPCKeyFile     = ""
-	defNatsURL        = nats.DefaultURL
-	defLogLevel       = "debug"
+	defNatsURL        = "nats://localhost:4222"
 	defESURL          = "localhost:6379"
 	defESPass         = ""
 	defESDB           = "0"
@@ -44,10 +46,10 @@ const (
 	defRouteMapURL    = "localhost:6379"
 	defRouteMapPass   = ""
 	defRouteMapDB     = "0"
-	defNodesConfig    = "/config/nodes.csv"
 
-	envHTTPPort       = "MF_OPCUA_ADAPTER_HTTP_PORT"
 	envLogLevel       = "MF_OPCUA_ADAPTER_LOG_LEVEL"
+	envHTTPPort       = "MF_OPCUA_ADAPTER_HTTP_PORT"
+	envOPCIntervalMs  = "MF_OPCUA_ADAPTER_INTERVAL_MS"
 	envOPCPolicy      = "MF_OPCUA_ADAPTER_POLICY"
 	envOPCMode        = "MF_OPCUA_ADAPTER_MODE"
 	envOPCCertFile    = "MF_OPCUA_ADAPTER_CERT_FILE"
@@ -60,13 +62,10 @@ const (
 	envRouteMapURL    = "MF_OPCUA_ADAPTER_ROUTE_MAP_URL"
 	envRouteMapPass   = "MF_OPCUA_ADAPTER_ROUTE_MAP_PASS"
 	envRouteMapDB     = "MF_OPCUA_ADAPTER_ROUTE_MAP_DB"
-	envNodesConfig    = "MF_OPCUA_ADAPTER_CONFIG_FILE"
 
 	thingsRMPrefix     = "thing"
 	channelsRMPrefix   = "channel"
 	connectionRMPrefix = "connection"
-
-	columns = 2
 )
 
 type config struct {
@@ -81,19 +80,17 @@ type config struct {
 	routeMapURL    string
 	routeMapPass   string
 	routeMapDB     string
-	nodesConfig    string
 }
 
 func main() {
 	cfg := loadConfig()
+	httpCtx, httpCancel := context.WithCancel(context.Background())
+	g, httpCtx := errgroup.WithContext(httpCtx)
 
 	logger, err := logger.New(os.Stdout, cfg.logLevel)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-
-	natsConn := connectToNATS(cfg.natsURL, logger)
-	defer natsConn.Close()
 
 	rmConn := connectToRedis(cfg.routeMapURL, cfg.routeMapPass, cfg.routeMapDB, logger)
 	defer rmConn.Close()
@@ -105,12 +102,18 @@ func main() {
 	esConn := connectToRedis(cfg.esURL, cfg.esPass, cfg.esDB, logger)
 	defer esConn.Close()
 
-	publisher := pub.NewMessagePublisher(natsConn)
+	pubSub, err := nats.NewPubSub(cfg.natsURL, "", logger)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to connect to NATS: %s", err))
+		os.Exit(1)
+	}
+	defer pubSub.Close()
 
 	ctx := context.Background()
-	pubsub := gopcua.NewPubSub(ctx, publisher, thingRM, chanRM, connRM, logger)
+	sub := gopcua.NewSubscriber(ctx, pubSub, thingRM, chanRM, connRM, logger)
+	browser := gopcua.NewBrowser(ctx, logger)
 
-	svc := opcua.New(pubsub, thingRM, chanRM, connRM, cfg.opcuaConfig, logger)
+	svc := opcua.New(sub, browser, thingRM, chanRM, connRM, cfg.opcuaConfig, logger)
 	svc = api.LoggingMiddleware(svc, logger)
 	svc = api.MetricsMiddleware(
 		svc,
@@ -128,25 +131,29 @@ func main() {
 		}, []string{"method"}),
 	)
 
-	//go subscribeToNodesFromFile(svc, cfg.nodesConfig, cfg.opcuaConfig, logger)
+	go subscribeToStoredSubs(sub, cfg.opcuaConfig, logger)
 	go subscribeToThingsES(svc, esConn, cfg.esConsumerName, logger)
 
-	errs := make(chan error, 2)
+	g.Go(func() error {
+		return startHTTPServer(httpCtx, svc, cfg, logger)
+	})
 
-	go startHTTPServer(cfg, logger, errs)
+	g.Go(func() error {
+		if sig := errors.SignalHandler(httpCtx); sig != nil {
+			httpCancel()
+			logger.Info(fmt.Sprintf("OPC-UA adapter service shutdown by signal: %s", sig))
+		}
+		return nil
+	})
 
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
-
-	err = <-errs
-	logger.Error(fmt.Sprintf("OPC-UA adapter terminated: %s", err))
+	if err := g.Wait(); err != nil {
+		logger.Error(fmt.Sprintf("OPC-UA adapter service terminated: %s", err))
+	}
 }
 
 func loadConfig() config {
 	oc := opcua.Config{
+		Interval: mainflux.Env(envOPCIntervalMs, defOPCIntervalMs),
 		Policy:   mainflux.Env(envOPCPolicy, defOPCPolicy),
 		Mode:     mainflux.Env(envOPCMode, defOPCMode),
 		CertFile: mainflux.Env(envOPCCertFile, defOPCCertFile),
@@ -164,19 +171,7 @@ func loadConfig() config {
 		routeMapURL:    mainflux.Env(envRouteMapURL, defRouteMapURL),
 		routeMapPass:   mainflux.Env(envRouteMapPass, defRouteMapPass),
 		routeMapDB:     mainflux.Env(envRouteMapDB, defRouteMapDB),
-		nodesConfig:    mainflux.Env(envNodesConfig, defNodesConfig),
 	}
-}
-
-func connectToNATS(url string, logger logger.Logger) *nats.Conn {
-	conn, err := nats.Connect(url)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to connect to NATS: %s", err))
-		os.Exit(1)
-	}
-
-	logger.Info("Connected to NATS")
-	return conn
 }
 
 func connectToRedis(redisURL, redisPass, redisDB string, logger logger.Logger) *r.Client {
@@ -193,53 +188,27 @@ func connectToRedis(redisURL, redisPass, redisDB string, logger logger.Logger) *
 	})
 }
 
-func subscribeToNodesFromFile(svc opcua.Service, nodes string, cfg opcua.Config, logger logger.Logger) {
-	if _, err := os.Stat(nodes); os.IsNotExist(err) {
-		logger.Warn(fmt.Sprintf("Config file not found: %s", err))
-		return
-	}
-
-	file, err := os.OpenFile(nodes, os.O_RDONLY, os.ModePerm)
+func subscribeToStoredSubs(sub opcua.Subscriber, cfg opcua.Config, logger logger.Logger) {
+	// Get all stored subscriptions
+	nodes, err := db.ReadAll()
 	if err != nil {
-		logger.Warn(fmt.Sprintf("Failed to open config file: %s", err))
-		return
+		logger.Warn(fmt.Sprintf("Read stored subscriptions failed: %s", err))
 	}
-	defer file.Close()
 
-	reader := csv.NewReader(file)
-	for {
-		l, err := reader.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			logger.Warn(fmt.Sprintf("Failed to read config file: %s", err))
-			return
-		}
-
-		if len(l) < columns {
-			logger.Warn(fmt.Sprintf("Empty or incomplete line found in file"))
-			return
-		}
-
-		cfg.ServerURI = l[0]
-		cfg.NodeID = l[1]
-
-		if err := svc.Subscribe(cfg); err != nil {
-			logger.Warn(fmt.Sprintf("OPC-UA Subscription failed: %s", err))
-		}
-	}
-}
-
-func subscribeToOpcuaServer(gc opcua.Subscriber, cfg opcua.Config, logger logger.Logger) {
-	if err := gc.Subscribe(cfg); err != nil {
-		logger.Warn(fmt.Sprintf("OPC-UA Subscription failed: %s", err))
+	for _, n := range nodes {
+		cfg.ServerURI = n.ServerURI
+		cfg.NodeID = n.NodeID
+		go func() {
+			if err := sub.Subscribe(context.Background(), cfg); err != nil {
+				logger.Warn(fmt.Sprintf("Subscription failed: %s", err))
+			}
+		}()
 	}
 }
 
 func subscribeToThingsES(svc opcua.Service, client *r.Client, prefix string, logger logger.Logger) {
 	eventStore := redis.NewEventStore(svc, client, prefix, logger)
-	if err := eventStore.Subscribe("mainflux.things"); err != nil {
+	if err := eventStore.Subscribe(context.Background(), "mainflux.things"); err != nil {
 		logger.Warn(fmt.Sprintf("Failed to subscribe to Redis event source: %s", err))
 	}
 }
@@ -249,8 +218,28 @@ func newRouteMapRepositoy(client *r.Client, prefix string, logger logger.Logger)
 	return redis.NewRouteMapRepository(client, prefix)
 }
 
-func startHTTPServer(cfg config, logger logger.Logger, errs chan error) {
+func startHTTPServer(ctx context.Context, svc opcua.Service, cfg config, logger logger.Logger) error {
 	p := fmt.Sprintf(":%s", cfg.httpPort)
-	logger.Info(fmt.Sprintf("opcua-adapter service started, exposed port %s", cfg.httpPort))
-	errs <- http.ListenAndServe(p, api.MakeHandler())
+
+	errCh := make(chan error)
+	server := &http.Server{Addr: p, Handler: api.MakeHandler(svc, logger)}
+	logger.Info(fmt.Sprintf("OPC-UA adapter service started, exposed port %s", cfg.httpPort))
+
+	go func() {
+		errCh <- server.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), stopWaitTime)
+		defer cancelShutdown()
+		if err := server.Shutdown(ctxShutdown); err != nil {
+			logger.Error(fmt.Sprintf("OPC-UA adapter service error occurred during shutdown at %s: %s", p, err))
+			return fmt.Errorf("OPC-UA adapter service error occurred during shutdown at %s: %w", p, err)
+		}
+		logger.Info(fmt.Sprintf("OPC-UA adapter service shutdown of http at %s", p))
+		return nil
+	case err := <-errCh:
+		return err
+	}
 }

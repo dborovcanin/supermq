@@ -9,11 +9,13 @@ import (
 	"os"
 	"testing"
 
+	log "github.com/mainflux/mainflux/logger"
+	dockertest "github.com/ory/dockertest/v3"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
+
+var testLog, _ = log.New(os.Stdout, log.Info.String())
 
 func TestMain(m *testing.M) {
 	pool, err := dockertest.NewPool("")
@@ -25,7 +27,7 @@ func TestMain(m *testing.M) {
 		"MONGO_INITDB_DATABASE=test",
 	}
 
-	container, err := pool.Run("mongo", "3.6-jessie", cfg)
+	container, err := pool.Run("mongo", "4.4.3-bionic", cfg)
 	if err != nil {
 		testLog.Error(fmt.Sprintf("Could not start container: %s", err))
 	}

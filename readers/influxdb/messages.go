@@ -3,20 +3,30 @@ package influxdb
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strconv"
-	"strings"
 	"time"
+	"unicode"
 
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/readers"
 
 	influxdata "github.com/influxdata/influxdb/client/v2"
-	"github.com/mainflux/mainflux/transformers/senml"
+	jsont "github.com/mainflux/mainflux/pkg/transformers/json"
+	"github.com/mainflux/mainflux/pkg/transformers/senml"
 )
 
-const countCol = "count"
+const (
+	countCol = "count_protocol"
+	// Measurement for SenML messages
+	defMeasurement = "messages"
+)
 
 var _ readers.MessageRepository = (*influxRepository)(nil)
+
+var (
+	errResultSet  = errors.New("invalid result set")
+	errResultTime = errors.New("invalid result time")
+)
 
 type influxRepository struct {
 	database string
@@ -31,48 +41,58 @@ func New(client influxdata.Client, database string) readers.MessageRepository {
 	}
 }
 
-func (repo *influxRepository) ReadAll(chanID string, offset, limit uint64, query map[string]string) (readers.MessagesPage, error) {
-	condition := fmtCondition(chanID, query)
-	cmd := fmt.Sprintf(`SELECT * FROM messages WHERE %s ORDER BY time DESC LIMIT %d OFFSET %d`, condition, limit, offset)
+func (repo *influxRepository) ReadAll(chanID string, rpm readers.PageMetadata) (readers.MessagesPage, error) {
+	format := defMeasurement
+	if rpm.Format != "" {
+		format = rpm.Format
+	}
+
+	condition := fmtCondition(chanID, rpm)
+
+	cmd := fmt.Sprintf(`SELECT * FROM %s WHERE %s ORDER BY time DESC LIMIT %d OFFSET %d`, format, condition, rpm.Limit, rpm.Offset)
 	q := influxdata.Query{
 		Command:  cmd,
 		Database: repo.database,
 	}
 
-	ret := []senml.Message{}
-
 	resp, err := repo.client.Query(q)
 	if err != nil {
-		return readers.MessagesPage{}, err
+		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
 	}
 	if resp.Error() != nil {
-		return readers.MessagesPage{}, resp.Error()
+		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, resp.Error())
 	}
 
-	if len(resp.Results) < 1 || len(resp.Results[0].Series) < 1 {
+	if len(resp.Results) == 0 || len(resp.Results[0].Series) == 0 {
 		return readers.MessagesPage{}, nil
 	}
 
+	var messages []readers.Message
 	result := resp.Results[0].Series[0]
 	for _, v := range result.Values {
-		ret = append(ret, parseMessage(result.Columns, v))
+		msg, err := parseMessage(format, result.Columns, v)
+		if err != nil {
+			return readers.MessagesPage{}, err
+		}
+		messages = append(messages, msg)
 	}
 
-	total, err := repo.count(condition)
+	total, err := repo.count(format, condition)
 	if err != nil {
-		return readers.MessagesPage{}, err
+		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
 	}
 
-	return readers.MessagesPage{
-		Total:    total,
-		Offset:   offset,
-		Limit:    limit,
-		Messages: ret,
-	}, nil
+	page := readers.MessagesPage{
+		PageMetadata: rpm,
+		Total:        total,
+		Messages:     messages,
+	}
+
+	return page, nil
 }
 
-func (repo *influxRepository) count(condition string) (uint64, error) {
-	cmd := fmt.Sprintf(`SELECT COUNT(protocol) FROM messages WHERE %s`, condition)
+func (repo *influxRepository) count(measurement, condition string) (uint64, error) {
+	cmd := fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s`, measurement, condition)
 	q := influxdata.Query{
 		Command:  cmd,
 		Database: repo.database,
@@ -86,9 +106,9 @@ func (repo *influxRepository) count(condition string) (uint64, error) {
 		return 0, resp.Error()
 	}
 
-	if len(resp.Results) < 1 ||
-		len(resp.Results[0].Series) < 1 ||
-		len(resp.Results[0].Series[0].Values) < 1 {
+	if len(resp.Results) == 0 ||
+		len(resp.Results[0].Series) == 0 ||
+		len(resp.Results[0].Series[0].Values) == 0 {
 		return 0, nil
 	}
 
@@ -109,104 +129,129 @@ func (repo *influxRepository) count(condition string) (uint64, error) {
 	if !ok {
 		return 0, nil
 	}
-
 	return strconv.ParseUint(count.String(), 10, 64)
 }
 
-func fmtCondition(chanID string, query map[string]string) string {
+func fmtCondition(chanID string, rpm readers.PageMetadata) string {
 	condition := fmt.Sprintf(`channel='%s'`, chanID)
+
+	var query map[string]interface{}
+	meta, err := json.Marshal(rpm)
+	if err != nil {
+		return condition
+	}
+
+	if err := json.Unmarshal(meta, &query); err != nil {
+		return condition
+	}
+
 	for name, value := range query {
 		switch name {
 		case
 			"channel",
 			"subtopic",
-			"publisher":
-			condition = fmt.Sprintf(`%s AND %s='%s'`, condition, name,
-				strings.Replace(value, "'", "\\'", -1))
-		case
+			"publisher",
 			"name",
 			"protocol":
-			condition = fmt.Sprintf(`%s AND "%s"='%s'`, condition, name,
-				strings.Replace(value, "\"", "\\\"", -1))
+			condition = fmt.Sprintf(`%s AND "%s"='%s'`, condition, name, value)
+		case "v":
+			comparator := readers.ParseValueComparator(query)
+			condition = fmt.Sprintf(`%s AND value %s %f`, condition, comparator, value)
+		case "vb":
+			condition = fmt.Sprintf(`%s AND boolValue = %t`, condition, value)
+		case "vs":
+			condition = fmt.Sprintf(`%s AND stringValue = '%s'`, condition, value)
+		case "vd":
+			condition = fmt.Sprintf(`%s AND dataValue = '%s'`, condition, value)
+		case "from":
+			iVal := int64(value.(float64) * 1e9)
+			condition = fmt.Sprintf(`%s AND time >= %d`, condition, iVal)
+		case "to":
+			iVal := int64(value.(float64) * 1e9)
+			condition = fmt.Sprintf(`%s AND time < %d`, condition, iVal)
 		}
 	}
 	return condition
 }
 
-// ParseMessage and parseValues are util methods. Since InfluxDB client returns
-// results in form of rows and columns, this obscure message conversion is needed
-// to return actual []mainflux.Message from the query result.
-func parseValues(value interface{}, name string, msg *senml.Message) {
-	if name == "sum" && value != nil {
-		if valSum, ok := value.(json.Number); ok {
-			sum, err := valSum.Float64()
-			if err != nil {
-				return
-			}
-
-			msg.Sum = &sum
-		}
-		return
-	}
-
-	if strings.HasSuffix(strings.ToLower(name), "value") {
-		switch value.(type) {
-		case bool:
-			v := value.(bool)
-			msg.BoolValue = &v
-		case json.Number:
-			num, err := value.(json.Number).Float64()
-			if err != nil {
-				return
-			}
-			msg.Value = &num
-		case string:
-			if strings.HasPrefix(name, "string") {
-				v := value.(string)
-				msg.StringValue = &v
-				return
-			}
-
-			if strings.HasPrefix(name, "data") {
-				v := value.(string)
-				msg.DataValue = &v
-			}
-		}
+func parseMessage(measurement string, names []string, fields []interface{}) (interface{}, error) {
+	switch measurement {
+	case defMeasurement:
+		return parseSenml(names, fields)
+	default:
+		return parseJSON(names, fields)
 	}
 }
 
-func parseMessage(names []string, fields []interface{}) senml.Message {
-	m := senml.Message{}
-	v := reflect.ValueOf(&m).Elem()
+func underscore(names []string) {
 	for i, name := range names {
-		parseValues(fields[i], name, &m)
-		msgField := v.FieldByName(strings.Title(name))
-		if !msgField.IsValid() {
-			continue
-		}
-
-		f := msgField.Interface()
-		switch f.(type) {
-		case string:
-			if s, ok := fields[i].(string); ok {
-				msgField.SetString(s)
-			}
-		case float64:
-			if name == "time" {
-				t, err := time.Parse(time.RFC3339, fields[i].(string))
-				if err != nil {
-					continue
-				}
-
-				v := float64(t.Unix())
-				msgField.SetFloat(v)
+		var buff []rune
+		idx := 0
+		for i, c := range name {
+			if unicode.IsUpper(c) {
+				buff = append(buff, []rune(name[idx:i])...)
+				buff = append(buff, []rune{'_', unicode.ToLower(c)}...)
+				idx = i + 1
 				continue
 			}
+		}
+		buff = append(buff, []rune(name[idx:])...)
+		names[i] = string(buff)
+	}
+}
 
-			val, _ := strconv.ParseFloat(fields[i].(string), 64)
-			msgField.SetFloat(val)
+func parseSenml(names []string, fields []interface{}) (interface{}, error) {
+	m := make(map[string]interface{})
+	if len(names) > len(fields) {
+		return nil, errResultSet
+	}
+	underscore(names)
+	for i, name := range names {
+		if name == "time" {
+			val, ok := fields[i].(string)
+			if !ok {
+				return nil, errResultTime
+			}
+			t, err := time.Parse(time.RFC3339Nano, val)
+			if err != nil {
+				return nil, err
+			}
+			v := float64(t.UnixNano()) / 1e9
+			m[name] = v
+			continue
+		}
+		m[name] = fields[i]
+	}
+	data, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	msg := senml.Message{}
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return nil, err
+	}
+	return msg, nil
+}
+
+func parseJSON(names []string, fields []interface{}) (interface{}, error) {
+	ret := make(map[string]interface{})
+	pld := make(map[string]interface{})
+	for i, n := range names {
+		switch n {
+		case "channel", "created", "subtopic", "publisher", "protocol", "time":
+			ret[n] = fields[i]
+		default:
+			v := fields[i]
+			if val, ok := v.(json.Number); ok {
+				var err error
+				v, err = val.Float64()
+				if err != nil {
+					return nil, err
+				}
+			}
+			pld[n] = v
 		}
 	}
-
-	return m
+	ret["payload"] = jsont.ParseFlat(pld)
+	return ret, nil
 }

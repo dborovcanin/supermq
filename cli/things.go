@@ -6,20 +6,18 @@ package cli
 import (
 	"encoding/json"
 
-	mfxsdk "github.com/mainflux/mainflux/sdk/go"
+	mfxsdk "github.com/mainflux/mainflux/pkg/sdk/go"
 	"github.com/spf13/cobra"
 )
 
-const thingsEP = "things"
-
 var cmdThings = []cobra.Command{
-	cobra.Command{
-		Use:   "create",
-		Short: "create <JSON_thing> <user_auth_token>",
+	{
+		Use:   "create <JSON_thing> <user_auth_token>",
+		Short: "Create thing",
 		Long:  `Create new thing, generate his UUID and store it`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -38,18 +36,30 @@ var cmdThings = []cobra.Command{
 			logCreated(id)
 		},
 	},
-	cobra.Command{
-		Use:   "get",
-		Short: "get [all | <thing_id>] <user_auth_token>",
-		Long:  `Get all things or thing by id`,
+	{
+		Use:   "get [all | <thing_id>] <user_auth_token>",
+		Short: "Get things",
+		Long: `Get all things or get thing by id. Things can be filtered by name or metadata
+		all - lists all things
+		<thing_id> - shows thing with provided <thing_id>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
-
+			metadata, err := convertMetadata(Metadata)
+			if err != nil {
+				logError(err)
+				return
+			}
+			pageMetadata := mfxsdk.PageMetadata{
+				Name:     "",
+				Offset:   uint64(Offset),
+				Limit:    uint64(Limit),
+				Metadata: metadata,
+			}
 			if args[0] == "all" {
-				l, err := sdk.Things(args[1], uint64(Offset), uint64(Limit), Name)
+				l, err := sdk.Things(args[1], pageMetadata)
 				if err != nil {
 					logError(err)
 					return
@@ -57,7 +67,6 @@ var cmdThings = []cobra.Command{
 				logJSON(l)
 				return
 			}
-
 			t, err := sdk.Thing(args[0], args[1])
 			if err != nil {
 				logError(err)
@@ -67,13 +76,13 @@ var cmdThings = []cobra.Command{
 			logJSON(t)
 		},
 	},
-	cobra.Command{
-		Use:   "delete",
-		Short: "delete <thing_id> <user_auth_token>",
+	{
+		Use:   "delete <thing_id> <user_auth_token>",
+		Short: "Delete thing",
 		Long:  `Removes thing from database`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -85,13 +94,13 @@ var cmdThings = []cobra.Command{
 			logOK()
 		},
 	},
-	cobra.Command{
-		Use:   "update",
-		Short: "update <JSON_string> <user_auth_token>",
+	{
+		Use:   "update <JSON_string> <user_auth_token>",
+		Short: "Update thing",
 		Long:  `Update thing record`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -109,21 +118,20 @@ var cmdThings = []cobra.Command{
 			logOK()
 		},
 	},
-	cobra.Command{
-		Use:   "connect",
-		Short: "connect <thing_id> <channel_id> <user_auth_token>",
+	{
+		Use:   "connect <thing_id> <channel_id> <user_auth_token>",
+		Short: "Connect thing",
 		Long:  `Connect thing to the channel`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
 			connIDs := mfxsdk.ConnectionIDs{
-				[]string{args[0]},
-				[]string{args[1]},
+				ChannelIDs: []string{args[1]},
+				ThingIDs:   []string{args[0]},
 			}
-
 			if err := sdk.Connect(connIDs, args[2]); err != nil {
 				logError(err)
 				return
@@ -132,13 +140,13 @@ var cmdThings = []cobra.Command{
 			logOK()
 		},
 	},
-	cobra.Command{
-		Use:   "disconnect",
-		Short: "disconnect <thing_id> <channel_id> <user_auth_token>",
+	{
+		Use:   "disconnect <thing_id> <channel_id> <user_auth_token>",
+		Short: "Disconnect thing",
 		Long:  `Disconnect thing to the channel`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
@@ -150,17 +158,36 @@ var cmdThings = []cobra.Command{
 			logOK()
 		},
 	},
-	cobra.Command{
-		Use:   "connections",
-		Short: "connections <thing_id> <user_auth_token>",
+	{
+		Use:   "connections <thing_id> <user_auth_token>",
+		Short: "Connected list",
 		Long:  `List of Channels connected to Thing`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
-				logUsage(cmd.Short)
+				logUsage(cmd.Use)
 				return
 			}
 
-			cl, err := sdk.ChannelsByThing(args[1], args[0], uint64(Offset), uint64(Limit))
+			cl, err := sdk.ChannelsByThing(args[1], args[0], uint64(Offset), uint64(Limit), true)
+			if err != nil {
+				logError(err)
+				return
+			}
+
+			logJSON(cl)
+		},
+	},
+	{
+		Use:   "not-connected <thing_id> <user_auth_token>",
+		Short: "Not-connected list",
+		Long:  `List of Channels not connected to a Thing`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) != 2 {
+				logUsage(cmd.Use)
+				return
+			}
+
+			cl, err := sdk.ChannelsByThing(args[1], args[0], uint64(Offset), uint64(Limit), false)
 			if err != nil {
 				logError(err)
 				return
@@ -174,12 +201,9 @@ var cmdThings = []cobra.Command{
 // NewThingsCmd returns things command.
 func NewThingsCmd() *cobra.Command {
 	cmd := cobra.Command{
-		Use:   "things",
+		Use:   "things [create | get | update | delete | connect | disconnect | connections | not-connected]",
 		Short: "Things management",
-		Long:  `Things management: create, get, update or delete Thing, connect or disconnect Thing from Channel and get the list of Channels connected to Thing`,
-		Run: func(cmd *cobra.Command, args []string) {
-			logUsage("things [create | get | update | delete | connect | disconnect | connections]")
-		},
+		Long:  `Things management: create, get, update or delete Thing, connect or disconnect Thing from Channel and get the list of Channels connected or disconnected from a Thing`,
 	}
 
 	for i := range cmdThings {

@@ -11,6 +11,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/mainflux/mainflux/bootstrap"
 	"github.com/mainflux/mainflux/bootstrap/postgres"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,8 +26,8 @@ var (
 		ExternalKey: "external-key",
 		Owner:       "user@email.com",
 		MFChannels: []bootstrap.Channel{
-			bootstrap.Channel{ID: "1", Name: "name 1", Metadata: map[string]interface{}{"meta": 1.0}},
-			bootstrap.Channel{ID: "2", Name: "name 2", Metadata: map[string]interface{}{"meta": 2.0}},
+			{ID: "1", Name: "name 1", Metadata: map[string]interface{}{"meta": 1.0}},
+			{ID: "2", Name: "name 2", Metadata: map[string]interface{}{"meta": 2.0}},
 		},
 		Content: "content",
 		State:   bootstrap.Inactive,
@@ -73,24 +74,24 @@ func TestSave(t *testing.T) {
 			desc:        "save config with same Thing ID",
 			config:      duplicateThing,
 			connections: nil,
-			err:         bootstrap.ErrConflict,
+			err:         errors.ErrConflict,
 		},
 		{
 			desc:        "save config with same external ID",
 			config:      duplicateExternal,
 			connections: nil,
-			err:         bootstrap.ErrConflict,
+			err:         errors.ErrConflict,
 		},
 		{
 			desc:        "save config with same Channels",
 			config:      duplicateChannels,
 			connections: channels,
-			err:         bootstrap.ErrConflict,
+			err:         errors.ErrConflict,
 		},
 	}
 	for _, tc := range cases {
 		_, err := repo.Save(tc.config, tc.connections)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
@@ -129,24 +130,24 @@ func TestRetrieveByID(t *testing.T) {
 			desc:  "retrieve config with wrong owner",
 			owner: "2",
 			id:    id,
-			err:   bootstrap.ErrNotFound,
+			err:   errors.ErrNotFound,
 		},
 		{
 			desc:  "retrieve a non-existing config",
 			owner: c.Owner,
 			id:    nonexistentConfID.String(),
-			err:   bootstrap.ErrNotFound,
+			err:   errors.ErrNotFound,
 		},
 		{
 			desc:  "retrieve a config with invalid ID",
 			owner: c.Owner,
 			id:    "invalid",
-			err:   bootstrap.ErrNotFound,
+			err:   errors.ErrNotFound,
 		},
 	}
 	for _, tc := range cases {
 		_, err := repo.RetrieveByID(tc.owner, tc.id)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
@@ -255,7 +256,7 @@ func TestRetrieveByExternalID(t *testing.T) {
 		{
 			desc:       "retrieve with invalid external ID",
 			externalID: strconv.Itoa(numConfigs + 1),
-			err:        bootstrap.ErrNotFound,
+			err:        errors.ErrNotFound,
 		},
 		{
 			desc:       "retrieve with external key",
@@ -265,7 +266,7 @@ func TestRetrieveByExternalID(t *testing.T) {
 	}
 	for _, tc := range cases {
 		_, err := repo.RetrieveByExternalID(tc.externalID)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
@@ -300,7 +301,7 @@ func TestUpdate(t *testing.T) {
 		{
 			desc:   "update with wrong owner",
 			config: wrongOwner,
-			err:    bootstrap.ErrNotFound,
+			err:    errors.ErrNotFound,
 		},
 		{
 			desc:   "update a config",
@@ -310,7 +311,7 @@ func TestUpdate(t *testing.T) {
 	}
 	for _, tc := range cases {
 		err := repo.Update(tc.config)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
@@ -338,7 +339,7 @@ func TestUpdateCert(t *testing.T) {
 
 	cases := []struct {
 		desc    string
-		key     string
+		thingID string
 		owner   string
 		cert    string
 		certKey string
@@ -347,16 +348,16 @@ func TestUpdateCert(t *testing.T) {
 	}{
 		{
 			desc:    "update with wrong owner",
-			key:     "",
+			thingID: "",
 			cert:    "cert",
 			certKey: "certKey",
 			ca:      "",
 			owner:   "wrong",
-			err:     bootstrap.ErrNotFound,
+			err:     errors.ErrNotFound,
 		},
 		{
 			desc:    "update a config",
-			key:     c.MFKey,
+			thingID: c.MFThing,
 			cert:    "cert",
 			certKey: "certKey",
 			ca:      "ca",
@@ -365,8 +366,8 @@ func TestUpdateCert(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		err := repo.UpdateCert(tc.owner, tc.key, tc.cert, tc.key, tc.ca)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := repo.UpdateCert(tc.owner, tc.thingID, tc.cert, tc.certKey, tc.ca)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
@@ -398,7 +399,7 @@ func TestUpdateConnections(t *testing.T) {
 
 	cases := []struct {
 		desc        string
-		key         string
+		owner       string
 		id          string
 		channels    []bootstrap.Channel
 		connections []string
@@ -406,15 +407,15 @@ func TestUpdateConnections(t *testing.T) {
 	}{
 		{
 			desc:        "update connections of non-existing config",
-			key:         config.Owner,
+			owner:       config.Owner,
 			id:          "unknown",
 			channels:    nil,
 			connections: []string{channels[1]},
-			err:         bootstrap.ErrNotFound,
+			err:         errors.ErrNotFound,
 		},
 		{
 			desc:        "update connections",
-			key:         config.Owner,
+			owner:       config.Owner,
 			id:          c.MFThing,
 			channels:    nil,
 			connections: []string{channels[1]},
@@ -422,7 +423,7 @@ func TestUpdateConnections(t *testing.T) {
 		},
 		{
 			desc:        "update connections with existing channels",
-			key:         config.Owner,
+			owner:       config.Owner,
 			id:          c2,
 			channels:    nil,
 			connections: channels,
@@ -430,7 +431,7 @@ func TestUpdateConnections(t *testing.T) {
 		},
 		{
 			desc:        "update connections no channels",
-			key:         config.Owner,
+			owner:       config.Owner,
 			id:          c.MFThing,
 			channels:    nil,
 			connections: nil,
@@ -438,8 +439,8 @@ func TestUpdateConnections(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		err := repo.UpdateConnections(tc.key, tc.id, tc.channels, tc.connections)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		err := repo.UpdateConnections(tc.owner, tc.id, tc.channels, tc.connections)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
@@ -466,7 +467,7 @@ func TestRemove(t *testing.T) {
 		require.Nil(t, err, fmt.Sprintf("%d: failed to remove config due to: %s", i, err))
 
 		_, err = repo.RetrieveByID(c.Owner, id)
-		require.Equal(t, bootstrap.ErrNotFound, err, fmt.Sprintf("%d: expected %s got %s", i, bootstrap.ErrNotFound, err))
+		require.True(t, errors.Contains(err, errors.ErrNotFound), fmt.Sprintf("%d: expected %s got %s", i, errors.ErrNotFound, err))
 	}
 }
 
@@ -497,13 +498,13 @@ func TestChangeState(t *testing.T) {
 			desc:  "change state with wrong owner",
 			id:    saved,
 			owner: "2",
-			err:   bootstrap.ErrNotFound,
+			err:   errors.ErrNotFound,
 		},
 		{
 			desc:  "change state with wrong id",
 			id:    "wrong",
 			owner: c.Owner,
-			err:   bootstrap.ErrNotFound,
+			err:   errors.ErrNotFound,
 		},
 		{
 			desc:  "change state to Active",
@@ -522,7 +523,7 @@ func TestChangeState(t *testing.T) {
 	}
 	for _, tc := range cases {
 		err := repo.ChangeState(tc.owner, tc.id, tc.state)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
@@ -543,102 +544,37 @@ func TestListExisting(t *testing.T) {
 	require.Nil(t, err, fmt.Sprintf("Saving config expected to succeed: %s.\n", err))
 
 	var chs []bootstrap.Channel
-	for _, ch := range config.MFChannels {
-		chs = append(chs, ch)
-	}
+	chs = append(chs, config.MFChannels...)
 
 	cases := []struct {
 		desc        string
-		key         string
+		owner       string
 		connections []string
 		existing    []bootstrap.Channel
 	}{
 		{
 			desc:        "list all existing channels",
-			key:         c.Owner,
+			owner:       c.Owner,
 			connections: channels,
 			existing:    chs,
 		},
 		{
 			desc:        "list a subset of existing channels",
-			key:         c.Owner,
+			owner:       c.Owner,
 			connections: []string{channels[0], "5"},
 			existing:    []bootstrap.Channel{chs[0]},
 		},
 		{
 			desc:        "list a subset of existing channels empty",
-			key:         c.Owner,
+			owner:       c.Owner,
 			connections: []string{"5", "6"},
 			existing:    []bootstrap.Channel{},
 		},
 	}
 	for _, tc := range cases {
-		existing, err := repo.ListExisting(tc.key, tc.connections)
+		existing, err := repo.ListExisting(tc.owner, tc.connections)
 		assert.Nil(t, err, fmt.Sprintf("%s: unexpected error: %s", tc.desc, err))
 		assert.ElementsMatch(t, tc.existing, existing, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.existing, existing))
-	}
-}
-
-func TestSaveUnknown(t *testing.T) {
-	repo := postgres.NewConfigRepository(db, testLog)
-
-	cases := []struct {
-		desc        string
-		externalID  string
-		externalKey string
-		err         error
-	}{
-		{
-			desc:        "save unknown",
-			externalID:  "unknown",
-			externalKey: "unknown",
-			err:         nil,
-		},
-		{
-			desc:        "save invalid unknown",
-			externalID:  "unknown",
-			externalKey: "",
-			err:         nil,
-		},
-	}
-	for _, tc := range cases {
-		err := repo.SaveUnknown(tc.externalKey, tc.externalID)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-	}
-}
-
-func TestRetrieveUnknown(t *testing.T) {
-	repo := postgres.NewConfigRepository(db, testLog)
-
-	for i := 0; i < numConfigs; i++ {
-		id, err := uuid.NewV4()
-		require.Nil(t, err, fmt.Sprintf("Got unexpected error: %s.\n", err))
-		repo.SaveUnknown(id.String(), id.String())
-	}
-
-	cases := []struct {
-		desc   string
-		offset uint64
-		limit  uint64
-		size   int
-	}{
-		{
-			desc:   "retrieve all",
-			offset: 0,
-			limit:  uint64(numConfigs),
-			size:   numConfigs,
-		},
-		{
-			desc:   "retrieve a subset",
-			offset: 5,
-			limit:  uint64(numConfigs - 5),
-			size:   numConfigs - 5,
-		},
-	}
-	for _, tc := range cases {
-		ret := repo.RetrieveUnknown(tc.offset, tc.limit)
-		size := len(ret.Configs)
-		assert.Equal(t, tc.size, size, fmt.Sprintf("%s: expected %d got %d\n", tc.desc, tc.size, size))
 	}
 }
 

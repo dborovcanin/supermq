@@ -1,7 +1,7 @@
 // Copyright (c) Mainflux
 // SPDX-License-Identifier: Apache-2.0
 
-// +build !test
+//go:build !test
 
 package api
 
@@ -52,6 +52,19 @@ func (lm *loggingMiddleware) UpdateThing(ctx context.Context, token string, thin
 	return lm.svc.UpdateThing(ctx, token, thing)
 }
 
+func (lm *loggingMiddleware) ShareThing(ctx context.Context, token, thingID string, actions, userIDs []string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method share_thing for token %s and thing %s took %s to complete", token, thingID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+
+	return lm.svc.ShareThing(ctx, token, thingID, actions, userIDs)
+}
+
 func (lm *loggingMiddleware) UpdateKey(ctx context.Context, token, id, key string) (err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method update_key for thing %s and key %s took %s to complete", id, key, time.Since(begin))
@@ -78,13 +91,13 @@ func (lm *loggingMiddleware) ViewThing(ctx context.Context, token, id string) (t
 	return lm.svc.ViewThing(ctx, token, id)
 }
 
-func (lm *loggingMiddleware) ListThings(ctx context.Context, token string, offset, limit uint64, name string, metadata things.Metadata) (_ things.ThingsPage, err error) {
+func (lm *loggingMiddleware) ListThings(ctx context.Context, token string, pm things.PageMetadata) (_ things.Page, err error) {
 	defer func(begin time.Time) {
 		nlog := ""
-		if name != "" {
-			nlog = fmt.Sprintf("with name %s ", name)
+		if pm.Name != "" {
+			nlog = fmt.Sprintf("with name %s", pm.Name)
 		}
-		message := fmt.Sprintf("Method list_things %sfor token %s took %s to complete", nlog, token, time.Since(begin))
+		message := fmt.Sprintf("Method list_things %s for token %s took %s to complete", nlog, token, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
@@ -92,19 +105,19 @@ func (lm *loggingMiddleware) ListThings(ctx context.Context, token string, offse
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
 
-	return lm.svc.ListThings(ctx, token, offset, limit, name, metadata)
+	return lm.svc.ListThings(ctx, token, pm)
 }
 
-func (lm *loggingMiddleware) ListThingsByChannel(ctx context.Context, token, id string, offset, limit uint64) (_ things.ThingsPage, err error) {
+func (lm *loggingMiddleware) ListThingsByChannel(ctx context.Context, token, chID string, pm things.PageMetadata) (_ things.Page, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method list_things_by_channel for channel %s took %s to complete", id, time.Since(begin))
+		message := fmt.Sprintf("Method list_things_by_channel for channel %s took %s to complete", chID, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s", message, err))
 		}
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
 
-	return lm.svc.ListThingsByChannel(ctx, token, id, offset, limit)
+	return lm.svc.ListThingsByChannel(ctx, token, chID, pm)
 }
 
 func (lm *loggingMiddleware) RemoveThing(ctx context.Context, token, id string) (err error) {
@@ -159,13 +172,13 @@ func (lm *loggingMiddleware) ViewChannel(ctx context.Context, token, id string) 
 	return lm.svc.ViewChannel(ctx, token, id)
 }
 
-func (lm *loggingMiddleware) ListChannels(ctx context.Context, token string, offset, limit uint64, name string, metadata things.Metadata) (_ things.ChannelsPage, err error) {
+func (lm *loggingMiddleware) ListChannels(ctx context.Context, token string, pm things.PageMetadata) (_ things.ChannelsPage, err error) {
 	defer func(begin time.Time) {
 		nlog := ""
-		if name != "" {
-			nlog = fmt.Sprintf("with name %s ", name)
+		if pm.Name != "" {
+			nlog = fmt.Sprintf("with name %s", pm.Name)
 		}
-		message := fmt.Sprintf("Method list_channels %sfor token %s took %s to complete", nlog, token, time.Since(begin))
+		message := fmt.Sprintf("Method list_channels %s for token %s took %s to complete", nlog, token, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
@@ -173,19 +186,19 @@ func (lm *loggingMiddleware) ListChannels(ctx context.Context, token string, off
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
 
-	return lm.svc.ListChannels(ctx, token, offset, limit, name, metadata)
+	return lm.svc.ListChannels(ctx, token, pm)
 }
 
-func (lm *loggingMiddleware) ListChannelsByThing(ctx context.Context, token, id string, offset, limit uint64) (_ things.ChannelsPage, err error) {
+func (lm *loggingMiddleware) ListChannelsByThing(ctx context.Context, token, thID string, pm things.PageMetadata) (_ things.ChannelsPage, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method list_channels_by_thing for thing %s took %s to complete", id, time.Since(begin))
+		message := fmt.Sprintf("Method list_channels_by_thing for thing %s took %s to complete", thID, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s", message, err))
 		}
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
 
-	return lm.svc.ListChannelsByThing(ctx, token, id, offset, limit)
+	return lm.svc.ListChannelsByThing(ctx, token, thID, pm)
 }
 
 func (lm *loggingMiddleware) RemoveChannel(ctx context.Context, token, id string) (err error) {
@@ -214,9 +227,9 @@ func (lm *loggingMiddleware) Connect(ctx context.Context, token string, chIDs, t
 	return lm.svc.Connect(ctx, token, chIDs, thIDs)
 }
 
-func (lm *loggingMiddleware) Disconnect(ctx context.Context, token, chanID, thingID string) (err error) {
+func (lm *loggingMiddleware) Disconnect(ctx context.Context, token string, chIDs, thIDs []string) (err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method disconnect for token %s, channel %s and thing %s took %s to complete", token, chanID, thingID, time.Since(begin))
+		message := fmt.Sprintf("Method disconnect for token %s, channels %v and things %v took %s to complete", token, chIDs, thIDs, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
@@ -224,7 +237,7 @@ func (lm *loggingMiddleware) Disconnect(ctx context.Context, token, chanID, thin
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
 
-	return lm.svc.Disconnect(ctx, token, chanID, thingID)
+	return lm.svc.Disconnect(ctx, token, chIDs, thIDs)
 }
 
 func (lm *loggingMiddleware) CanAccessByKey(ctx context.Context, id, key string) (thing string, err error) {
@@ -252,9 +265,23 @@ func (lm *loggingMiddleware) CanAccessByID(ctx context.Context, chanID, thingID 
 
 	return lm.svc.CanAccessByID(ctx, chanID, thingID)
 }
+
+func (lm *loggingMiddleware) IsChannelOwner(ctx context.Context, owner, chanID string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method is_channel_owner for channel %s and user %s took %s to complete", chanID, owner, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+
+	return lm.svc.IsChannelOwner(ctx, owner, chanID)
+}
+
 func (lm *loggingMiddleware) Identify(ctx context.Context, key string) (id string, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method identify for key %s and thing %s took %s to complete", key, id, time.Since(begin))
+		message := fmt.Sprintf("Method identify for token %s and thing %s took %s to complete", key, id, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
@@ -263,4 +290,17 @@ func (lm *loggingMiddleware) Identify(ctx context.Context, key string) (id strin
 	}(time.Now())
 
 	return lm.svc.Identify(ctx, key)
+}
+
+func (lm *loggingMiddleware) ListMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (tp things.Page, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method list_members for token %s and group id %s took %s to complete", token, groupID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+
+	return lm.svc.ListMembers(ctx, token, groupID, pm)
 }

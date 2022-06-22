@@ -13,6 +13,7 @@ import (
 
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/bootstrap"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +40,7 @@ func dec(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	if len(in) < aes.BlockSize {
-		return nil, bootstrap.ErrMalformedEntity
+		return nil, errors.ErrMalformedEntity
 	}
 	iv := in[:aes.BlockSize]
 	in = in[aes.BlockSize:]
@@ -119,8 +120,8 @@ func TestReadConfig(t *testing.T) {
 		require.Nil(t, err, fmt.Sprintf("Marshalling expected to succeed: %s.\n", err))
 		assert.Equal(t, tc.enc, b, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.enc, b))
 		resp, ok := res.(mainflux.Response)
-		require.True(t, ok, fmt.Sprintf("If not encrypted, reader should return response."))
+		require.True(t, ok, "If not encrypted, reader should return response.")
 		assert.False(t, resp.Empty(), fmt.Sprintf("Response should not be empty %s.", err))
-		assert.Equal(t, http.StatusOK, resp.Code(), fmt.Sprintf("Default config response code should be 200."))
+		assert.Equal(t, http.StatusOK, resp.Code(), "Default config response code should be 200.")
 	}
 }

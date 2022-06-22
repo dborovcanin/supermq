@@ -5,43 +5,44 @@ import (
 	"testing"
 
 	"github.com/mainflux/mainflux/bootstrap"
+	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAddReqValidation(t *testing.T) {
 	cases := []struct {
 		desc        string
-		key         string
+		token       string
 		externalID  string
 		externalKey string
 		err         error
 	}{
 		{
 			desc:        "empty key",
-			key:         "",
+			token:       "",
 			externalID:  "external-id",
 			externalKey: "external-key",
-			err:         bootstrap.ErrUnauthorizedAccess,
+			err:         apiutil.ErrBearerToken,
 		},
 		{
 			desc:        "empty external ID",
-			key:         "key",
+			token:       "token",
 			externalID:  "",
 			externalKey: "external-key",
-			err:         bootstrap.ErrMalformedEntity,
+			err:         apiutil.ErrMissingID,
 		},
 		{
 			desc:        "empty external key",
-			key:         "key",
+			token:       "token",
 			externalID:  "external-id",
 			externalKey: "",
-			err:         bootstrap.ErrMalformedEntity,
+			err:         apiutil.ErrBearerKey,
 		},
 	}
 
 	for _, tc := range cases {
 		req := addReq{
-			key:         tc.key,
+			token:       tc.token,
 			ExternalID:  tc.externalID,
 			ExternalKey: tc.externalKey,
 		}
@@ -53,28 +54,28 @@ func TestAddReqValidation(t *testing.T) {
 
 func TestEntityReqValidation(t *testing.T) {
 	cases := []struct {
-		desc string
-		key  string
-		id   string
-		err  error
+		desc  string
+		token string
+		id    string
+		err   error
 	}{
 		{
-			desc: "empty key",
-			key:  "",
-			id:   "id",
-			err:  bootstrap.ErrUnauthorizedAccess,
+			desc:  "empty token",
+			token: "",
+			id:    "id",
+			err:   apiutil.ErrBearerToken,
 		},
 		{
-			desc: "empty id",
-			key:  "key",
-			id:   "",
-			err:  bootstrap.ErrMalformedEntity,
+			desc:  "empty id",
+			token: "token",
+			id:    "",
+			err:   apiutil.ErrMissingID,
 		},
 	}
 
 	for _, tc := range cases {
 		req := entityReq{
-			key: tc.key,
+			token: tc.token,
 		}
 
 		err := req.validate()
@@ -84,29 +85,29 @@ func TestEntityReqValidation(t *testing.T) {
 
 func TestUpdateReqValidation(t *testing.T) {
 	cases := []struct {
-		desc string
-		key  string
-		id   string
-		err  error
+		desc  string
+		token string
+		id    string
+		err   error
 	}{
 		{
-			desc: "empty key",
-			key:  "",
-			id:   "id",
-			err:  bootstrap.ErrUnauthorizedAccess,
+			desc:  "empty token",
+			token: "",
+			id:    "id",
+			err:   apiutil.ErrBearerToken,
 		},
 		{
-			desc: "empty id",
-			key:  "key",
-			id:   "",
-			err:  bootstrap.ErrMalformedEntity,
+			desc:  "empty id",
+			token: "token",
+			id:    "",
+			err:   apiutil.ErrMissingID,
 		},
 	}
 
 	for _, tc := range cases {
 		req := updateReq{
-			key: tc.key,
-			id:  tc.id,
+			token: tc.token,
+			id:    tc.id,
 		}
 
 		err := req.validate()
@@ -117,27 +118,27 @@ func TestUpdateReqValidation(t *testing.T) {
 func TestUpdateCertReqValidation(t *testing.T) {
 	cases := []struct {
 		desc    string
-		key     string
+		token   string
 		thingID string
 		err     error
 	}{
 		{
-			desc:    "empty key",
-			key:     "",
+			desc:    "empty token",
+			token:   "",
 			thingID: "thingID",
-			err:     bootstrap.ErrUnauthorizedAccess,
+			err:     apiutil.ErrBearerToken,
 		},
 		{
-			desc:    "empty thing key",
-			key:     "key",
+			desc:    "empty thing id",
+			token:   "token",
 			thingID: "",
-			err:     bootstrap.ErrNotFound,
+			err:     apiutil.ErrMissingID,
 		},
 	}
 
 	for _, tc := range cases {
 		req := updateCertReq{
-			key:     tc.key,
+			token:   tc.token,
 			thingID: tc.thingID,
 		}
 
@@ -148,29 +149,29 @@ func TestUpdateCertReqValidation(t *testing.T) {
 
 func TestUpdateConnReqValidation(t *testing.T) {
 	cases := []struct {
-		desc string
-		key  string
-		id   string
-		err  error
+		desc  string
+		token string
+		id    string
+		err   error
 	}{
 		{
-			desc: "empty key",
-			key:  "",
-			id:   "id",
-			err:  bootstrap.ErrUnauthorizedAccess,
+			desc:  "empty token",
+			token: "",
+			id:    "id",
+			err:   apiutil.ErrBearerToken,
 		},
 		{
-			desc: "empty id",
-			key:  "key",
-			id:   "",
-			err:  bootstrap.ErrMalformedEntity,
+			desc:  "empty id",
+			token: "token",
+			id:    "",
+			err:   apiutil.ErrMissingID,
 		},
 	}
 
 	for _, tc := range cases {
 		req := updateReq{
-			key: tc.key,
-			id:  tc.id,
+			token: tc.token,
+			id:    tc.id,
 		}
 
 		err := req.validate()
@@ -182,36 +183,36 @@ func TestListReqValidation(t *testing.T) {
 	cases := []struct {
 		desc   string
 		offset uint64
-		key    string
+		token  string
 		limit  uint64
 		err    error
 	}{
 		{
-			desc:   "empty key",
-			key:    "",
+			desc:   "empty token",
+			token:  "",
 			offset: 0,
 			limit:  1,
-			err:    bootstrap.ErrUnauthorizedAccess,
+			err:    apiutil.ErrBearerToken,
 		},
 		{
 			desc:   "too large limit",
-			key:    "key",
+			token:  "token",
 			offset: 0,
-			limit:  maxLimit + 1,
-			err:    bootstrap.ErrMalformedEntity,
+			limit:  maxLimitSize + 1,
+			err:    apiutil.ErrLimitSize,
 		},
 		{
-			desc:   "zero limit",
-			key:    "key",
+			desc:   "default limit",
+			token:  "token",
 			offset: 0,
-			limit:  0,
-			err:    bootstrap.ErrMalformedEntity,
+			limit:  defLimit,
+			err:    nil,
 		},
 	}
 
 	for _, tc := range cases {
 		req := listReq{
-			key:    tc.key,
+			token:  tc.token,
 			offset: tc.offset,
 			limit:  tc.limit,
 		}
@@ -232,13 +233,13 @@ func TestBootstrapReqValidation(t *testing.T) {
 			desc:      "empty external key",
 			externKey: "",
 			externID:  "id",
-			err:       bootstrap.ErrUnauthorizedAccess,
+			err:       apiutil.ErrBearerKey,
 		},
 		{
 			desc:      "empty external id",
 			externKey: "key",
 			externID:  "",
-			err:       bootstrap.ErrMalformedEntity,
+			err:       apiutil.ErrMissingID,
 		},
 	}
 
@@ -256,37 +257,37 @@ func TestBootstrapReqValidation(t *testing.T) {
 func TestChangeStateReqValidation(t *testing.T) {
 	cases := []struct {
 		desc  string
-		key   string
+		token string
 		id    string
 		state bootstrap.State
 		err   error
 	}{
 		{
-			desc:  "empty key",
-			key:   "",
+			desc:  "empty token",
+			token: "",
 			id:    "id",
 			state: bootstrap.State(1),
-			err:   bootstrap.ErrUnauthorizedAccess,
+			err:   apiutil.ErrBearerToken,
 		},
 		{
 			desc:  "empty id",
-			key:   "key",
+			token: "token",
 			id:    "",
 			state: bootstrap.State(0),
-			err:   bootstrap.ErrMalformedEntity,
+			err:   apiutil.ErrMissingID,
 		},
 		{
 			desc:  "invalid state",
-			key:   "key",
+			token: "token",
 			id:    "id",
 			state: bootstrap.State(14),
-			err:   bootstrap.ErrMalformedEntity,
+			err:   apiutil.ErrBootstrapState,
 		},
 	}
 
 	for _, tc := range cases {
 		req := changeStateReq{
-			key:   tc.key,
+			token: tc.token,
 			id:    tc.id,
 			State: tc.state,
 		}

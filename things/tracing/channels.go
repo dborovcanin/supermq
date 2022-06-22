@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	saveChannelOp             = "save_channel"
 	saveChannelsOp            = "save_channels"
 	updateChannelOp           = "update_channel"
 	retrieveChannelByIDOp     = "retrieve_channel_by_id"
@@ -67,20 +66,20 @@ func (crm channelRepositoryMiddleware) RetrieveByID(ctx context.Context, owner, 
 	return crm.repo.RetrieveByID(ctx, owner, id)
 }
 
-func (crm channelRepositoryMiddleware) RetrieveAll(ctx context.Context, owner string, offset, limit uint64, name string, metadata things.Metadata) (things.ChannelsPage, error) {
+func (crm channelRepositoryMiddleware) RetrieveAll(ctx context.Context, owner string, pm things.PageMetadata) (things.ChannelsPage, error) {
 	span := createSpan(ctx, crm.tracer, retrieveAllChannelsOp)
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
-	return crm.repo.RetrieveAll(ctx, owner, offset, limit, name, metadata)
+	return crm.repo.RetrieveAll(ctx, owner, pm)
 }
 
-func (crm channelRepositoryMiddleware) RetrieveByThing(ctx context.Context, owner, thing string, offset, limit uint64) (things.ChannelsPage, error) {
+func (crm channelRepositoryMiddleware) RetrieveByThing(ctx context.Context, owner, thID string, pm things.PageMetadata) (things.ChannelsPage, error) {
 	span := createSpan(ctx, crm.tracer, retrieveChannelsByThingOp)
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
-	return crm.repo.RetrieveByThing(ctx, owner, thing, offset, limit)
+	return crm.repo.RetrieveByThing(ctx, owner, thID, pm)
 }
 
 func (crm channelRepositoryMiddleware) Remove(ctx context.Context, owner, id string) error {
@@ -99,12 +98,12 @@ func (crm channelRepositoryMiddleware) Connect(ctx context.Context, owner string
 	return crm.repo.Connect(ctx, owner, chIDs, thIDs)
 }
 
-func (crm channelRepositoryMiddleware) Disconnect(ctx context.Context, owner, chanID, thingID string) error {
+func (crm channelRepositoryMiddleware) Disconnect(ctx context.Context, owner string, chIDs, thIDs []string) error {
 	span := createSpan(ctx, crm.tracer, disconnectOp)
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
-	return crm.repo.Disconnect(ctx, owner, chanID, thingID)
+	return crm.repo.Disconnect(ctx, owner, chIDs, thIDs)
 }
 
 func (crm channelRepositoryMiddleware) HasThing(ctx context.Context, chanID, key string) (string, error) {

@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/gocql/gocql"
+	"github.com/mainflux/mainflux/consumers/writers/cassandra"
 	log "github.com/mainflux/mainflux/logger"
-	"github.com/mainflux/mainflux/writers/cassandra"
-	dockertest "gopkg.in/ory-am/dockertest.v3"
+	dockertest "github.com/ory/dockertest/v3"
 )
 
 var logger, _ = log.New(os.Stdout, log.Info.String())
@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 		logger.Error(fmt.Sprintf("Could not connect to docker: %s", err))
 	}
 
-	container, err := pool.Run("cassandra", "3.11.3", []string{})
+	container, err := pool.Run("cassandra", "3.11.9", []string{})
 	if err != nil {
 		logger.Error(fmt.Sprintf("Could not start container: %s", err))
 	}

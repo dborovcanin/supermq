@@ -4,22 +4,23 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/gocql/gocql"
 	"github.com/mainflux/mainflux"
+	authapi "github.com/mainflux/mainflux/auth/api/grpc"
 	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/readers"
 	"github.com/mainflux/mainflux/readers/api"
 	"github.com/mainflux/mainflux/readers/cassandra"
@@ -27,53 +28,69 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	jconfig "github.com/uber/jaeger-client-go/config"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
 const (
-	sep = ","
+	stopWaitTime = 5 * time.Second
 
-	defLogLevel      = "error"
-	defPort          = "8180"
-	defCluster       = "127.0.0.1"
-	defKeyspace      = "mainflux"
-	defDBUsername    = ""
-	defDBPassword    = ""
-	defDBPort        = "9042"
-	defThingsURL     = "localhost:8181"
-	defClientTLS     = "false"
-	defCACerts       = ""
-	defJaegerURL     = ""
-	defThingsTimeout = "1" // in seconds
+	sep                  = ","
+	defLogLevel          = "error"
+	defPort              = "8180"
+	defCluster           = "127.0.0.1"
+	defKeyspace          = "mainflux"
+	defDBUser            = "mainflux"
+	defDBPass            = "mainflux"
+	defDBPort            = "9042"
+	defClientTLS         = "false"
+	defCACerts           = ""
+	defServerCert        = ""
+	defServerKey         = ""
+	defJaegerURL         = ""
+	defThingsAuthURL     = "localhost:8183"
+	defThingsAuthTimeout = "1s"
+	defUsersAuthURL      = "localhost:8181"
+	defUsersAuthTimeout  = "1s"
 
-	envLogLevel      = "MF_CASSANDRA_READER_LOG_LEVEL"
-	envPort          = "MF_CASSANDRA_READER_PORT"
-	envCluster       = "MF_CASSANDRA_READER_DB_CLUSTER"
-	envKeyspace      = "MF_CASSANDRA_READER_DB_KEYSPACE"
-	envDBUsername    = "MF_CASSANDRA_READER_DB_USERNAME"
-	envDBPassword    = "MF_CASSANDRA_READER_DB_PASSWORD"
-	envDBPort        = "MF_CASSANDRA_READER_DB_PORT"
-	envThingsURL     = "MF_THINGS_URL"
-	envClientTLS     = "MF_CASSANDRA_READER_CLIENT_TLS"
-	envCACerts       = "MF_CASSANDRA_READER_CA_CERTS"
-	envJaegerURL     = "MF_JAEGER_URL"
-	envThingsTimeout = "MF_CASSANDRA_READER_THINGS_TIMEOUT"
+	envLogLevel          = "MF_CASSANDRA_READER_LOG_LEVEL"
+	envPort              = "MF_CASSANDRA_READER_PORT"
+	envCluster           = "MF_CASSANDRA_READER_DB_CLUSTER"
+	envKeyspace          = "MF_CASSANDRA_READER_DB_KEYSPACE"
+	envDBUser            = "MF_CASSANDRA_READER_DB_USER"
+	envDBPass            = "MF_CASSANDRA_READER_DB_PASS"
+	envDBPort            = "MF_CASSANDRA_READER_DB_PORT"
+	envClientTLS         = "MF_CASSANDRA_READER_CLIENT_TLS"
+	envCACerts           = "MF_CASSANDRA_READER_CA_CERTS"
+	envServerCert        = "MF_CASSANDRA_READER_SERVER_CERT"
+	envServerKey         = "MF_CASSANDRA_READER_SERVER_KEY"
+	envJaegerURL         = "MF_JAEGER_URL"
+	envThingsAuthURL     = "MF_THINGS_AUTH_GRPC_URL"
+	envThingsAuthTimeout = "MF_THINGS_AUTH_GRPC_TIMEOUT"
+	envUsersAuthURL      = "MF_AUTH_GRPC_URL"
+	envUsersAuthTimeout  = "MF_AUTH_GRPC_TIMEOUT"
 )
 
 type config struct {
-	logLevel      string
-	port          string
-	dbCfg         cassandra.DBConfig
-	thingsURL     string
-	clientTLS     bool
-	caCerts       string
-	jaegerURL     string
-	thingsTimeout time.Duration
+	logLevel          string
+	port              string
+	dbCfg             cassandra.DBConfig
+	clientTLS         bool
+	caCerts           string
+	serverCert        string
+	serverKey         string
+	jaegerURL         string
+	thingsAuthURL     string
+	usersAuthURL      string
+	thingsAuthTimeout time.Duration
+	usersAuthTimeout  time.Duration
 }
 
 func main() {
 	cfg := loadConfig()
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 
 	logger, err := logger.New(os.Stdout, cfg.logLevel)
 	if err != nil {
@@ -89,21 +106,57 @@ func main() {
 	thingsTracer, thingsCloser := initJaeger("things", cfg.jaegerURL, logger)
 	defer thingsCloser.Close()
 
-	tc := thingsapi.NewClient(conn, thingsTracer, cfg.thingsTimeout)
+	tc := thingsapi.NewClient(conn, thingsTracer, cfg.thingsAuthTimeout)
+	authTracer, authCloser := initJaeger("auth", cfg.jaegerURL, logger)
+	defer authCloser.Close()
+
+	authConn := connectToAuth(cfg, logger)
+	defer authConn.Close()
+
+	auth := authapi.NewClient(authTracer, authConn, cfg.usersAuthTimeout)
+
 	repo := newService(session, logger)
 
-	errs := make(chan error, 2)
+	g.Go(func() error {
+		return startHTTPServer(ctx, repo, tc, auth, cfg, logger)
+	})
 
-	go startHTTPServer(repo, tc, cfg.port, errs, logger)
+	g.Go(func() error {
+		if sig := errors.SignalHandler(ctx); sig != nil {
+			cancel()
+			logger.Info(fmt.Sprintf("Cassandra reader service shutdown by signal: %s", sig))
+		}
+		return nil
+	})
+	if err := g.Wait(); err != nil {
+		logger.Error(fmt.Sprintf("Cassandra reader service terminated: %s", err))
+	}
+}
 
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
+func connectToAuth(cfg config, logger logger.Logger) *grpc.ClientConn {
+	var opts []grpc.DialOption
+	logger.Info("Connecting to auth via gRPC")
+	if cfg.clientTLS {
+		if cfg.caCerts != "" {
+			tpc, err := credentials.NewClientTLSFromFile(cfg.caCerts, "")
+			if err != nil {
+				logger.Error(fmt.Sprintf("Failed to create tls credentials: %s", err))
+				os.Exit(1)
+			}
+			opts = append(opts, grpc.WithTransportCredentials(tpc))
+		}
+	} else {
+		opts = append(opts, grpc.WithInsecure())
+		logger.Info("gRPC communication is not encrypted")
+	}
 
-	err = <-errs
-	logger.Error(fmt.Sprintf("Cassandra reader service terminated: %s", err))
+	conn, err := grpc.Dial(cfg.usersAuthURL, opts...)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to connect to auth service: %s", err))
+		os.Exit(1)
+	}
+	logger.Info(fmt.Sprintf("Established gRPC connection to things via gRPC: %s", cfg.usersAuthURL))
+	return conn
 }
 
 func loadConfig() config {
@@ -115,8 +168,8 @@ func loadConfig() config {
 	dbCfg := cassandra.DBConfig{
 		Hosts:    strings.Split(mainflux.Env(envCluster, defCluster), sep),
 		Keyspace: mainflux.Env(envKeyspace, defKeyspace),
-		Username: mainflux.Env(envDBUsername, defDBUsername),
-		Password: mainflux.Env(envDBPassword, defDBPassword),
+		User:     mainflux.Env(envDBUser, defDBUser),
+		Pass:     mainflux.Env(envDBPass, defDBPass),
 		Port:     dbPort,
 	}
 
@@ -125,20 +178,29 @@ func loadConfig() config {
 		log.Fatalf("Invalid value passed for %s\n", envClientTLS)
 	}
 
-	timeout, err := strconv.ParseInt(mainflux.Env(envThingsTimeout, defThingsTimeout), 10, 64)
+	authTimeout, err := time.ParseDuration(mainflux.Env(envThingsAuthTimeout, defThingsAuthTimeout))
 	if err != nil {
-		log.Fatalf("Invalid %s value: %s", envThingsTimeout, err.Error())
+		log.Fatalf("Invalid %s value: %s", envThingsAuthTimeout, err.Error())
+	}
+
+	usersAuthTimeout, err := time.ParseDuration(mainflux.Env(envUsersAuthTimeout, defUsersAuthTimeout))
+	if err != nil {
+		log.Fatalf("Invalid %s value: %s", envThingsAuthTimeout, err.Error())
 	}
 
 	return config{
-		logLevel:      mainflux.Env(envLogLevel, defLogLevel),
-		port:          mainflux.Env(envPort, defPort),
-		dbCfg:         dbCfg,
-		thingsURL:     mainflux.Env(envThingsURL, defThingsURL),
-		clientTLS:     tls,
-		caCerts:       mainflux.Env(envCACerts, defCACerts),
-		jaegerURL:     mainflux.Env(envJaegerURL, defJaegerURL),
-		thingsTimeout: time.Duration(timeout) * time.Second,
+		logLevel:          mainflux.Env(envLogLevel, defLogLevel),
+		port:              mainflux.Env(envPort, defPort),
+		dbCfg:             dbCfg,
+		clientTLS:         tls,
+		caCerts:           mainflux.Env(envCACerts, defCACerts),
+		serverCert:        mainflux.Env(envServerCert, defServerCert),
+		serverKey:         mainflux.Env(envServerKey, defServerKey),
+		jaegerURL:         mainflux.Env(envJaegerURL, defJaegerURL),
+		thingsAuthURL:     mainflux.Env(envThingsAuthURL, defThingsAuthURL),
+		usersAuthURL:      mainflux.Env(envUsersAuthURL, defUsersAuthURL),
+		usersAuthTimeout:  usersAuthTimeout,
+		thingsAuthTimeout: authTimeout,
 	}
 }
 
@@ -168,11 +230,12 @@ func connectToThings(cfg config, logger logger.Logger) *grpc.ClientConn {
 		opts = append(opts, grpc.WithInsecure())
 	}
 
-	conn, err := grpc.Dial(cfg.thingsURL, opts...)
+	conn, err := grpc.Dial(cfg.thingsAuthURL, opts...)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Failed to connect to things service: %s", err))
 		os.Exit(1)
 	}
+	logger.Info(fmt.Sprintf("Established gRPC connection to things via gRPC: %s", cfg.thingsAuthURL))
 	return conn
 }
 
@@ -222,8 +285,33 @@ func newService(session *gocql.Session, logger logger.Logger) readers.MessageRep
 	return repo
 }
 
-func startHTTPServer(repo readers.MessageRepository, tc mainflux.ThingsServiceClient, port string, errs chan error, logger logger.Logger) {
-	p := fmt.Sprintf(":%s", port)
-	logger.Info(fmt.Sprintf("Cassandra reader service started, exposed port %s", port))
-	errs <- http.ListenAndServe(p, api.MakeHandler(repo, tc, "cassandra-reader"))
+func startHTTPServer(ctx context.Context, repo readers.MessageRepository, tc mainflux.ThingsServiceClient, ac mainflux.AuthServiceClient, cfg config, logger logger.Logger) error {
+	p := fmt.Sprintf(":%s", cfg.port)
+	errCh := make(chan error)
+	server := &http.Server{Addr: p, Handler: api.MakeHandler(repo, tc, ac, "cassandra-reader", logger)}
+	switch {
+	case cfg.serverCert != "" || cfg.serverKey != "":
+		logger.Info(fmt.Sprintf("Cassandra reader service started using https on port %s with cert %s key %s", cfg.port, cfg.serverCert, cfg.serverKey))
+		go func() {
+			errCh <- server.ListenAndServeTLS(cfg.serverCert, cfg.serverKey)
+		}()
+	default:
+		logger.Info(fmt.Sprintf("Cassandra reader service started, exposed port %s", cfg.port))
+		go func() {
+			errCh <- server.ListenAndServe()
+		}()
+	}
+	select {
+	case <-ctx.Done():
+		ctxShutdown, cancelShutdown := context.WithTimeout(context.Background(), stopWaitTime)
+		defer cancelShutdown()
+		if err := server.Shutdown(ctxShutdown); err != nil {
+			logger.Error(fmt.Sprintf("Cassandra reader service error occurred during shutdown at %s: %s", p, err))
+			return fmt.Errorf("cassandra reader service error occurred during shutdown at %s: %w", p, err)
+		}
+		logger.Info(fmt.Sprintf("Cassandra reader service shutdown of http at %s", p))
+		return nil
+	case err := <-errCh:
+		return err
+	}
 }

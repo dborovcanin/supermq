@@ -24,14 +24,22 @@ import (
 )
 
 var (
-	approvedAuthenticators = [...]string{
+	defaultApprovedAuthenticators = []string{
 		"org.apache.cassandra.auth.PasswordAuthenticator",
 		"com.instaclustr.cassandra.auth.SharedSecretAuthenticator",
 		"com.datastax.bdp.cassandra.auth.DseAuthenticator",
+		"io.aiven.cassandra.auth.AivenAuthenticator",
+		"com.ericsson.bss.cassandra.ecaudit.auth.AuditPasswordAuthenticator",
+		"com.amazon.helenus.auth.HelenusAuthenticator",
+		"com.ericsson.bss.cassandra.ecaudit.auth.AuditAuthenticator",
 	}
 )
 
-func approve(authenticator string) bool {
+// approve the authenticator with the list of allowed authenticators or default list if approvedAuthenticators is empty.
+func approve(authenticator string, approvedAuthenticators []string) bool {
+	if len(approvedAuthenticators) == 0 {
+		approvedAuthenticators = defaultApprovedAuthenticators
+	}
 	for _, s := range approvedAuthenticators {
 		if authenticator == s {
 			return true
@@ -40,8 +48,8 @@ func approve(authenticator string) bool {
 	return false
 }
 
-//JoinHostPort is a utility to return a address string that can be used
-//gocql.Conn to form a connection with a host.
+// JoinHostPort is a utility to return an address string that can be used
+// by `gocql.Conn` to form a connection with a host.
 func JoinHostPort(addr string, port int) string {
 	addr = strings.TrimSpace(addr)
 	if _, _, err := net.SplitHostPort(addr); err != nil {
@@ -56,12 +64,13 @@ type Authenticator interface {
 }
 
 type PasswordAuthenticator struct {
-	Username string
-	Password string
+	Username              string
+	Password              string
+	AllowedAuthenticators []string
 }
 
 func (p PasswordAuthenticator) Challenge(req []byte) ([]byte, Authenticator, error) {
-	if !approve(string(req)) {
+	if !approve(string(req), p.AllowedAuthenticators) {
 		return nil, nil, fmt.Errorf("unexpected authenticator %q", req)
 	}
 	resp := make([]byte, 2+len(p.Username)+len(p.Password))
@@ -76,6 +85,19 @@ func (p PasswordAuthenticator) Success(data []byte) error {
 	return nil
 }
 
+// SslOptions configures TLS use.
+//
+// Warning: Due to historical reasons, the SslOptions is insecure by default, so you need to set EnableHostVerification
+// to true if no Config is set. Most users should set SslOptions.Config to a *tls.Config.
+// SslOptions and Config.InsecureSkipVerify interact as follows:
+//
+//  Config.InsecureSkipVerify | EnableHostVerification | Result
+//  Config is nil             | false                  | do not verify host
+//  Config is nil             | true                   | verify host
+//  false                     | false                  | verify host
+//  true                      | false                  | do not verify host
+//  false                     | true                   | verify host
+//  true                      | true                   | verify host
 type SslOptions struct {
 	*tls.Config
 
@@ -85,9 +107,12 @@ type SslOptions struct {
 	CertPath string
 	KeyPath  string
 	CaPath   string //optional depending on server config
-	// If you want to verify the hostname and server cert (like a wildcard for cass cluster) then you should turn this on
-	// This option is basically the inverse of InSecureSkipVerify
-	// See InSecureSkipVerify in http://golang.org/pkg/crypto/tls/ for more info
+	// If you want to verify the hostname and server cert (like a wildcard for cass cluster) then you should turn this
+	// on.
+	// This option is basically the inverse of tls.Config.InsecureSkipVerify.
+	// See InsecureSkipVerify in http://golang.org/pkg/crypto/tls/ for more info.
+	//
+	// See SslOptions documentation to see how EnableHostVerification interacts with the provided tls.Config.
 	EnableHostVerification bool
 }
 
@@ -96,10 +121,22 @@ type ConnConfig struct {
 	CQLVersion     string
 	Timeout        time.Duration
 	ConnectTimeout time.Duration
+	Dialer         Dialer
 	Compressor     Compressor
 	Authenticator  Authenticator
+	AuthProvider   func(h *HostInfo) (Authenticator, error)
 	Keepalive      time.Duration
-	tlsConfig      *tls.Config
+	Logger         StdLogger
+
+	tlsConfig       *tls.Config
+	disableCoalesce bool
+}
+
+func (c *ConnConfig) logger() StdLogger {
+	if c.Logger == nil {
+		return Logger
+	}
+	return c.Logger
 }
 
 type ConnErrorHandler interface {
@@ -117,7 +154,7 @@ func (fn connErrorHandlerFn) HandleError(conn *Conn, err error, closed bool) {
 // which may be serving more queries just fine.
 // Default is 0, should not be changed concurrently with queries.
 //
-// depreciated
+// Deprecated.
 var TimeoutLimit int64 = 0
 
 // Conn is a single connection to a Cassandra node. It can be used to execute
@@ -135,7 +172,7 @@ type Conn struct {
 	headerBuf [maxFrameHeaderSize]byte
 
 	streams *streams.IDGenerator
-	mu      sync.RWMutex
+	mu      sync.Mutex
 	calls   map[int]*callReq
 
 	errorHandler ConnErrorHandler
@@ -150,50 +187,91 @@ type Conn struct {
 	session *Session
 
 	closed int32
-	quit   chan struct{}
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	timeouts int64
+
+	logger StdLogger
 }
 
-// Connect establishes a connection to a Cassandra node.
-func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHandler) (*Conn, error) {
+// connect establishes a connection to a Cassandra node using session's connection config.
+func (s *Session) connect(ctx context.Context, host *HostInfo, errorHandler ConnErrorHandler) (*Conn, error) {
+	return s.dial(ctx, host, s.connCfg, errorHandler)
+}
+
+// dial establishes a connection to a Cassandra node and notifies the session's connectObserver.
+func (s *Session) dial(ctx context.Context, host *HostInfo, connConfig *ConnConfig, errorHandler ConnErrorHandler) (*Conn, error) {
+	var obs ObservedConnect
+	if s.connectObserver != nil {
+		obs.Host = host
+		obs.Start = time.Now()
+	}
+
+	conn, err := s.dialWithoutObserver(ctx, host, connConfig, errorHandler)
+
+	if s.connectObserver != nil {
+		obs.End = time.Now()
+		obs.Err = err
+		s.connectObserver.ObserveConnect(obs)
+	}
+
+	return conn, err
+}
+
+// dialWithoutObserver establishes connection to a Cassandra node.
+//
+// dialWithoutObserver does not notify the connection observer, so you most probably want to call dial() instead.
+func (s *Session) dialWithoutObserver(ctx context.Context, host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHandler) (*Conn, error) {
 	ip := host.ConnectAddress()
 	port := host.port
 
 	// TODO(zariel): remove these
-	if len(ip) == 0 || ip.IsUnspecified() {
+	if !validIpAddr(ip) {
 		panic(fmt.Sprintf("host missing connect ip address: %v", ip))
 	} else if port == 0 {
 		panic(fmt.Sprintf("host missing port: %v", port))
 	}
 
-	var (
-		err  error
-		conn net.Conn
-	)
-
-	dialer := &net.Dialer{
-		Timeout: cfg.ConnectTimeout,
-	}
-	if cfg.Keepalive > 0 {
-		dialer.KeepAlive = cfg.Keepalive
-	}
-
-	// TODO(zariel): handle ipv6 zone
-	addr := (&net.TCPAddr{IP: ip, Port: port}).String()
-
-	if cfg.tlsConfig != nil {
-		// the TLS config is safe to be reused by connections but it must not
-		// be modified after being used.
-		conn, err = tls.DialWithDialer(dialer, "tcp", addr, cfg.tlsConfig)
-	} else {
-		conn, err = dialer.Dial("tcp", addr)
+	dialer := cfg.Dialer
+	if dialer == nil {
+		d := &net.Dialer{
+			Timeout: cfg.ConnectTimeout,
+		}
+		if cfg.Keepalive > 0 {
+			d.KeepAlive = cfg.Keepalive
+		}
+		dialer = d
 	}
 
+	addr := host.HostnameAndPort()
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
 	}
+	if cfg.tlsConfig != nil {
+		// the TLS config is safe to be reused by connections but it must not
+		// be modified after being used.
+		tlsConfig := cfg.tlsConfig
+		if !tlsConfig.InsecureSkipVerify && tlsConfig.ServerName == "" {
+			colonPos := strings.LastIndex(addr, ":")
+			if colonPos == -1 {
+				colonPos = len(addr)
+			}
+			hostname := addr[:colonPos]
+			// clone config to avoid modifying the shared one.
+			tlsConfig = tlsConfig.Clone()
+			tlsConfig.ServerName = hostname
+		}
+		tconn := tls.Client(conn, tlsConfig)
+		if err := tconn.Handshake(); err != nil {
+			conn.Close()
+			return nil, err
+		}
+		conn = tconn
+	}
 
+	ctx, cancel := context.WithCancel(ctx)
 	c := &Conn{
 		conn:          conn,
 		r:             bufio.NewReader(conn),
@@ -203,8 +281,6 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 		addr:          conn.RemoteAddr().String(),
 		errorHandler:  errorHandler,
 		compressor:    cfg.Compressor,
-		auth:          cfg.Authenticator,
-		quit:          make(chan struct{}),
 		session:       s,
 		streams:       streams.New(cfg.ProtoVersion),
 		host:          host,
@@ -213,40 +289,52 @@ func (s *Session) dial(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHa
 			w:       conn,
 			timeout: cfg.Timeout,
 		},
+		ctx:    ctx,
+		cancel: cancel,
+		logger: cfg.logger(),
 	}
 
-	var (
-		ctx    context.Context
-		cancel func()
-	)
-	if cfg.ConnectTimeout > 0 {
-		ctx, cancel = context.WithTimeout(context.TODO(), cfg.ConnectTimeout)
-	} else {
-		ctx, cancel = context.WithCancel(context.TODO())
+	if err := c.init(ctx); err != nil {
+		cancel()
+		c.Close()
+		return nil, err
 	}
-	defer cancel()
+
+	return c, nil
+}
+
+func (c *Conn) init(ctx context.Context) error {
+	if c.session.cfg.AuthProvider != nil {
+		var err error
+		c.auth, err = c.cfg.AuthProvider(c.host)
+		if err != nil {
+			return err
+		}
+	} else {
+		c.auth = c.cfg.Authenticator
+	}
 
 	startup := &startupCoordinator{
 		frameTicker: make(chan struct{}),
 		conn:        c,
 	}
 
-	c.timeout = cfg.ConnectTimeout
+	c.timeout = c.cfg.ConnectTimeout
 	if err := startup.setupConn(ctx); err != nil {
-		c.close()
-		return nil, err
+		return err
 	}
 
-	c.timeout = cfg.Timeout
+	c.timeout = c.cfg.Timeout
 
 	// dont coalesce startup frames
-	if s.cfg.WriteCoalesceWaitTime > 0 {
-		c.w = newWriteCoalescer(c.w, s.cfg.WriteCoalesceWaitTime, c.quit)
+	if c.session.cfg.WriteCoalesceWaitTime > 0 && !c.cfg.disableCoalesce {
+		c.w = newWriteCoalescer(c.conn, c.timeout, c.session.cfg.WriteCoalesceWaitTime, ctx.Done())
 	}
 
-	go c.serve()
+	go c.serve(ctx)
+	go c.heartBeat(ctx)
 
-	return c, nil
+	return nil
 }
 
 func (c *Conn) Write(p []byte) (n int, err error) {
@@ -282,10 +370,18 @@ type startupCoordinator struct {
 }
 
 func (s *startupCoordinator) setupConn(ctx context.Context) error {
+	var cancel context.CancelFunc
+	if s.conn.timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, s.conn.timeout)
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
+	}
+	defer cancel()
+
 	startupErr := make(chan error)
 	go func() {
 		for range s.frameTicker {
-			err := s.conn.recv()
+			err := s.conn.recv(ctx)
 			if err != nil {
 				select {
 				case startupErr <- err:
@@ -432,7 +528,7 @@ func (c *Conn) closeWithError(err error) {
 	// we should attempt to deliver the error back to the caller if it
 	// exists
 	if err != nil {
-		c.mu.RLock()
+		c.mu.Lock()
 		for _, req := range c.calls {
 			// we need to send the error to all waiting queries, put the state
 			// of this conn into not active so that it can not execute any queries.
@@ -441,11 +537,11 @@ func (c *Conn) closeWithError(err error) {
 			case <-req.timeout:
 			}
 		}
-		c.mu.RUnlock()
+		c.mu.Unlock()
 	}
 
 	// if error was nil then unblock the quit channel
-	close(c.quit)
+	c.cancel()
 	cerr := c.close()
 
 	if err != nil {
@@ -467,10 +563,10 @@ func (c *Conn) Close() {
 // Serve starts the stream multiplexer for this connection, which is required
 // to execute any queries. This method runs as long as the connection is
 // open and is therefore usually called in a separate goroutine.
-func (c *Conn) serve() {
+func (c *Conn) serve(ctx context.Context) {
 	var err error
 	for err == nil {
-		err = c.recv()
+		err = c.recv(ctx)
 	}
 
 	c.closeWithError(err)
@@ -495,7 +591,54 @@ func (p *protocolError) Error() string {
 	return fmt.Sprintf("gocql: received unexpected frame on stream %d: %v", p.frame.Header().stream, p.frame)
 }
 
-func (c *Conn) recv() error {
+func (c *Conn) heartBeat(ctx context.Context) {
+	sleepTime := 1 * time.Second
+	timer := time.NewTimer(sleepTime)
+	defer timer.Stop()
+
+	var failures int
+
+	for {
+		if failures > 5 {
+			c.closeWithError(fmt.Errorf("gocql: heartbeat failed"))
+			return
+		}
+
+		timer.Reset(sleepTime)
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+		}
+
+		framer, err := c.exec(context.Background(), &writeOptionsFrame{}, nil)
+		if err != nil {
+			failures++
+			continue
+		}
+
+		resp, err := framer.parseFrame()
+		if err != nil {
+			// invalid frame
+			failures++
+			continue
+		}
+
+		switch resp.(type) {
+		case *supportedFrame:
+			// Everything ok
+			sleepTime = 5 * time.Second
+			failures = 0
+		case error:
+			// TODO: should we do something here?
+		default:
+			panic(fmt.Sprintf("gocql: unknown frame in response to options: %T", resp))
+		}
+	}
+}
+
+func (c *Conn) recv(ctx context.Context) error {
 	// not safe for concurrent reads
 
 	// read a full header, ignore timeouts, as this is being ran in a loop
@@ -521,6 +664,7 @@ func (c *Conn) recv() error {
 			Length:  int32(head.length),
 			Start:   headStartTime,
 			End:     headEndTime,
+			Host:    c.host,
 		})
 	}
 
@@ -552,12 +696,15 @@ func (c *Conn) recv() error {
 		}
 	}
 
-	c.mu.RLock()
+	c.mu.Lock()
 	call, ok := c.calls[head.stream]
-	c.mu.RUnlock()
+	delete(c.calls, head.stream)
+	c.mu.Unlock()
 	if call == nil || call.framer == nil || !ok {
-		Logger.Printf("gocql: received response for stream which has no handler: header=%v\n", head)
+		c.logger.Printf("gocql: received response for stream which has no handler: header=%v\n", head)
 		return c.discardFrame(head)
+	} else if head.stream != call.streamID {
+		panic(fmt.Sprintf("call has incorrect streamID: got %d expected %d", call.streamID, head.stream))
 	}
 
 	err = call.framer.readFrame(&head)
@@ -574,30 +721,19 @@ func (c *Conn) recv() error {
 	select {
 	case call.resp <- err:
 	case <-call.timeout:
-		c.releaseStream(head.stream)
-	case <-c.quit:
+		c.releaseStream(call)
+	case <-ctx.Done():
 	}
 
 	return nil
 }
 
-func (c *Conn) releaseStream(stream int) {
-	c.mu.Lock()
-	call := c.calls[stream]
-	if call != nil && stream != call.streamID {
-		panic(fmt.Sprintf("attempt to release streamID with invalid stream: %d -> %+v\n", stream, call))
-	} else if call == nil {
-		panic(fmt.Sprintf("releasing a stream not in use: %d", stream))
-	}
-	delete(c.calls, stream)
-	c.mu.Unlock()
-
+func (c *Conn) releaseStream(call *callReq) {
 	if call.timer != nil {
 		call.timer.Stop()
 	}
 
-	streamPool.Put(call)
-	c.streams.Clear(stream)
+	c.streams.Clear(call.streamID)
 }
 
 func (c *Conn) handleTimeout() {
@@ -605,16 +741,6 @@ func (c *Conn) handleTimeout() {
 		c.closeWithError(ErrTooManyTimeouts)
 	}
 }
-
-var (
-	streamPool = sync.Pool{
-		New: func() interface{} {
-			return &callReq{
-				resp: make(chan error),
-			}
-		},
-	}
-)
 
 type callReq struct {
 	// could use a waitgroup but this allows us to do timeouts on the read/send
@@ -641,19 +767,20 @@ func (c *deadlineWriter) Write(p []byte) (int, error) {
 	return c.w.Write(p)
 }
 
-func newWriteCoalescer(w io.Writer, d time.Duration, quit <-chan struct{}) *writeCoalescer {
+func newWriteCoalescer(conn net.Conn, timeout time.Duration, d time.Duration, quit <-chan struct{}) *writeCoalescer {
 	wc := &writeCoalescer{
 		writeCh: make(chan struct{}), // TODO: could this be sync?
 		cond:    sync.NewCond(&sync.Mutex{}),
-		w:       w,
+		c:       conn,
 		quit:    quit,
+		timeout: timeout,
 	}
 	go wc.writeFlusher(d)
 	return wc
 }
 
 type writeCoalescer struct {
-	w io.Writer
+	c net.Conn
 
 	quit    <-chan struct{}
 	writeCh chan struct{}
@@ -662,6 +789,7 @@ type writeCoalescer struct {
 	// cond waits for the buffer to be flushed
 	cond    *sync.Cond
 	buffers net.Buffers
+	timeout time.Duration
 
 	// result of the write
 	err error
@@ -673,10 +801,14 @@ func (w *writeCoalescer) flushLocked() {
 		return
 	}
 
+	if w.timeout > 0 {
+		w.c.SetWriteDeadline(time.Now().Add(w.timeout))
+	}
+
 	// Given we are going to do a fanout n is useless and according to
 	// the docs WriteTo should return 0 and err or bytes written and
 	// no error.
-	_, w.err = w.buffers.WriteTo(w.w)
+	_, w.err = w.buffers.WriteTo(w.c)
 	if w.err != nil {
 		w.buffers = nil
 	}
@@ -757,6 +889,10 @@ func (w *writeCoalescer) writeFlusher(interval time.Duration) {
 }
 
 func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*framer, error) {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, ctxErr
+	}
+
 	// TODO: move tracer onto conn
 	stream, ok := c.streams.GetStream()
 	if !ok {
@@ -766,10 +902,12 @@ func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*frame
 	// resp is basically a waiting semaphore protecting the framer
 	framer := newFramer(c, c, c.compressor, c.version)
 
-	call := streamPool.Get().(*callReq)
-	call.framer = framer
-	call.timeout = make(chan struct{})
-	call.streamID = stream
+	call := &callReq{
+		framer:   framer,
+		timeout:  make(chan struct{}),
+		streamID: stream,
+		resp:     make(chan error),
+	}
 
 	c.mu.Lock()
 	existingCall := c.calls[stream]
@@ -833,7 +971,7 @@ func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*frame
 				// this is because the request is still outstanding and we have
 				// been handed another error from another stream which caused the
 				// connection to close.
-				c.releaseStream(stream)
+				c.releaseStream(call)
 			}
 			return nil, err
 		}
@@ -844,7 +982,7 @@ func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*frame
 	case <-ctxDone:
 		close(call.timeout)
 		return nil, ctx.Err()
-	case <-c.quit:
+	case <-c.ctx.Done():
 		return nil, ErrConnectionClosed
 	}
 
@@ -854,7 +992,7 @@ func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*frame
 	//
 	// Ensure that the stream is not released if there are potentially outstanding
 	// requests on the stream to prevent nil pointer dereferences in recv().
-	defer c.releaseStream(stream)
+	defer c.releaseStream(call)
 
 	if v := framer.header.version.version(); v != c.version {
 		return nil, NewErrProtocol("unexpected protocol version in response: got %d expected %d", v, c.version)
@@ -870,8 +1008,8 @@ type preparedStatment struct {
 }
 
 type inflightPrepare struct {
-	wg  sync.WaitGroup
-	err error
+	done chan struct{}
+	err  error
 
 	preparedStatment *preparedStatment
 }
@@ -879,69 +1017,76 @@ type inflightPrepare struct {
 func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer) (*preparedStatment, error) {
 	stmtCacheKey := c.session.stmtsLRU.keyFor(c.addr, c.currentKeyspace, stmt)
 	flight, ok := c.session.stmtsLRU.execIfMissing(stmtCacheKey, func(lru *lru.Cache) *inflightPrepare {
-		flight := new(inflightPrepare)
-		flight.wg.Add(1)
+		flight := &inflightPrepare{
+			done: make(chan struct{}),
+		}
 		lru.Add(stmtCacheKey, flight)
 		return flight
 	})
 
-	if ok {
-		flight.wg.Wait()
+	if !ok {
+		go func() {
+			defer close(flight.done)
+
+			prep := &writePrepareFrame{
+				statement: stmt,
+			}
+			if c.version > protoVersion4 {
+				prep.keyspace = c.currentKeyspace
+			}
+
+			// we won the race to do the load, if our context is canceled we shouldnt
+			// stop the load as other callers are waiting for it but this caller should get
+			// their context cancelled error.
+			framer, err := c.exec(c.ctx, prep, tracer)
+			if err != nil {
+				flight.err = err
+				c.session.stmtsLRU.remove(stmtCacheKey)
+				return
+			}
+
+			frame, err := framer.parseFrame()
+			if err != nil {
+				flight.err = err
+				c.session.stmtsLRU.remove(stmtCacheKey)
+				return
+			}
+
+			// TODO(zariel): tidy this up, simplify handling of frame parsing so its not duplicated
+			// everytime we need to parse a frame.
+			if len(framer.traceID) > 0 && tracer != nil {
+				tracer.Trace(framer.traceID)
+			}
+
+			switch x := frame.(type) {
+			case *resultPreparedFrame:
+				flight.preparedStatment = &preparedStatment{
+					// defensively copy as we will recycle the underlying buffer after we
+					// return.
+					id: copyBytes(x.preparedID),
+					// the type info's should _not_ have a reference to the framers read buffer,
+					// therefore we can just copy them directly.
+					request:  x.reqMeta,
+					response: x.respMeta,
+				}
+			case error:
+				flight.err = x
+			default:
+				flight.err = NewErrProtocol("Unknown type in response to prepare frame: %s", x)
+			}
+
+			if flight.err != nil {
+				c.session.stmtsLRU.remove(stmtCacheKey)
+			}
+		}()
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-flight.done:
 		return flight.preparedStatment, flight.err
 	}
-
-	prep := &writePrepareFrame{
-		statement: stmt,
-	}
-	if c.version > protoVersion4 {
-		prep.keyspace = c.currentKeyspace
-	}
-
-	framer, err := c.exec(ctx, prep, tracer)
-	if err != nil {
-		flight.err = err
-		flight.wg.Done()
-		c.session.stmtsLRU.remove(stmtCacheKey)
-		return nil, err
-	}
-
-	frame, err := framer.parseFrame()
-	if err != nil {
-		flight.err = err
-		flight.wg.Done()
-		c.session.stmtsLRU.remove(stmtCacheKey)
-		return nil, err
-	}
-
-	// TODO(zariel): tidy this up, simplify handling of frame parsing so its not duplicated
-	// everytime we need to parse a frame.
-	if len(framer.traceID) > 0 && tracer != nil {
-		tracer.Trace(framer.traceID)
-	}
-
-	switch x := frame.(type) {
-	case *resultPreparedFrame:
-		flight.preparedStatment = &preparedStatment{
-			// defensively copy as we will recycle the underlying buffer after we
-			// return.
-			id: copyBytes(x.preparedID),
-			// the type info's should _not_ have a reference to the framers read buffer,
-			// therefore we can just copy them directly.
-			request:  x.reqMeta,
-			response: x.respMeta,
-		}
-	case error:
-		flight.err = x
-	default:
-		flight.err = NewErrProtocol("Unknown type in response to prepare frame: %s", x)
-	}
-	flight.wg.Done()
-
-	if flight.err != nil {
-		c.session.stmtsLRU.remove(stmtCacheKey)
-	}
-
-	return flight.preparedStatment, flight.err
 }
 
 func marshalQueryValue(typ TypeInfo, value interface{}, dst *queryValues) error {
@@ -989,7 +1134,7 @@ func (c *Conn) executeQuery(ctx context.Context, qry *Query) *Iter {
 		info  *preparedStatment
 	)
 
-	if qry.shouldPrepare() {
+	if !qry.skipPrepare && qry.shouldPrepare() {
 		// Prepare all DML queries. Other queries can not be prepared.
 		var err error
 		info, err = c.prepareStatement(ctx, qry.stmt, qry.trace)
@@ -997,11 +1142,8 @@ func (c *Conn) executeQuery(ctx context.Context, qry *Query) *Iter {
 			return &Iter{err: err}
 		}
 
-		var values []interface{}
-
-		if qry.binding == nil {
-			values = qry.values
-		} else {
+		values := qry.values
+		if qry.binding != nil {
 			values, err = qry.binding(&QueryInfo{
 				Id:          info.id,
 				Args:        info.request.columns,
@@ -1079,12 +1221,16 @@ func (c *Conn) executeQuery(ctx context.Context, qry *Query) *Iter {
 		}
 
 		if x.meta.morePages() && !qry.disableAutoPage {
+			newQry := new(Query)
+			*newQry = *qry
+			newQry.pageState = copyBytes(x.meta.pagingState)
+			newQry.metrics = &queryMetrics{m: make(map[string]*hostMetrics)}
+
 			iter.next = &nextIter{
-				qry: qry,
+				qry: newQry,
 				pos: int((1 - qry.prefetch) * float64(x.numRows)),
 			}
 
-			iter.next.qry.pageState = copyBytes(x.meta.pagingState)
 			if iter.next.pos < 1 {
 				iter.next.pos = 1
 			}
@@ -1097,7 +1243,7 @@ func (c *Conn) executeQuery(ctx context.Context, qry *Query) *Iter {
 		iter := &Iter{framer: framer}
 		if err := c.awaitSchemaAgreement(ctx); err != nil {
 			// TODO: should have this behind a flag
-			Logger.Println(err)
+			c.logger.Println(err)
 		}
 		// dont return an error from this, might be a good idea to give a warning
 		// though. The impact of this returning an error would be that the cluster
@@ -1105,11 +1251,8 @@ func (c *Conn) executeQuery(ctx context.Context, qry *Query) *Iter {
 		return iter
 	case *RequestErrUnprepared:
 		stmtCacheKey := c.session.stmtsLRU.keyFor(c.addr, c.currentKeyspace, qry.stmt)
-		if c.session.stmtsLRU.remove(stmtCacheKey) {
-			return c.executeQuery(ctx, qry)
-		}
-
-		return &Iter{err: x, framer: framer}
+		c.session.stmtsLRU.evictPreparedID(stmtCacheKey, x.StatementId)
+		return c.executeQuery(ctx, qry)
 	case error:
 		return &Iter{err: x, framer: framer}
 	default:
@@ -1141,9 +1284,9 @@ func (c *Conn) AvailableStreams() int {
 
 func (c *Conn) UseKeyspace(keyspace string) error {
 	q := &writeQueryFrame{statement: `USE "` + keyspace + `"`}
-	q.params.consistency = Any
+	q.params.consistency = c.session.cons
 
-	framer, err := c.exec(context.Background(), q, nil)
+	framer, err := c.exec(c.ctx, q, nil)
 	if err != nil {
 		return err
 	}
@@ -1189,7 +1332,7 @@ func (c *Conn) executeBatch(ctx context.Context, batch *Batch) *Iter {
 		b := &req.statements[i]
 
 		if len(entry.Args) > 0 || entry.binding != nil {
-			info, err := c.prepareStatement(batch.Context(), entry.Stmt, nil)
+			info, err := c.prepareStatement(batch.Context(), entry.Stmt, batch.trace)
 			if err != nil {
 				return &Iter{err: err}
 			}
@@ -1231,8 +1374,7 @@ func (c *Conn) executeBatch(ctx context.Context, batch *Batch) *Iter {
 		}
 	}
 
-	// TODO: should batch support tracing?
-	framer, err := c.exec(batch.Context(), req, nil)
+	framer, err := c.exec(batch.Context(), req, batch.trace)
 	if err != nil {
 		return &Iter{err: err}
 	}
@@ -1242,6 +1384,10 @@ func (c *Conn) executeBatch(ctx context.Context, batch *Batch) *Iter {
 		return &Iter{err: err, framer: framer}
 	}
 
+	if len(framer.traceID) > 0 && batch.trace != nil {
+		batch.trace.Trace(framer.traceID)
+	}
+
 	switch x := resp.(type) {
 	case *resultVoidFrame:
 		return &Iter{}
@@ -1249,14 +1395,9 @@ func (c *Conn) executeBatch(ctx context.Context, batch *Batch) *Iter {
 		stmt, found := stmts[string(x.StatementId)]
 		if found {
 			key := c.session.stmtsLRU.keyFor(c.addr, c.currentKeyspace, stmt)
-			c.session.stmtsLRU.remove(key)
+			c.session.stmtsLRU.evictPreparedID(key, x.StatementId)
 		}
-
-		if found {
-			return c.executeBatch(ctx, batch)
-		} else {
-			return &Iter{err: x, framer: framer}
-		}
+		return c.executeBatch(ctx, batch)
 	case *resultRowsFrame:
 		iter := &Iter{
 			meta:    x.meta,
@@ -1273,18 +1414,22 @@ func (c *Conn) executeBatch(ctx context.Context, batch *Batch) *Iter {
 }
 
 func (c *Conn) query(ctx context.Context, statement string, values ...interface{}) (iter *Iter) {
-	q := c.session.Query(statement, values...).Consistency(One)
-	q.trace = nil
+	q := c.session.Query(statement, values...).Consistency(One).Trace(nil)
+	q.skipPrepare = true
+	q.disableSkipMetadata = true
+	// we want to keep the query on this connection
+	q.conn = c
 	return c.executeQuery(ctx, q)
 }
 
 func (c *Conn) awaitSchemaAgreement(ctx context.Context) (err error) {
 	const (
-		peerSchemas  = "SELECT schema_version, peer FROM system.peers"
+		peerSchemas  = "SELECT * FROM system.peers"
 		localSchemas = "SELECT schema_version FROM system.local WHERE key='local'"
 	)
 
 	var versions map[string]struct{}
+	var schemaVersion string
 
 	endDeadline := time.Now().Add(c.session.cfg.MaxWaitSchemaAgreement)
 	for time.Now().Before(endDeadline) {
@@ -1292,16 +1437,22 @@ func (c *Conn) awaitSchemaAgreement(ctx context.Context) (err error) {
 
 		versions = make(map[string]struct{})
 
-		var schemaVersion string
-		var peer string
-		for iter.Scan(&schemaVersion, &peer) {
-			if schemaVersion == "" {
-				Logger.Printf("skipping peer entry with empty schema_version: peer=%q", peer)
+		rows, err := iter.SliceMap()
+		if err != nil {
+			goto cont
+		}
+
+		for _, row := range rows {
+			host, err := c.session.hostInfoFromMap(row, &HostInfo{connectAddress: c.host.ConnectAddress(), port: c.session.cfg.Port})
+			if err != nil {
+				goto cont
+			}
+			if !isValidPeer(host) || host.schemaVersion == "" {
+				c.logger.Printf("invalid peer or peer with empty schema_version: peer=%q", host)
 				continue
 			}
 
-			versions[schemaVersion] = struct{}{}
-			schemaVersion = ""
+			versions[host.schemaVersion] = struct{}{}
 		}
 
 		if err = iter.Close(); err != nil {
@@ -1352,7 +1503,7 @@ func (c *Conn) localHostInfo(ctx context.Context) (*HostInfo, error) {
 	port := c.conn.RemoteAddr().(*net.TCPAddr).Port
 
 	// TODO(zariel): avoid doing this here
-	host, err := c.session.hostInfoFromMap(row, port)
+	host, err := c.session.hostInfoFromMap(row, &HostInfo{connectAddress: c.host.connectAddress, port: port})
 	if err != nil {
 		return nil, err
 	}

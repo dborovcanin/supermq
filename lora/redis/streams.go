@@ -1,25 +1,30 @@
 package redis
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/lora"
 )
 
 const (
-	protocol = "lora"
+	keyType   = "lora"
+	keyDevEUI = "dev_eui"
+	keyAppID  = "app_id"
 
 	group  = "mainflux.lora"
 	stream = "mainflux.things"
 
-	thingPrefix = "thing."
-	thingCreate = thingPrefix + "create"
-	thingUpdate = thingPrefix + "update"
-	thingRemove = thingPrefix + "remove"
+	thingPrefix     = "thing."
+	thingCreate     = thingPrefix + "create"
+	thingUpdate     = thingPrefix + "update"
+	thingRemove     = thingPrefix + "remove"
+	thingConnect    = thingPrefix + "connect"
+	thingDisconnect = thingPrefix + "disconnect"
 
 	channelPrefix = "channel."
 	channelCreate = channelPrefix + "create"
@@ -42,7 +47,7 @@ var (
 // Subscriber represents event source for things and channels provisioning.
 type Subscriber interface {
 	// Subscribes to geven subject and receives events.
-	Subscribe(string) error
+	Subscribe(context.Context, string) error
 }
 
 type eventStore struct {
@@ -62,14 +67,14 @@ func NewEventStore(svc lora.Service, client *redis.Client, consumer string, log 
 	}
 }
 
-func (es eventStore) Subscribe(subject string) error {
-	err := es.client.XGroupCreateMkStream(stream, group, "$").Err()
+func (es eventStore) Subscribe(ctx context.Context, subject string) error {
+	err := es.client.XGroupCreateMkStream(ctx, stream, group, "$").Err()
 	if err != nil && err.Error() != exists {
 		return err
 	}
 
 	for {
-		streams, err := es.client.XReadGroup(&redis.XReadGroupArgs{
+		streams, err := es.client.XReadGroup(ctx, &redis.XReadGroupArgs{
 			Group:    group,
 			Consumer: es.consumer,
 			Streams:  []string{stream, ">"},
@@ -90,40 +95,47 @@ func (es eventStore) Subscribe(subject string) error {
 					err = derr
 					break
 				}
-				err = es.handleCreateThing(cte)
+				err = es.svc.CreateThing(ctx, cte.id, cte.loraDevEUI)
 			case thingUpdate:
 				ute, derr := decodeCreateThing(event)
 				if derr != nil {
 					err = derr
 					break
 				}
-				err = es.handleCreateThing(ute)
-			case thingRemove:
-				rte := decodeRemoveThing(event)
-				err = es.handleRemoveThing(rte)
+				err = es.svc.CreateThing(ctx, ute.id, ute.loraDevEUI)
+
 			case channelCreate:
 				cce, derr := decodeCreateChannel(event)
 				if derr != nil {
 					err = derr
 					break
 				}
-				err = es.handleCreateChannel(cce)
+				err = es.svc.CreateChannel(ctx, cce.id, cce.loraAppID)
 			case channelUpdate:
 				uce, derr := decodeCreateChannel(event)
 				if derr != nil {
 					err = derr
 					break
 				}
-				err = es.handleCreateChannel(uce)
+				err = es.svc.CreateChannel(ctx, uce.id, uce.loraAppID)
+			case thingRemove:
+				rte := decodeRemoveThing(event)
+				err = es.svc.RemoveThing(ctx, rte.id)
 			case channelRemove:
 				rce := decodeRemoveChannel(event)
-				err = es.handleRemoveChannel(rce)
+				err = es.svc.RemoveChannel(ctx, rce.id)
+			case thingConnect:
+				tce := decodeConnectionThing(event)
+				err = es.svc.ConnectThing(ctx, tce.chanID, tce.thingID)
+			case thingDisconnect:
+				tde := decodeConnectionThing(event)
+				err = es.svc.DisconnectThing(ctx, tde.chanID, tde.thingID)
 			}
 			if err != nil && err != errMetadataType {
 				es.logger.Warn(fmt.Sprintf("Failed to handle event sourcing: %s", err.Error()))
 				break
 			}
-			es.client.XAck(stream, group, msg.ID)
+			es.client.XAck(ctx, stream, group, msg.ID)
 		}
 	}
 }
@@ -139,7 +151,7 @@ func decodeCreateThing(event map[string]interface{}) (createThingEvent, error) {
 		id: read(event, "id", ""),
 	}
 
-	m, ok := metadata["lora"]
+	m, ok := metadata[keyType]
 	if !ok {
 		return createThingEvent{}, errMetadataType
 	}
@@ -149,7 +161,7 @@ func decodeCreateThing(event map[string]interface{}) (createThingEvent, error) {
 		return createThingEvent{}, errMetadataFormat
 	}
 
-	val, ok := lm["devEUI"].(string)
+	val, ok := lm[keyDevEUI].(string)
 	if !ok {
 		return createThingEvent{}, errMetadataDevEUI
 	}
@@ -175,7 +187,7 @@ func decodeCreateChannel(event map[string]interface{}) (createChannelEvent, erro
 		id: read(event, "id", ""),
 	}
 
-	m, ok := metadata["lora"]
+	m, ok := metadata[keyType]
 	if !ok {
 		return createChannelEvent{}, errMetadataType
 	}
@@ -185,7 +197,7 @@ func decodeCreateChannel(event map[string]interface{}) (createChannelEvent, erro
 		return createChannelEvent{}, errMetadataFormat
 	}
 
-	val, ok := lm["appID"].(string)
+	val, ok := lm[keyAppID].(string)
 	if !ok {
 		return createChannelEvent{}, errMetadataAppID
 	}
@@ -194,26 +206,17 @@ func decodeCreateChannel(event map[string]interface{}) (createChannelEvent, erro
 	return cce, nil
 }
 
+func decodeConnectionThing(event map[string]interface{}) connectionThingEvent {
+	return connectionThingEvent{
+		chanID:  read(event, "chan_id", ""),
+		thingID: read(event, "thing_id", ""),
+	}
+}
+
 func decodeRemoveChannel(event map[string]interface{}) removeChannelEvent {
 	return removeChannelEvent{
 		id: read(event, "id", ""),
 	}
-}
-
-func (es eventStore) handleCreateThing(cte createThingEvent) error {
-	return es.svc.CreateThing(cte.id, cte.loraDevEUI)
-}
-
-func (es eventStore) handleRemoveThing(rte removeThingEvent) error {
-	return es.svc.RemoveThing(rte.id)
-}
-
-func (es eventStore) handleCreateChannel(cce createChannelEvent) error {
-	return es.svc.CreateChannel(cce.id, cce.loraAppID)
-}
-
-func (es eventStore) handleRemoveChannel(rce removeChannelEvent) error {
-	return es.svc.RemoveChannel(rce.id)
 }
 
 func read(event map[string]interface{}, key, def string) string {

@@ -15,6 +15,8 @@ import (
 
 	"github.com/opentracing/opentracing-go/mocktracer"
 
+	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/things"
 	httpapi "github.com/mainflux/mainflux/things/api/auth/http"
 	"github.com/mainflux/mainflux/things/mocks"
@@ -27,7 +29,6 @@ const (
 	email       = "user@example.com"
 	token       = "token"
 	wrong       = "wrong_value"
-	wrongID     = "0"
 )
 
 var (
@@ -66,19 +67,21 @@ func toJSON(data interface{}) string {
 }
 
 func newService(tokens map[string]string) things.Service {
-	users := mocks.NewUsersService(tokens)
+	policies := []mocks.MockSubjectSet{{Object: "users", Relation: "member"}}
+	auth := mocks.NewAuthService(tokens, map[string][]mocks.MockSubjectSet{email: policies})
 	conns := make(chan mocks.Connection)
 	thingsRepo := mocks.NewThingRepository(conns)
 	channelsRepo := mocks.NewChannelRepository(thingsRepo, conns)
 	chanCache := mocks.NewChannelCache()
 	thingCache := mocks.NewThingCache()
-	idp := mocks.NewIdentityProvider()
+	idProvider := uuid.NewMock()
 
-	return things.New(users, thingsRepo, channelsRepo, chanCache, thingCache, idp)
+	return things.New(auth, thingsRepo, channelsRepo, chanCache, thingCache, idProvider)
 }
 
 func newServer(svc things.Service) *httptest.Server {
-	mux := httpapi.MakeHandler(mocktracer.New(), svc)
+	logger := logger.NewMock()
+	mux := httpapi.MakeHandler(mocktracer.New(), svc, logger)
 	return httptest.NewServer(mux)
 }
 
@@ -87,11 +90,11 @@ func TestIdentify(t *testing.T) {
 	ts := newServer(svc)
 	defer ts.Close()
 
-	sths, err := svc.CreateThings(context.Background(), token, thing)
+	ths, err := svc.CreateThings(context.Background(), token, thing)
 	require.Nil(t, err, fmt.Sprintf("failed to create thing: %s", err))
-	sth := sths[0]
+	th := ths[0]
 
-	ir := identifyReq{Token: sth.Key}
+	ir := identifyReq{Token: th.Key}
 	data := toJSON(ir)
 
 	nonexistentData := toJSON(identifyReq{Token: wrong})
@@ -109,7 +112,7 @@ func TestIdentify(t *testing.T) {
 		"identify non-existent thing": {
 			contentType: contentType,
 			req:         nonexistentData,
-			status:      http.StatusForbidden,
+			status:      http.StatusNotFound,
 		},
 		"identify with missing content type": {
 			contentType: wrong,
@@ -119,7 +122,7 @@ func TestIdentify(t *testing.T) {
 		"identify with empty JSON request": {
 			contentType: contentType,
 			req:         "{}",
-			status:      http.StatusForbidden,
+			status:      http.StatusUnauthorized,
 		},
 		"identify with invalid JSON request": {
 			contentType: contentType,
@@ -147,21 +150,20 @@ func TestCanAccessByKey(t *testing.T) {
 	ts := newServer(svc)
 	defer ts.Close()
 
-	sths, err := svc.CreateThings(context.Background(), token, thing)
+	ths, err := svc.CreateThings(context.Background(), token, thing)
 	require.Nil(t, err, fmt.Sprintf("failed to create thing: %s", err))
-	sth := sths[0]
+	th := ths[0]
 
-	schs, err := svc.CreateChannels(context.Background(), token, channel)
+	chs, err := svc.CreateChannels(context.Background(), token, channel)
 	require.Nil(t, err, fmt.Sprintf("failed to create channel: %s", err))
-	sch := schs[0]
+	ch := chs[0]
 
-	err = svc.Connect(context.Background(), token, []string{sch.ID}, []string{sth.ID})
+	err = svc.Connect(context.Background(), token, []string{ch.ID}, []string{th.ID})
 	require.Nil(t, err, fmt.Sprintf("failed to connect thing and channel: %s", err))
 
-	car := canAccessByKeyReq{
-		Token: sth.Key,
-	}
-	data := toJSON(car)
+	data := toJSON(canAccessByKeyReq{
+		Token: th.Key,
+	})
 
 	cases := map[string]struct {
 		contentType string
@@ -171,7 +173,7 @@ func TestCanAccessByKey(t *testing.T) {
 	}{
 		"check access for connected thing and channel": {
 			contentType: contentType,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         data,
 			status:      http.StatusOK,
 		},
@@ -183,26 +185,32 @@ func TestCanAccessByKey(t *testing.T) {
 		},
 		"check access with invalid content type": {
 			contentType: wrong,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         data,
 			status:      http.StatusUnsupportedMediaType,
 		},
 		"check access with empty JSON request": {
 			contentType: contentType,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         "{}",
-			status:      http.StatusForbidden,
+			status:      http.StatusUnauthorized,
 		},
 		"check access with invalid JSON request": {
 			contentType: contentType,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         "}",
 			status:      http.StatusBadRequest,
 		},
 		"check access with empty request": {
 			contentType: contentType,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         "",
+			status:      http.StatusBadRequest,
+		},
+		"check access with empty channel id": {
+			contentType: contentType,
+			chanID:      "",
+			req:         data,
 			status:      http.StatusBadRequest,
 		},
 	}
@@ -211,7 +219,7 @@ func TestCanAccessByKey(t *testing.T) {
 		req := testRequest{
 			client:      ts.Client(),
 			method:      http.MethodPost,
-			url:         fmt.Sprintf("%s/channels/%s/access-by-key", ts.URL, tc.chanID),
+			url:         fmt.Sprintf("%s/identify/channels/%s/access-by-key", ts.URL, tc.chanID),
 			contentType: tc.contentType,
 			body:        strings.NewReader(tc.req),
 		}
@@ -226,21 +234,20 @@ func TestCanAccessByID(t *testing.T) {
 	ts := newServer(svc)
 	defer ts.Close()
 
-	sths, err := svc.CreateThings(context.Background(), token, thing)
+	ths, err := svc.CreateThings(context.Background(), token, thing)
 	require.Nil(t, err, fmt.Sprintf("failed to create thing: %s", err))
-	sth := sths[0]
+	th := ths[0]
 
-	schs, err := svc.CreateChannels(context.Background(), token, channel)
+	chs, err := svc.CreateChannels(context.Background(), token, channel)
 	require.Nil(t, err, fmt.Sprintf("failed to create channel: %s", err))
-	sch := schs[0]
+	ch := chs[0]
 
-	err = svc.Connect(context.Background(), token, []string{sch.ID}, []string{sth.ID})
+	err = svc.Connect(context.Background(), token, []string{ch.ID}, []string{th.ID})
 	require.Nil(t, err, fmt.Sprintf("failed to connect thing and channel: %s", err))
 
-	car := canAccessByIDReq{
-		ThingID: sth.ID,
-	}
-	data := toJSON(car)
+	data := toJSON(canAccessByIDReq{
+		ThingID: th.ID,
+	})
 
 	cases := map[string]struct {
 		contentType string
@@ -250,7 +257,7 @@ func TestCanAccessByID(t *testing.T) {
 	}{
 		"check access for connected thing and channel": {
 			contentType: contentType,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         data,
 			status:      http.StatusOK,
 		},
@@ -262,26 +269,32 @@ func TestCanAccessByID(t *testing.T) {
 		},
 		"check access with invalid content type": {
 			contentType: wrong,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         data,
 			status:      http.StatusUnsupportedMediaType,
 		},
 		"check access with empty JSON request": {
 			contentType: contentType,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         "{}",
-			status:      http.StatusForbidden,
+			status:      http.StatusBadRequest,
 		},
 		"check access with invalid JSON request": {
 			contentType: contentType,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         "}",
 			status:      http.StatusBadRequest,
 		},
 		"check access with empty request": {
 			contentType: contentType,
-			chanID:      sch.ID,
+			chanID:      ch.ID,
 			req:         "",
+			status:      http.StatusBadRequest,
+		},
+		"check access with empty channel id": {
+			contentType: contentType,
+			chanID:      "",
+			req:         data,
 			status:      http.StatusBadRequest,
 		},
 	}
@@ -290,7 +303,7 @@ func TestCanAccessByID(t *testing.T) {
 		req := testRequest{
 			client:      ts.Client(),
 			method:      http.MethodPost,
-			url:         fmt.Sprintf("%s/channels/%s/access-by-id", ts.URL, tc.chanID),
+			url:         fmt.Sprintf("%s/identify/channels/%s/access-by-id", ts.URL, tc.chanID),
 			contentType: tc.contentType,
 			body:        strings.NewReader(tc.req),
 		}

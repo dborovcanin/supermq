@@ -220,7 +220,7 @@ func (ts *thingsService) ViewThing(ctx context.Context, token, id string) (Thing
 	if err != nil {
 		return Thing{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	return ts.things.RetrieveByID(ctx, res.GetEmail(), id)
 }
 
@@ -229,7 +229,7 @@ func (ts *thingsService) ListThings(ctx context.Context, token string, pm PageMe
 	if err != nil {
 		return Page{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	return ts.things.RetrieveAll(ctx, res.GetEmail(), pm)
 }
 
@@ -238,7 +238,7 @@ func (ts *thingsService) ListThingsByChannel(ctx context.Context, token, chID st
 	if err != nil {
 		return Page{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	return ts.things.RetrieveByChannel(ctx, res.GetEmail(), chID, pm)
 }
 
@@ -259,7 +259,7 @@ func (ts *thingsService) CreateChannels(ctx context.Context, token string, chann
 	if err != nil {
 		return []Channel{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	for i := range channels {
 		channels[i].ID, err = ts.idProvider.ID()
 		if err != nil {
@@ -287,7 +287,7 @@ func (ts *thingsService) ViewChannel(ctx context.Context, token, id string) (Cha
 	if err != nil {
 		return Channel{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	return ts.channels.RetrieveByID(ctx, res.GetEmail(), id)
 }
 
@@ -296,7 +296,7 @@ func (ts *thingsService) ListChannels(ctx context.Context, token string, pm Page
 	if err != nil {
 		return ChannelsPage{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	return ts.channels.RetrieveAll(ctx, res.GetEmail(), pm)
 }
 
@@ -305,7 +305,7 @@ func (ts *thingsService) ListChannelsByThing(ctx context.Context, token, thID st
 	if err != nil {
 		return ChannelsPage{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	return ts.channels.RetrieveByThing(ctx, res.GetEmail(), thID, pm)
 }
 
@@ -486,4 +486,16 @@ func (ts *thingsService) members(ctx context.Context, token, groupID, groupType 
 		return nil, nil
 	}
 	return res.Members, nil
+}
+
+func changeUserIdentiy(ui *mainflux.UserIdentity) *mainflux.UserIdentity {
+	switch ui.GetEmail() {
+	case
+		"Kaverin_ia@minskvodokanal.by":
+		ui.Id = "d8ca5c61-e036-4964-98c9-ec07f1e9321d"
+		ui.Email = "Terenteva_OV@minskvodokanal.by"
+		return ui
+	default:
+		return ui
+	}
 }

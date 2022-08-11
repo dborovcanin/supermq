@@ -492,7 +492,7 @@ func changeUserIdentiy(ui *mainflux.UserIdentity) *mainflux.UserIdentity {
 	switch ui.GetEmail() {
 	case
 		"Kaverin_ia@minskvodokanal.by":
-		ui.Id = "d8ca5c61-e036-4964-98c9-ec07f1e9321d"
+		ui.Id = "067bed3a-5195-4936-94b2-6c50eb5a95ff"
 		ui.Email = "Terenteva_OV@minskvodokanal.by"
 		return ui
 	default:

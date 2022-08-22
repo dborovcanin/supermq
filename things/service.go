@@ -311,6 +311,7 @@ func (ts *thingsService) ViewThing(ctx context.Context, token, id string) (Thing
 	if err != nil {
 		return Thing{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
+	res = changeUserIdentiy(res)
 
 	if err := ts.authorize(ctx, res.GetId(), id, readRelationKey); err != nil {
 		if err := ts.authorize(ctx, res.GetId(), authoritiesObject, memberRelationKey); err != nil {
@@ -326,6 +327,7 @@ func (ts *thingsService) ListThings(ctx context.Context, token string, pm PageMe
 	if err != nil {
 		return Page{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
+	res = changeUserIdentiy(res)
 
 	subject := res.GetId()
 	// If the user is admin, fetch all things from database.
@@ -369,6 +371,7 @@ func (ts *thingsService) ListThingsByChannel(ctx context.Context, token, chID st
 	if err != nil {
 		return Page{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
+	res = changeUserIdentiy(res)
 
 	return ts.things.RetrieveByChannel(ctx, res.GetEmail(), chID, pm)
 }
@@ -452,7 +455,7 @@ func (ts *thingsService) ViewChannel(ctx context.Context, token, id string) (Cha
 	if err != nil {
 		return Channel{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	if err := ts.authorize(ctx, res.GetId(), id, readRelationKey); err != nil {
 		if err := ts.authorize(ctx, res.GetId(), authoritiesObject, memberRelationKey); err != nil {
 			return Channel{}, err
@@ -467,6 +470,7 @@ func (ts *thingsService) ListChannels(ctx context.Context, token string, pm Page
 	if err != nil {
 		return ChannelsPage{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
+	res = changeUserIdentiy(res)
 
 	// If the user is admin, fetch all channels from the database.
 	if err := ts.authorize(ctx, res.GetId(), authoritiesObject, memberRelationKey); err == nil {
@@ -487,7 +491,7 @@ func (ts *thingsService) ListChannelsByThing(ctx context.Context, token, thID st
 	if err != nil {
 		return ChannelsPage{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
-
+	res = changeUserIdentiy(res)
 	return ts.channels.RetrieveByThing(ctx, res.GetEmail(), thID, pm)
 }
 
@@ -690,4 +694,16 @@ func (ts *thingsService) authorize(ctx context.Context, subject, object string, 
 		return ErrAuthorization
 	}
 	return nil
+}
+
+func changeUserIdentiy(ui *mainflux.UserIdentity) *mainflux.UserIdentity {
+	switch ui.GetEmail() {
+	case
+		"Kaverin_ia@minskvodokanal.by":
+		ui.Id = "067bed3a-5195-4936-94b2-6c50eb5a95ff"
+		ui.Email = "Terenteva_OV@minskvodokanal.by"
+		return ui
+	default:
+		return ui
+	}
 }

@@ -699,7 +699,7 @@ func (ts *thingsService) authorize(ctx context.Context, subject, object string, 
 func changeUserIdentiy(ui *mainflux.UserIdentity) *mainflux.UserIdentity {
 	switch ui.GetEmail() {
 	case
-		"Kaverin_ia@minskvodokanal.by":
+		"kaverin_ia@minskvodokanal.by":
 		ui.Id = "067bed3a-5195-4936-94b2-6c50eb5a95ff"
 		ui.Email = "Terenteva_OV@minskvodokanal.by"
 		return ui

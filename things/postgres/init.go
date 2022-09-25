@@ -69,7 +69,7 @@ func migrateDB(db *sqlx.DB) error {
 						thing_id      UUID,
 						thing_owner   VARCHAR(254),
 						FOREIGN KEY (channel_id, channel_owner) REFERENCES channels (id, owner) ON DELETE CASCADE ON UPDATE CASCADE,
-						FOREIGN KEY (thing_id, thing_owner) REFERENCES things (id, owner) ON DELETE CASCADE ON UPDATE CASCADE,
+						FOREIGN KEY (thing_id) REFERENCES things (id) ON DELETE CASCADE ON UPDATE CASCADE,
 						PRIMARY KEY (channel_id, channel_owner, thing_id, thing_owner)
 					)`,
 				},

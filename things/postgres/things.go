@@ -271,12 +271,17 @@ func (tr thingRepository) RetrieveAll(ctx context.Context, owner string, pm thin
 		query = append(query, ownerQuery)
 	}
 
+	var ids string
+	if len(pm.SharedThings) > 0 {
+		ids = fmt.Sprintf("id IN ('%s')", strings.Join(pm.SharedThings, "', '"))
+		query = append(query, ids)
+	}
 	var whereClause string
 	if len(query) > 0 {
 		whereClause = fmt.Sprintf(" WHERE %s", strings.Join(query, " AND "))
 	}
 
-	q := fmt.Sprintf(`SELECT id, name, key, metadata FROM things
+	q := fmt.Sprintf(`SELECT  id, name, key, metadata FROM things
 	      %s ORDER BY %s %s LIMIT :limit OFFSET :offset;`, whereClause, oq, dq)
 	params := map[string]interface{}{
 		"owner":    owner,
@@ -476,6 +481,21 @@ func (tr thingRepository) searchMeters(ctx context.Context, devices []string) (t
 func (tr thingRepository) RetrieveByChannel(ctx context.Context, owner, chID string, pm things.PageMetadata) (things.Page, error) {
 	oq := getConnOrderQuery(pm.Order, "th")
 	dq := getDirQuery(pm.Dir)
+	ownerQuery := getOwnerQuery(pm.FetchSharedThings)
+
+	var query []string
+	if ownerQuery != "" {
+		query = append(query, fmt.Sprintf("th.%s", ownerQuery))
+	}
+	var ids string
+	if len(pm.SharedThings) > 0 {
+		ids = fmt.Sprintf("th.id IN ('%s')", strings.Join(pm.SharedThings, "', '"))
+		query = append(query, ids)
+	}
+	var thingWhereClause string
+	if len(query) > 0 {
+		thingWhereClause = fmt.Sprintf(" WHERE %s", strings.Join(query, " AND "))
+	}
 
 	// Verify if UUID format is valid to avoid internal Postgres error
 	if _, err := uuid.FromString(chID); err != nil {
@@ -485,30 +505,34 @@ func (tr thingRepository) RetrieveByChannel(ctx context.Context, owner, chID str
 	var q, qc string
 	switch pm.Disconnected {
 	case true:
+		if thingWhereClause == "" {
+			thingWhereClause = " WHERE "
+		}
 		q = fmt.Sprintf(`SELECT id, name, key, metadata
 		        FROM things th
-		        WHERE th.owner = :owner AND th.id NOT IN
+		        %s AND th.id NOT IN
 		        (SELECT id FROM things th
 		          INNER JOIN connections conn
 		          ON th.id = conn.thing_id
-		          WHERE th.owner = :owner AND conn.channel_id = :channel)
+		          WHERE conn.channel_owner = :owner AND conn.channel_id = :channel)
 		        ORDER BY %s %s
 		        LIMIT :limit
-		        OFFSET :offset;`, oq, dq)
+		        OFFSET :offset;`, thingWhereClause, oq, dq)
 
-		qc = `SELECT COUNT(*)
+		qc = fmt.Sprintf(`SELECT COUNT(*)
 		        FROM things th
-		        WHERE th.owner = $1 AND th.id NOT IN
+		        %s AND th.id NOT IN
 		        (SELECT id FROM things th
 		          INNER JOIN connections conn
 		          ON th.id = conn.thing_id
-		          WHERE th.owner = $1 AND conn.channel_id = $2);`
+		          WHERE conn.channel_owner = $1 AND conn.channel_id = $2);`, thingWhereClause)
+		qc = strings.Replace(qc, ":owner", "$1", 1)
 	default:
 		q = fmt.Sprintf(`SELECT id, name, key, metadata
 		        FROM things th
 		        INNER JOIN connections conn
 		        ON th.id = conn.thing_id
-		        WHERE th.owner = :owner AND conn.channel_id = :channel
+		        WHERE conn.channel_owner = :owner AND conn.channel_id = :channel
 		        ORDER BY %s %s
 		        LIMIT :limit
 		        OFFSET :offset;`, oq, dq)
@@ -517,7 +541,7 @@ func (tr thingRepository) RetrieveByChannel(ctx context.Context, owner, chID str
 		        FROM things th
 		        INNER JOIN connections conn
 		        ON th.id = conn.thing_id
-		        WHERE th.owner = $1 AND conn.channel_id = $2;`
+		        WHERE conn.channel_owner = $1 AND conn.channel_id = $2 ; `
 	}
 
 	params := map[string]interface{}{

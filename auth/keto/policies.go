@@ -97,6 +97,9 @@ func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error
 
 func (pa policyAgent) RetrievePolicies(ctx context.Context, pr auth.PolicyReq) ([]*acl.RelationTuple, error) {
 	var ss *acl.Subject
+	nextPageToken := ""
+	var tuple []*acl.RelationTuple
+
 	switch isSubjectSet(pr.Subject) {
 	case true:
 		namespace, object, relation := parseSubjectSet(pr.Subject)
@@ -107,23 +110,32 @@ func (pa policyAgent) RetrievePolicies(ctx context.Context, pr auth.PolicyReq) (
 		ss = &acl.Subject{Ref: &acl.Subject_Id{Id: pr.Subject}}
 	}
 
-	res, err := pa.reader.ListRelationTuples(ctx, &acl.ListRelationTuplesRequest{
-		Query: &acl.ListRelationTuplesRequest_Query{
-			Namespace: ketoNamespace,
-			Relation:  pr.Relation,
-			Subject:   ss,
-		},
-	})
-	if err != nil {
-		return []*acl.RelationTuple{}, err
+	query := &acl.ListRelationTuplesRequest_Query{
+		Namespace: ketoNamespace,
+		Relation:  pr.Relation,
+		Subject:   ss,
 	}
 
-	tuple := res.GetRelationTuples()
-	for res.NextPageToken != "" {
-		tuple = append(tuple, res.GetRelationTuples()...)
+	for {
+		rt, npt, err := retrievePoliciesAll(pa.reader, query, nextPageToken)
+		if err != nil {
+			return tuple, err
+		}
+		nextPageToken = npt
+		tuple = append(tuple, rt...)
+		if nextPageToken == "" {
+			break
+		}
 	}
-
 	return tuple, nil
+}
+
+func retrievePoliciesAll(client acl.ReadServiceClient, query *acl.ListRelationTuplesRequest_Query, nextPageToken string) ([]*acl.RelationTuple, string, error) {
+	res, err := client.ListRelationTuples(context.Background(), &acl.ListRelationTuplesRequest{
+		Query:     query,
+		PageToken: nextPageToken,
+	})
+	return res.GetRelationTuples(), res.GetNextPageToken(), err
 }
 
 // getSubject returns a 'subject' field for ACL(access control lists).

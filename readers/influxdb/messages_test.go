@@ -18,18 +18,18 @@ import (
 )
 
 const (
-	subtopic    = "topic"
-	msgsNum     = 100
-	limit       = 10
-	valueFields = 5
-	mqttProt    = "mqtt"
-	httpProt    = "http"
-	msgName     = "temperature"
-	offset      = 21
-
-	format1 = "format1"
-	format2 = "format2"
-	wrongID = "wrong_id"
+	subtopic     = "topic"
+	msgsNum      = 100
+	limit        = 10
+	valueFields  = 5
+	mqttProt     = "mqtt"
+	httpProt     = "http"
+	msgName      = "temperature"
+	offset       = 21
+	messageDelay = 10
+	format1      = "format1"
+	format2      = "format2"
+	wrongID      = "wrong_id"
 )
 
 var (
@@ -82,7 +82,8 @@ func TestReadAll(t *testing.T) {
 	for i := 0; i < msgsNum; i++ {
 		// Mix possible values as well as value sum.
 		msg := m
-		msg.Time = float64(now)/float64(1e9) - 10*float64(i)
+		// now is unixnano, now/1e9 is seconds
+		msg.Time = float64(now)/float64(1e9) - messageDelay*float64(i)
 
 		count := i % valueFields
 		switch count {

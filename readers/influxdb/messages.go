@@ -71,11 +71,7 @@ func (repo *influxRepository) ReadAll(chanID string, rpm readers.PageMetadata) (
 	if err != nil {
 		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
 	}
-	/*
-		if len(resp.Results) == 0 || len(resp.Results[0].Series) == 0 {
-			return readers.MessagesPage{}, nil
-		}
-	*/
+
 	var messages []readers.Message
 
 	var valueMap map[string]interface{}
@@ -144,7 +140,6 @@ func (repo *influxRepository) count(measurement, condition string, timeRange str
 }
 
 func fmtCondition(chanID string, rpm readers.PageMetadata) (string, string) {
-	// TODO: adapt filters to flux
 	var timeRange string
 
 	var sb strings.Builder

@@ -45,7 +45,6 @@ func New(client influxdb2.Client, repoCfg RepoConfig) readers.MessageRepository 
 }
 
 func (repo *influxRepository) ReadAll(chanID string, rpm readers.PageMetadata) (readers.MessagesPage, error) {
-
 	format := defMeasurement
 	if rpm.Format != "" {
 		format = rpm.Format
@@ -92,8 +91,6 @@ func (repo *influxRepository) ReadAll(chanID string, rpm readers.PageMetadata) (
 		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, resp.Err())
 	}
 
-	fmt.Println("Query: ", query)
-
 	total, err := repo.count(format, condition, timeRange)
 	if err != nil {
 		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
@@ -110,7 +107,6 @@ func (repo *influxRepository) ReadAll(chanID string, rpm readers.PageMetadata) (
 }
 
 func (repo *influxRepository) count(measurement, condition string, timeRange string) (uint64, error) {
-
 	var sb strings.Builder
 	sb.WriteString(`import "influxdata/influxdb/v1"`)
 	sb.WriteString(fmt.Sprintf(`from(bucket: "%s")`, repo.cfg.Bucket))
@@ -192,7 +188,7 @@ func fmtCondition(chanID string, rpm readers.PageMetadata) (string, string) {
 			sb.WriteString(fmt.Sprintf(`|> filter(fn: (r) => r.%s == "%s" )`, name, value))
 		case "v":
 			comparator := readers.ParseValueComparator(query)
-			//flux eq comparator is different
+			// flux eq comparator is different
 			if comparator == "=" {
 				comparator = "=="
 			}

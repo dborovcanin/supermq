@@ -160,6 +160,7 @@ type PageMetadata struct {
 	Metadata          map[string]interface{} `json:"metadata,omitempty"`
 	Disconnected      bool                   // Used for connected or disconnected lists
 	FetchSharedThings bool                   // Used for identifying fetching either all or shared things.
+	SharedThings      []string
 }
 
 var _ Service = (*thingsService)(nil)
@@ -350,11 +351,14 @@ func (ts *thingsService) ListThings(ctx context.Context, token string, pm PageMe
 			return Page{}, err
 		}
 
-		var page Page
+		// var page Page
+		// for _, thingID := range lpr.Policies {
+		// 	page.Things = append(page.Things, Thing{ID: thingID})
+		// }
+		// return page, nil
 		for _, thingID := range lpr.Policies {
-			page.Things = append(page.Things, Thing{ID: thingID})
+			pm.SharedThings = append(pm.SharedThings, thingID)
 		}
-		return page, nil
 	}
 
 	// By default, fetch things from Things service.
@@ -372,6 +376,24 @@ func (ts *thingsService) ListThingsByChannel(ctx context.Context, token, chID st
 		return Page{}, errors.Wrap(ErrUnauthorizedAccess, err)
 	}
 	res = changeUserIdentity(res)
+
+	subject := res.GetId()
+	if pm.FetchSharedThings {
+		req := &mainflux.ListPoliciesReq{Act: "read", Sub: subject}
+		lpr, err := ts.auth.ListPolicies(ctx, req)
+		if err != nil {
+			return Page{}, err
+		}
+
+		// var page Page
+		// for _, thingID := range lpr.Policies {
+		// 	page.Things = append(page.Things, Thing{ID: thingID})
+		// }
+		// return page, nil
+		for _, thingID := range lpr.Policies {
+			pm.SharedThings = append(pm.SharedThings, thingID)
+		}
+	}
 
 	return ts.things.RetrieveByChannel(ctx, res.GetEmail(), chID, pm)
 }

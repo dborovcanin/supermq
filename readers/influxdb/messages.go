@@ -51,29 +51,30 @@ func (repo *influxRepository) ReadAll(chanID string, rpm readers.PageMetadata) (
 	}
 
 	queryAPI := repo.client.QueryAPI(repo.cfg.Org)
-	var sb strings.Builder
-
 	condition, timeRange := fmtCondition(chanID, rpm)
-	sb.WriteString(`import "influxdata/influxdb/v1"`)
-	sb.WriteString(fmt.Sprintf(`from(bucket: "%s")`, repo.cfg.Bucket))
-	// FluxQL syntax requires timeRange filter in this position, do not change.
-	sb.WriteString(timeRange)
-	// This is required to get messsage structure. Otherwise query returns fields in seperate rows.
-	sb.WriteString(`|> v1.fieldsAsCols()`)
-	sb.WriteString(`|> group()`)
-	sb.WriteString(fmt.Sprintf(`|> filter(fn: (r) => r._measurement == "%s")`, format))
-	sb.WriteString(condition)
-	sb.WriteString(`|> sort(columns: ["_time"], desc: true)`)
-	sb.WriteString(fmt.Sprintf(`|> limit(n:%d,offset:%d)`, rpm.Limit, rpm.Offset))
-	sb.WriteString(`|> yield(name: "sort")`)
-	query := sb.String()
+	query := fmt.Sprintf(`
+	import "influxdata/influxdb/v1" from(bucket: "%s")
+	%s
+	|> v1.fieldsAsCols()
+	|> group()
+	|> filter(fn: (r) => r._measurement == "%s")
+	%s
+	|> sort(columns: ["_time"], desc: true)
+	|> limit(n:%d,offset:%d)
+	|> yield(name: "sort")`,
+		repo.cfg.Bucket,
+		timeRange,
+		format,
+		condition,
+		rpm.Limit, rpm.Offset,
+	)
+
 	resp, err := queryAPI.Query(context.Background(), query)
 	if err != nil {
 		return readers.MessagesPage{}, errors.Wrap(readers.ErrReadMessages, err)
 	}
 
 	var messages []readers.Message
-
 	var valueMap map[string]interface{}
 	for resp.Next() {
 		valueMap = resp.Record().Values()
@@ -103,18 +104,21 @@ func (repo *influxRepository) ReadAll(chanID string, rpm readers.PageMetadata) (
 }
 
 func (repo *influxRepository) count(measurement, condition string, timeRange string) (uint64, error) {
-	var sb strings.Builder
-	sb.WriteString(`import "influxdata/influxdb/v1"`)
-	sb.WriteString(fmt.Sprintf(`from(bucket: "%s")`, repo.cfg.Bucket))
-	sb.WriteString(timeRange)
-	sb.WriteString(`|> v1.fieldsAsCols()`)
-	sb.WriteString(fmt.Sprintf(`|> filter(fn: (r) => r._measurement == "%s")`, measurement))
-	sb.WriteString(condition)
-	sb.WriteString(`|> group()`)
-	sb.WriteString(`|> count(column:"_measurement")`)
-	sb.WriteString(`|> yield(name: "count")`)
 
-	cmd := sb.String()
+	cmd := fmt.Sprintf(`
+	import "influxdata/influxdb/v1" from(bucket: "%s")
+	%s
+	|> v1.fieldsAsCols()
+	|> filter(fn: (r) => r._measurement == "%s")
+	%s
+	|> group()
+	|> count(column:"_measurement")
+	|> yield(name: "count")
+	`,
+		repo.cfg.Bucket,
+		timeRange,
+		measurement,
+		condition)
 	queryAPI := repo.client.QueryAPI(repo.cfg.Org)
 	resp, err := queryAPI.Query(context.Background(), cmd)
 
@@ -136,7 +140,6 @@ func (repo *influxRepository) count(measurement, condition string, timeRange str
 		// same as no rows.
 		return 0, nil
 	}
-
 }
 
 func fmtCondition(chanID string, rpm readers.PageMetadata) (string, string) {

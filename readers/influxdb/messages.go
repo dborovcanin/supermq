@@ -141,7 +141,6 @@ func (repo *influxRepository) count(measurement, condition string, timeRange str
 
 func fmtCondition(chanID string, rpm readers.PageMetadata) (string, string) {
 	var timeRange string
-
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf(`|> filter(fn: (r) => r["channel"] == "%s" )`, chanID))
 

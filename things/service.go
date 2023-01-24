@@ -495,8 +495,10 @@ func (ts *thingsService) ListChannels(ctx context.Context, token string, pm Page
 	res = changeUserIdentiy(res)
 
 	// If the user is admin, fetch all channels from the database.
-	if err := ts.authorize(ctx, res.GetId(), authoritiesObject, memberRelationKey); err == nil {
-		pm.FetchSharedThings = true
+	if pm.FetchSharedThings {
+		if err := ts.authorize(ctx, res.GetId(), authoritiesObject, memberRelationKey); err != nil {
+			return ChannelsPage{}, err
+		}
 		page, err := ts.channels.RetrieveAll(ctx, res.GetEmail(), pm)
 		if err != nil {
 			return ChannelsPage{}, err

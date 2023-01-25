@@ -9900,6 +9900,7 @@ var nodes = [...]uint8{
 // will be in the range [0, 6), depending on the wildcard bit and node type.
 //
 // The layout within the uint32, from MSB to LSB, is:
+//
 //	[ 1 bits] unused
 //	[ 1 bits] wildcard bit
 //	[ 2 bits] node type

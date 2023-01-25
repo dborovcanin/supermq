@@ -70,8 +70,9 @@ type config struct {
 
 func main() {
 	cfg, repoCfg := loadConfigs()
-	//print(cfg.dbUrl)
-	println("Hello from influxdb Writer")
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
+
 	logger, err := logger.New(os.Stdout, cfg.logLevel)
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -113,6 +114,12 @@ func main() {
 	err = <-errs
 	logger.Error(fmt.Sprintf("InfluxDB writer service terminated: %s", err))
 
+}
+
+func connectToInfluxDB(cfg config) (influxdb2.Client, error) {
+	client := influxdb2.NewClient(cfg.dbUrl, cfg.dbToken)
+	_, err := client.Ping(context.Background())
+	return client, err
 }
 
 func connectToInfluxDB(cfg config) (influxdb2.Client, error) {

@@ -114,6 +114,14 @@ func main() {
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
+		&sdkConf.ReaderURL,
+		"reader-url",
+		"R",
+		sdkConf.ReaderURL,
+		"Reader URL",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
 		&msgContentType,
 		"content-type",
 		"y",
@@ -175,7 +183,7 @@ func main() {
 		"email",
 		"e",
 		"",
-		"Email query parameter",
+		"User email query parameter",
 	)
 
 	rootCmd.PersistentFlags().StringVarP(
@@ -184,6 +192,14 @@ func main() {
 		"m",
 		"",
 		"Metadata query parameter",
+	)
+
+	rootCmd.PersistentFlags().StringVarP(
+		&cli.Status,
+		"status",
+		"S",
+		"",
+		"User status query parameter",
 	)
 
 	if err := rootCmd.Execute(); err != nil {

@@ -21,18 +21,14 @@ type Options struct {
 	useGZip bool
 	// Tags added to each point during writing. If a point already has a tag with the same key, it is left unchanged.
 	defaultTags map[string]string
-	// Default retry interval in ms, if not sent by server. Default 5,000.
+	// Default retry interval in ms, if not sent by server. Default 5,000ms
 	retryInterval uint
-	// Maximum count of retry attempts of failed writes, default 5.
+	// Maximum count of retry attempts of failed writes
 	maxRetries uint
-	// Maximum number of points to keep for retry. Should be multiple of BatchSize. Default 50,000.
+	// Maximum number of points to keep for retry. Should be multiple of BatchSize. Default 50,000
 	retryBufferLimit uint
-	// The maximum delay between each retry attempt in milliseconds, default 125,000.
+	// Maximum retry interval, default 5min (300,000ms)
 	maxRetryInterval uint
-	// The maximum total retry timeout in millisecond, default 180,000.
-	maxRetryTime uint
-	// The base for the exponential retry delay
-	exponentialBase uint
 }
 
 // BatchSize returns size of batch
@@ -57,18 +53,18 @@ func (o *Options) SetFlushInterval(flushIntervalMs uint) *Options {
 	return o
 }
 
-// RetryInterval returns the default retry interval in ms, if not sent by server. Default 5,000.
+// RetryInterval returns the retry interval in ms
 func (o *Options) RetryInterval() uint {
 	return o.retryInterval
 }
 
-// SetRetryInterval sets the time to wait before retry unsuccessful write in ms, if not sent by server
+// SetRetryInterval sets retry interval in ms, which is set if not sent by server
 func (o *Options) SetRetryInterval(retryIntervalMs uint) *Options {
 	o.retryInterval = retryIntervalMs
 	return o
 }
 
-// MaxRetries returns maximum count of retry attempts of failed writes, default 5.
+// MaxRetries returns maximum count of retry attempts of failed writes
 func (o *Options) MaxRetries() uint {
 	return o.maxRetries
 }
@@ -80,7 +76,7 @@ func (o *Options) SetMaxRetries(maxRetries uint) *Options {
 	return o
 }
 
-// RetryBufferLimit returns retry buffer limit.
+// RetryBufferLimit returns retry buffer limit
 func (o *Options) RetryBufferLimit() uint {
 	return o.retryBufferLimit
 }
@@ -91,36 +87,14 @@ func (o *Options) SetRetryBufferLimit(retryBufferLimit uint) *Options {
 	return o
 }
 
-// MaxRetryInterval returns the maximum delay between each retry attempt in milliseconds, default 125,000.
+// MaxRetryInterval return maximum retry interval in ms. Default 5min.
 func (o *Options) MaxRetryInterval() uint {
 	return o.maxRetryInterval
 }
 
-// SetMaxRetryInterval sets the maximum delay between each retry attempt in millisecond
+// SetMaxRetryInterval set maximum retry interval in ms
 func (o *Options) SetMaxRetryInterval(maxRetryIntervalMs uint) *Options {
 	o.maxRetryInterval = maxRetryIntervalMs
-	return o
-}
-
-// MaxRetryTime returns the maximum total retry timeout in millisecond, default 180,000.
-func (o *Options) MaxRetryTime() uint {
-	return o.maxRetryTime
-}
-
-// SetMaxRetryTime sets the maximum total retry timeout in millisecond.
-func (o *Options) SetMaxRetryTime(maxRetryTimeMs uint) *Options {
-	o.maxRetryTime = maxRetryTimeMs
-	return o
-}
-
-// ExponentialBase returns the base for the exponential retry delay. Default 2.
-func (o *Options) ExponentialBase() uint {
-	return o.exponentialBase
-}
-
-// SetExponentialBase sets the base for the exponential retry delay.
-func (o *Options) SetExponentialBase(retryExponentialBase uint) *Options {
-	o.exponentialBase = retryExponentialBase
 	return o
 }
 
@@ -164,6 +138,5 @@ func (o *Options) DefaultTags() map[string]string {
 
 // DefaultOptions returns Options object with default values
 func DefaultOptions() *Options {
-	return &Options{batchSize: 5_000, flushInterval: 1_000, precision: time.Nanosecond, useGZip: false, retryBufferLimit: 50_000, defaultTags: make(map[string]string),
-		maxRetries: 5, retryInterval: 5_000, maxRetryInterval: 125_000, maxRetryTime: 180_000, exponentialBase: 2}
+	return &Options{batchSize: 5000, maxRetries: 3, retryInterval: 5000, maxRetryInterval: 300000, flushInterval: 1000, precision: time.Nanosecond, useGZip: false, retryBufferLimit: 50000, defaultTags: make(map[string]string)}
 }

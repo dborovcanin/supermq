@@ -61,7 +61,7 @@ var cmdChannels = []cobra.Command{
 			}
 
 			if args[0] == "all" {
-				l, err := sdk.Channels(args[1], pageMetadata)
+				l, err := sdk.Channels(pageMetadata, args[1])
 				if err != nil {
 					logError(err)
 					return
@@ -80,7 +80,7 @@ var cmdChannels = []cobra.Command{
 		},
 	},
 	{
-		Use:   "updatev <JSON_string> <user_auth_token>",
+		Use:   "update <JSON_string> <user_auth_token>",
 		Short: "Update channel",
 		Long:  `Updates channel record`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -130,8 +130,12 @@ var cmdChannels = []cobra.Command{
 				logUsage(cmd.Use)
 				return
 			}
-
-			cl, err := sdk.ThingsByChannel(args[1], args[0], uint64(Offset), uint64(Limit), false)
+			pm := mfxsdk.PageMetadata{
+				Offset:       uint64(Offset),
+				Limit:        uint64(Limit),
+				Disconnected: false,
+			}
+			cl, err := sdk.ThingsByChannel(args[0], pm, args[1])
 			if err != nil {
 				logError(err)
 				return
@@ -149,8 +153,12 @@ var cmdChannels = []cobra.Command{
 				logUsage(cmd.Use)
 				return
 			}
-
-			cl, err := sdk.ThingsByChannel(args[1], args[0], uint64(Offset), uint64(Limit), false)
+			pm := mfxsdk.PageMetadata{
+				Offset:       uint64(Offset),
+				Limit:        uint64(Limit),
+				Disconnected: true,
+			}
+			cl, err := sdk.ThingsByChannel(args[0], pm, args[1])
 			if err != nil {
 				logError(err)
 				return

@@ -13,7 +13,9 @@ import (
 
 	"github.com/mainflux/mainflux"
 	mfauth "github.com/mainflux/mainflux/auth"
+	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
 	sdk "github.com/mainflux/mainflux/pkg/sdk/go"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/users"
@@ -80,7 +82,7 @@ func TestCreateUser(t *testing.T) {
 		desc  string
 		user  sdk.User
 		token string
-		err   error
+		err   errors.SDKError
 	}{
 		{
 			desc:  "register new user",
@@ -92,42 +94,42 @@ func TestCreateUser(t *testing.T) {
 			desc:  "register existing user",
 			user:  user,
 			token: token,
-			err:   createError(sdk.ErrFailedCreation, http.StatusConflict),
+			err:   errors.NewSDKErrorWithStatus(errors.ErrConflict, http.StatusConflict),
 		},
 		{
 			desc:  "register user with invalid email address",
 			user:  sdk.User{Email: invalidEmail, Password: "password"},
 			token: token,
-			err:   createError(sdk.ErrFailedCreation, http.StatusBadRequest),
+			err:   errors.NewSDKErrorWithStatus(errors.ErrMalformedEntity, http.StatusBadRequest),
 		},
 		{
 			desc:  "register user with empty password",
 			user:  sdk.User{Email: "user2@example.com", Password: ""},
 			token: token,
-			err:   createError(sdk.ErrFailedCreation, http.StatusBadRequest),
+			err:   errors.NewSDKErrorWithStatus(users.ErrPasswordFormat, http.StatusBadRequest),
 		},
 		{
 			desc:  "register user without password",
 			user:  sdk.User{Email: "user2@example.com"},
 			token: token,
-			err:   createError(sdk.ErrFailedCreation, http.StatusBadRequest),
+			err:   errors.NewSDKErrorWithStatus(users.ErrPasswordFormat, http.StatusBadRequest),
 		},
 		{
 			desc:  "register user without email",
 			user:  sdk.User{Password: "password"},
 			token: token,
-			err:   createError(sdk.ErrFailedCreation, http.StatusBadRequest),
+			err:   errors.NewSDKErrorWithStatus(errors.ErrMalformedEntity, http.StatusBadRequest),
 		},
 		{
 			desc:  "register empty user",
 			user:  sdk.User{},
 			token: token,
-			err:   createError(sdk.ErrFailedCreation, http.StatusBadRequest),
+			err:   errors.NewSDKErrorWithStatus(errors.ErrMalformedEntity, http.StatusBadRequest),
 		},
 	}
 
 	for _, tc := range cases {
-		_, err := mainfluxSDK.CreateUser(tc.token, tc.user)
+		_, err := mainfluxSDK.CreateUser(tc.user, tc.token)
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 	}
 }
@@ -151,7 +153,7 @@ func TestUser(t *testing.T) {
 
 	tkn, _ := auth.Issue(context.Background(), &mainflux.IssueReq{Id: user.ID, Email: user.Email, Type: mfauth.APIKey})
 	token := tkn.GetValue()
-	userID, err := mainfluxSDK.CreateUser(token, user)
+	userID, err := mainfluxSDK.CreateUser(user, token)
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 	usertoken, err := mainfluxSDK.CreateToken(user)
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
@@ -162,7 +164,7 @@ func TestUser(t *testing.T) {
 		desc     string
 		userID   string
 		token    string
-		err      error
+		err      errors.SDKError
 		response sdk.User
 	}{
 		{
@@ -176,7 +178,7 @@ func TestUser(t *testing.T) {
 			desc:     "get non-existent user",
 			userID:   "43",
 			token:    usertoken,
-			err:      createError(sdk.ErrFailedFetch, http.StatusUnauthorized),
+			err:      errors.NewSDKErrorWithStatus(errors.ErrNotFound, http.StatusNotFound),
 			response: sdk.User{},
 		},
 
@@ -184,7 +186,7 @@ func TestUser(t *testing.T) {
 			desc:     "get user with invalid token",
 			userID:   userID,
 			token:    wrongValue,
-			err:      createError(sdk.ErrFailedFetch, http.StatusUnauthorized),
+			err:      errors.NewSDKErrorWithStatus(errors.ErrAuthentication, http.StatusUnauthorized),
 			response: sdk.User{},
 		},
 	}
@@ -222,7 +224,7 @@ func TestUsers(t *testing.T) {
 		password := fmt.Sprintf("password%d", i)
 		metadata := map[string]interface{}{"name": fmt.Sprintf("user%d", i)}
 		us := sdk.User{Email: email, Password: password, Metadata: metadata}
-		userID, err := mainfluxSDK.CreateUser(token, us)
+		userID, err := mainfluxSDK.CreateUser(us, token)
 		require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 		us.ID = userID
 		us.Password = ""
@@ -234,7 +236,7 @@ func TestUsers(t *testing.T) {
 		token    string
 		offset   uint64
 		limit    uint64
-		err      error
+		err      errors.SDKError
 		response []sdk.User
 		email    string
 		metadata map[string]interface{}
@@ -253,7 +255,7 @@ func TestUsers(t *testing.T) {
 			token:    wrongValue,
 			offset:   offset,
 			limit:    limit,
-			err:      createError(sdk.ErrFailedFetch, http.StatusUnauthorized),
+			err:      errors.NewSDKErrorWithStatus(errors.ErrAuthentication, http.StatusUnauthorized),
 			email:    "",
 			response: nil,
 		},
@@ -262,7 +264,7 @@ func TestUsers(t *testing.T) {
 			token:    "",
 			offset:   offset,
 			limit:    limit,
-			err:      createError(sdk.ErrFailedFetch, http.StatusUnauthorized),
+			err:      errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
 			email:    "",
 			response: nil,
 		},
@@ -271,7 +273,7 @@ func TestUsers(t *testing.T) {
 			token:    token,
 			offset:   offset,
 			limit:    0,
-			err:      createError(sdk.ErrFailedFetch, http.StatusBadRequest),
+			err:      errors.NewSDKErrorWithStatus(apiutil.ErrLimitSize, http.StatusBadRequest),
 			email:    "",
 			response: nil,
 		},
@@ -280,7 +282,7 @@ func TestUsers(t *testing.T) {
 			token:    token,
 			offset:   offset,
 			limit:    110,
-			err:      createError(sdk.ErrFailedFetch, http.StatusBadRequest),
+			err:      errors.NewSDKErrorWithStatus(apiutil.ErrLimitSize, http.StatusBadRequest),
 			email:    "",
 			response: []sdk.User(nil),
 		},
@@ -315,7 +317,7 @@ func TestUsers(t *testing.T) {
 			Limit:    uint64(tc.limit),
 			Metadata: tc.metadata,
 		}
-		page, err := mainfluxSDK.Users(tc.token, filter)
+		page, err := mainfluxSDK.Users(filter, tc.token)
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))
 		assert.Equal(t, tc.response, page.Users, fmt.Sprintf("%s: expected response user %s, got %s", tc.desc, tc.response, page.Users))
 	}
@@ -340,14 +342,14 @@ func TestCreateToken(t *testing.T) {
 
 	tkn, _ := auth.Issue(context.Background(), &mainflux.IssueReq{Id: user.ID, Email: user.Email, Type: mfauth.APIKey})
 	token := tkn.GetValue()
-	_, err := mainfluxSDK.CreateUser(token, user)
+	_, err := mainfluxSDK.CreateUser(user, token)
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 
 	cases := []struct {
 		desc  string
 		user  sdk.User
 		token string
-		err   error
+		err   errors.SDKError
 	}{
 		{
 			desc:  "create token for user",
@@ -359,13 +361,13 @@ func TestCreateToken(t *testing.T) {
 			desc:  "create token for non existing user",
 			user:  sdk.User{Email: "user2@example.com", Password: "password"},
 			token: "",
-			err:   createError(sdk.ErrFailedCreation, http.StatusUnauthorized),
+			err:   errors.NewSDKErrorWithStatus(errors.ErrAuthentication, http.StatusUnauthorized),
 		},
 		{
 			desc:  "create user with empty email",
 			user:  sdk.User{Email: "", Password: "password"},
 			token: "",
-			err:   createError(sdk.ErrFailedCreation, http.StatusBadRequest),
+			err:   errors.NewSDKErrorWithStatus(errors.ErrMalformedEntity, http.StatusBadRequest),
 		},
 	}
 	for _, tc := range cases {
@@ -394,7 +396,7 @@ func TestUpdateUser(t *testing.T) {
 
 	tkn, _ := auth.Issue(context.Background(), &mainflux.IssueReq{Id: user.ID, Email: user.Email, Type: mfauth.APIKey})
 	token := tkn.GetValue()
-	userID, err := mainfluxSDK.CreateUser(token, user)
+	userID, err := mainfluxSDK.CreateUser(user, token)
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 	usertoken, err := mainfluxSDK.CreateToken(user)
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
@@ -403,7 +405,7 @@ func TestUpdateUser(t *testing.T) {
 		desc  string
 		user  sdk.User
 		token string
-		err   error
+		err   errors.SDKError
 	}{
 		{
 			desc:  "update email for user",
@@ -415,13 +417,13 @@ func TestUpdateUser(t *testing.T) {
 			desc:  "update email for user with invalid token",
 			user:  sdk.User{ID: userID, Email: "user2@example.com", Password: "password"},
 			token: wrongValue,
-			err:   createError(sdk.ErrFailedUpdate, http.StatusUnauthorized),
+			err:   errors.NewSDKErrorWithStatus(errors.ErrAuthentication, http.StatusUnauthorized),
 		},
 		{
 			desc:  "update email for user with empty token",
 			user:  sdk.User{ID: userID, Email: "user2@example.com", Password: "password"},
 			token: "",
-			err:   createError(sdk.ErrFailedUpdate, http.StatusUnauthorized),
+			err:   errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
 		},
 		{
 			desc:  "update metadata for user",
@@ -455,7 +457,7 @@ func TestUpdatePassword(t *testing.T) {
 
 	tkn, _ := auth.Issue(context.Background(), &mainflux.IssueReq{Id: user.ID, Email: user.Email, Type: mfauth.APIKey})
 	token := tkn.GetValue()
-	_, err := mainfluxSDK.CreateUser(token, user)
+	_, err := mainfluxSDK.CreateUser(user, token)
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 	usertoken, err := mainfluxSDK.CreateToken(user)
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
@@ -465,7 +467,7 @@ func TestUpdatePassword(t *testing.T) {
 		oldPass string
 		newPass string
 		token   string
-		err     error
+		err     errors.SDKError
 	}{
 		{
 			desc:    "update password for user",
@@ -479,14 +481,14 @@ func TestUpdatePassword(t *testing.T) {
 			oldPass: "password",
 			newPass: "password123",
 			token:   wrongValue,
-			err:     createError(sdk.ErrFailedUpdate, http.StatusUnauthorized),
+			err:     errors.NewSDKErrorWithStatus(errors.ErrAuthentication, http.StatusUnauthorized),
 		},
 		{
 			desc:    "update password for user with empty token",
 			oldPass: "password",
 			newPass: "password123",
 			token:   "",
-			err:     createError(sdk.ErrFailedUpdate, http.StatusUnauthorized),
+			err:     errors.NewSDKErrorWithStatus(apiutil.ErrBearerToken, http.StatusUnauthorized),
 		},
 	}
 	for _, tc := range cases {

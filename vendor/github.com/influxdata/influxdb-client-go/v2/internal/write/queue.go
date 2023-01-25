@@ -31,7 +31,7 @@ func (q *queue) pop() *Batch {
 	if el != nil {
 		q.list.Remove(el)
 		batch := el.Value.(*Batch)
-		batch.Evicted = true
+		batch.evicted = true
 		return batch
 	}
 	return nil
@@ -39,10 +39,7 @@ func (q *queue) pop() *Batch {
 
 func (q *queue) first() *Batch {
 	el := q.list.Front()
-	if el != nil {
-		return el.Value.(*Batch)
-	}
-	return nil
+	return el.Value.(*Batch)
 }
 
 func (q *queue) isEmpty() bool {

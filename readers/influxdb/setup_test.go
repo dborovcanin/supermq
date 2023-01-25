@@ -3,16 +3,21 @@ package influxdb_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"testing"
+	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	log "github.com/mainflux/mainflux/logger"
+	mainflux_log "github.com/mainflux/mainflux/logger"
 	dockertest "github.com/ory/dockertest/v3"
 )
 
 var (
-	testLog, _ = log.New(os.Stdout, log.Info.String())
+	testLog, _ = mainflux_log.New(os.Stdout, mainflux_log.Info.String())
+	address    string
 )
 
 const (
@@ -23,6 +28,12 @@ const (
 	dbBucket      = "test-bucket"
 	dbInitMode    = "setup"
 	dbFluxEnabled = "true"
+	dbBindAddress = ":8088"
+	port          = "8086/tcp"
+	broker        = "influxdb"
+	brokerVersion = "2.2-alpine"
+	brokerTimeout = 30 * time.Second
+	poolMaxWait   = 120 * time.Second
 )
 
 func TestMain(m *testing.M) {
@@ -39,23 +50,25 @@ func TestMain(m *testing.M) {
 		fmt.Sprintf("DOCKER_INFLUXDB_INIT_BUCKET=%s", dbBucket),
 		fmt.Sprintf("DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=%s", dbToken),
 		fmt.Sprintf("INFLUXDB_HTTP_FLUX_ENABLED=%s", dbFluxEnabled),
+		fmt.Sprintf("INFLUXDB_BIND_ADDRESS=%s", dbBindAddress),
 	}
-	container, err := pool.Run("influxdb", "2.2-alpine", cfg)
+	container, err := pool.Run(broker, brokerVersion, cfg)
 	if err != nil {
 		testLog.Error(fmt.Sprintf("Could not start container: %s", err))
 	}
 
-	port := container.GetPort("8086/tcp")
-	dbUrl := fmt.Sprintf("http://localhost:%s", port)
+	handleInterrupt(m, pool, container)
+
+	address = fmt.Sprintf("%s:%s", "http://localhost", container.GetPort(port))
+	pool.MaxWait = poolMaxWait
 
 	if err := pool.Retry(func() error {
-		client = influxdb2.NewClient(dbUrl, dbToken)
-		_, err = client.Ping(context.Background())
+		client = influxdb2.NewClient(address, dbToken)
+		_, err = client.Ready(context.Background())
 		return err
 	}); err != nil {
 		testLog.Error(fmt.Sprintf("Could not connect to docker: %s", err))
 	}
-
 	code := m.Run()
 
 	if err := pool.Purge(container); err != nil {
@@ -63,4 +76,16 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(code)
+}
+
+func handleInterrupt(m *testing.M, pool *dockertest.Pool, container *dockertest.Resource) {
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		if err := pool.Purge(container); err != nil {
+			log.Fatalf("Could not purge container: %s", err)
+		}
+		os.Exit(0)
+	}()
 }

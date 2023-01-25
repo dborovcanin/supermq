@@ -275,7 +275,6 @@ func parseJSON(valueMap map[string]interface{}) (interface{}, error) {
 			ret[name] = v
 			continue
 		case "table", "_start", "_stop", "result", "_measurement":
-			break
 		default:
 			v := field
 			if val, ok := v.(json.Number); ok {

@@ -14,7 +14,6 @@ import (
 	ireader "github.com/mainflux/mainflux/readers/influxdb"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -54,13 +53,11 @@ func TestReadAll(t *testing.T) {
 	writer := iwriter.New(client, repoCfg)
 
 	chanID, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 	pubID, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 	pubID2, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
-	wrongID, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 
 	m := senml.Message{
 		Channel:    chanID,
@@ -111,16 +108,18 @@ func TestReadAll(t *testing.T) {
 	}
 
 	err = writer.Consume(messages)
-	require.Nil(t, err, fmt.Sprintf("failed to store message to InfluxDB: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("failed to store message to InfluxDB: %s", err))
 
 	reader := ireader.New(client, repoCfg)
 
-	cases := map[string]struct {
+	cases := []struct {
+		desc     string
 		chanID   string
 		pageMeta readers.PageMetadata
 		page     readers.MessagesPage
 	}{
-		"read message page for existing channel": {
+		{
+			desc:   "read message page for existing channel",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset: 0,
@@ -131,7 +130,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(messages),
 			},
 		},
-		"read message page for non-existent channel": {
+		{
+			desc:   "read message page for non-existent channel",
 			chanID: wrongID,
 			pageMeta: readers.PageMetadata{
 				Offset: 0,
@@ -141,7 +141,8 @@ func TestReadAll(t *testing.T) {
 				Messages: []readers.Message{},
 			},
 		},
-		"read message last page": {
+		{
+			desc:   "read message last page",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset: msgsNum - 20,
@@ -152,7 +153,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(messages[msgsNum-20 : msgsNum]),
 			},
 		},
-		"read message with non-existent subtopic": {
+		{
+			desc:   "read message with non-existent subtopic",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:   0,
@@ -163,7 +165,8 @@ func TestReadAll(t *testing.T) {
 				Messages: []readers.Message{},
 			},
 		},
-		"read message with subtopic": {
+		{
+			desc:   "read message with subtopic",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:   0,
@@ -175,7 +178,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(queryMsgs),
 			},
 		},
-		"read message with publisher": {
+		{
+			desc:   "read message with publisher",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:    0,
@@ -187,7 +191,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(queryMsgs),
 			},
 		},
-		"read message with wrong format": {
+		{
+			desc:   "read message with wrong format",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Format:    "messagess",
@@ -200,7 +205,8 @@ func TestReadAll(t *testing.T) {
 				Messages: []readers.Message{},
 			},
 		},
-		"read message with protocol": {
+		{
+			desc:   "read message with protocol",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:   0,
@@ -212,7 +218,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(queryMsgs),
 			},
 		},
-		"read message with name": {
+		{
+			desc:   "read message with name",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset: 0,
@@ -224,7 +231,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(queryMsgs[0:limit]),
 			},
 		},
-		"read message with value": {
+		{
+			desc:   "read message with value",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset: 0,
@@ -236,7 +244,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(valueMsgs[0:limit]),
 			},
 		},
-		"read message with value and equal comparator": {
+		{
+			desc:   "read message with value and equal comparator",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:     0,
@@ -249,7 +258,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(valueMsgs[0:limit]),
 			},
 		},
-		"read message with value and lower-than comparator": {
+		{
+			desc:   "read message with value and lower-than comparator",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:     0,
@@ -262,7 +272,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(valueMsgs[0:limit]),
 			},
 		},
-		"read message with value and lower-than-or-equal comparator": {
+		{
+			desc:   "read message with value and lower-than-or-equal comparator",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:     0,
@@ -275,7 +286,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(valueMsgs[0:limit]),
 			},
 		},
-		"read message with value and greater-than comparator": {
+		{
+			desc:   "read message with value and greater-than comparator",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:     0,
@@ -288,7 +300,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(valueMsgs[0:limit]),
 			},
 		},
-		"read message with value and greater-than-or-equal comparator": {
+		{
+			desc:   "read message with value and greater-than-or-equal comparator",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:     0,
@@ -301,7 +314,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(valueMsgs[0:limit]),
 			},
 		},
-		"read message with boolean value": {
+		{
+			desc:   "read message with boolean value",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:    0,
@@ -313,7 +327,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(boolMsgs[0:limit]),
 			},
 		},
-		"read message with string value": {
+		{
+			desc:   "read message with string value",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:      0,
@@ -325,7 +340,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(stringMsgs[0:limit]),
 			},
 		},
-		"read message with data value": {
+		{
+			desc:   "read message with data value",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset:    0,
@@ -337,7 +353,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(dataMsgs[0:limit]),
 			},
 		},
-		"read message with from": {
+		{
+			desc:   "failing test case : read message with from",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset: 0,
@@ -349,7 +366,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(messages[0 : offset+1]),
 			},
 		},
-		"read message with to": {
+		{
+			desc:   "failing test case : read message with to",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset: 0,
@@ -361,7 +379,8 @@ func TestReadAll(t *testing.T) {
 				Messages: fromSenml(messages[offset:]),
 			},
 		},
-		"read message with from/to": {
+		{
+			desc:   "read message with from/to",
 			chanID: chanID,
 			pageMeta: readers.PageMetadata{
 				Offset: 0,
@@ -370,17 +389,17 @@ func TestReadAll(t *testing.T) {
 				To:     messages[0].Time,
 			},
 			page: readers.MessagesPage{
-				Total:    5,
+				Total:    uint64(len(messages[0+1 : 5+1])),
 				Messages: fromSenml(messages[0+1 : 5+1]),
 			},
 		},
 	}
 
-	for desc, tc := range cases {
+	for _, tc := range cases {
 		result, err := reader.ReadAll(tc.chanID, tc.pageMeta)
-		assert.Nil(t, err, fmt.Sprintf("%s: expected no error got %s", desc, err))
-		assert.ElementsMatch(t, tc.page.Messages, result.Messages, fmt.Sprintf("%s: expected: %v, got: %v", desc, tc.page.Messages, result.Messages))
-		assert.Equal(t, tc.page.Total, result.Total, fmt.Sprintf("%s: expected %d got %d", desc, tc.page.Total, result.Total))
+		assert.Nil(t, err, fmt.Sprintf("%s: got unexpected error: %s\n", tc.desc, err))
+		assert.ElementsMatch(t, tc.page.Messages, result.Messages, fmt.Sprintf("%s: expected: %v, got: %v\n", tc.desc, tc.page.Messages, result.Messages))
+		assert.Equal(t, tc.page.Total, result.Total, fmt.Sprintf("%s: expected %d got %d\n", tc.desc, tc.page.Total, result.Total))
 	}
 }
 
@@ -388,7 +407,8 @@ func TestReadJSON(t *testing.T) {
 	writer := iwriter.New(client, repoCfg)
 
 	id1, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+
 	m := json.Message{
 		Channel:   id1,
 		Publisher: id1,
@@ -414,7 +434,8 @@ func TestReadJSON(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("expected no error got %s\n", err))
 
 	id2, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+
 	m = json.Message{
 		Channel:   id2,
 		Publisher: id2,
@@ -447,12 +468,14 @@ func TestReadJSON(t *testing.T) {
 	}
 	reader := ireader.New(client, repoCfg)
 
-	cases := map[string]struct {
+	cases := []struct {
+		desc     string
 		chanID   string
 		pageMeta readers.PageMetadata
 		page     readers.MessagesPage
 	}{
-		"read message page for existing channel": {
+		{
+			desc:   "read message page for existing channel",
 			chanID: id1,
 			pageMeta: readers.PageMetadata{
 				Format: messages1.Format,
@@ -464,7 +487,8 @@ func TestReadJSON(t *testing.T) {
 				Messages: fromJSON(msgs1[:1]),
 			},
 		},
-		"read message page for non-existent channel": {
+		{
+			desc:   "read message page for non-existent channel",
 			chanID: wrongID,
 			pageMeta: readers.PageMetadata{
 				Format: messages1.Format,
@@ -475,7 +499,8 @@ func TestReadJSON(t *testing.T) {
 				Messages: []readers.Message{},
 			},
 		},
-		"read message last page": {
+		{
+			desc:   "read message last page",
 			chanID: id2,
 			pageMeta: readers.PageMetadata{
 				Format: messages2.Format,
@@ -487,7 +512,8 @@ func TestReadJSON(t *testing.T) {
 				Messages: fromJSON(msgs2[msgsNum-20 : msgsNum]),
 			},
 		},
-		"read message with protocol": {
+		{
+			desc:   "read message with protocol",
 			chanID: id2,
 			pageMeta: readers.PageMetadata{
 				Format:   messages2.Format,
@@ -502,9 +528,9 @@ func TestReadJSON(t *testing.T) {
 		},
 	}
 
-	for desc, tc := range cases {
+	for _, tc := range cases {
 		result, err := reader.ReadAll(tc.chanID, tc.pageMeta)
-		assert.Nil(t, err, fmt.Sprintf("%s: expected no error got %s", desc, err))
+		assert.Nil(t, err, fmt.Sprintf("%s: got unexpected error: %s", tc.desc, err))
 
 		for i := 0; i < len(result.Messages); i++ {
 			m := result.Messages[i]
@@ -513,8 +539,8 @@ func TestReadJSON(t *testing.T) {
 
 			result.Messages[i] = m
 		}
-		assert.ElementsMatch(t, tc.page.Messages, result.Messages, fmt.Sprintf("%s: expected \n%v got \n%v", desc, tc.page.Messages, result.Messages))
-		assert.Equal(t, tc.page.Total, result.Total, fmt.Sprintf("%s: expected %v got %v", desc, tc.page.Total, result.Total))
+		assert.ElementsMatch(t, tc.page.Messages, result.Messages, fmt.Sprintf("%s: expected \n%v got \n%v", tc.desc, tc.page.Messages, result.Messages))
+		assert.Equal(t, tc.page.Total, result.Total, fmt.Sprintf("%s: expected %v got %v", tc.desc, tc.page.Total, result.Total))
 	}
 }
 

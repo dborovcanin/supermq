@@ -32,7 +32,6 @@ const (
 	port          = "8086/tcp"
 	broker        = "influxdb"
 	brokerVersion = "2.2-alpine"
-	brokerTimeout = 30 * time.Second
 	poolMaxWait   = 120 * time.Second
 )
 

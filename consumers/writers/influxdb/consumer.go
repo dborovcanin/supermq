@@ -14,7 +14,6 @@ import (
 	"github.com/mainflux/mainflux/pkg/transformers/senml"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/influxdata/influxdb-client-go/v2/api/write"
 	influxdb2write "github.com/influxdata/influxdb-client-go/v2/api/write"
 )
 
@@ -63,7 +62,7 @@ func (repo *influxRepo) senmlPoints(messages interface{}) ([]*influxdb2write.Poi
 	if !ok {
 		return nil, errSaveMessage
 	}
-	var pts []*write.Point
+	var pts []*influxdb2write.Point
 	for _, msg := range msgs {
 		tgs, flds := senmlTags(msg), senmlFields(msg)
 
@@ -78,7 +77,7 @@ func (repo *influxRepo) senmlPoints(messages interface{}) ([]*influxdb2write.Poi
 }
 
 func (repo *influxRepo) jsonPoints(msgs json.Messages) ([]*influxdb2write.Point, error) {
-	var pts []*write.Point
+	var pts []*influxdb2write.Point
 	for i, m := range msgs.Data {
 		t := time.Unix(0, m.Created+int64(i))
 

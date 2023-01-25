@@ -19,7 +19,6 @@ import (
 	"github.com/mainflux/mainflux/pkg/transformers/senml"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const valueFields = 5
@@ -120,6 +119,7 @@ func queryDB(fluxQuery string) (int, error) {
 
 func TestSaveSenml(t *testing.T) {
 	repo := writer.New(client, repoCfg)
+
 	cases := []struct {
 		desc         string
 		msgsNum      int
@@ -139,15 +139,14 @@ func TestSaveSenml(t *testing.T) {
 
 	for _, tc := range cases {
 		err := resetBucket()
-		require.Nil(t, err, fmt.Sprintf("Cleaning data from InfluxDB expected to succeed: %s.\n", err))
-
+		assert.Nil(t, err, fmt.Sprintf("Cleaning data from InfluxDB expected to succeed: %s.\n", err))
 		now := time.Now().UnixNano()
 		var msgs []senml.Message
 
 		chanID, err := idProvider.ID()
-		require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+		assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s\n", err))
 		pubID, err := idProvider.ID()
-		require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+		assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s\n", err))
 		for i := 0; i < tc.msgsNum; i++ {
 			msg := senml.Message{
 				Channel:    chanID,
@@ -179,6 +178,7 @@ func TestSaveSenml(t *testing.T) {
 
 		err = repo.Consume(msgs)
 		assert.Nil(t, err, fmt.Sprintf("Save operation expected to succeed: %s.\n", err))
+
 		count, err := queryDB(rowCountSenml)
 		assert.Nil(t, err, fmt.Sprintf("Querying InfluxDB to retrieve data expected to succeed: %s.\n", err))
 		assert.Equal(t, tc.expectedSize, count, fmt.Sprintf("Expected to have %d messages saved, found %d instead.\n", tc.expectedSize, count))
@@ -189,9 +189,9 @@ func TestSaveJSON(t *testing.T) {
 	repo := writer.New(client, repoCfg)
 
 	chanID, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 	pubID, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 
 	msg := json.Message{
 		Channel:   chanID,
@@ -277,7 +277,7 @@ func TestSaveJSON(t *testing.T) {
 	}
 	for _, tc := range cases {
 		err := resetBucket()
-		require.Nil(t, err, fmt.Sprintf("Cleaning data from InfluxDB expected to succeed: %s.\n", err))
+		assert.Nil(t, err, fmt.Sprintf("Cleaning data from InfluxDB expected to succeed: %s.\n", err))
 
 		switch err = repo.Consume(tc.msgs); err {
 		case nil:

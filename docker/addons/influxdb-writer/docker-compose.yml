@@ -18,7 +18,7 @@ volumes:
 
 services:
   influxdb:
-    image: influxdb:2.5-alpine
+    image: influxdb:2.5
     container_name: mainflux-influxdb
     restart: on-failure
     environment:

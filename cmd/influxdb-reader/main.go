@@ -27,6 +27,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -160,7 +161,7 @@ func connectToAuth(cfg config, logger logger.Logger) *grpc.ClientConn {
 			opts = append(opts, grpc.WithTransportCredentials(tpc))
 		}
 	} else {
-		opts = append(opts, grpc.WithInsecure())
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		logger.Info("gRPC communication is not encrypted")
 	}
 
@@ -175,7 +176,7 @@ func connectToAuth(cfg config, logger logger.Logger) *grpc.ClientConn {
 
 func connectToInfluxDB(cfg config) (influxdb2.Client, error) {
 	client := influxdb2.NewClient(cfg.dbUrl, cfg.dbToken)
-	_, err := client.Ping(context.Background())
+	_, err := client.Ready(context.Background())
 	return client, err
 }
 
@@ -240,7 +241,7 @@ func connectToThings(cfg config, logger logger.Logger) *grpc.ClientConn {
 		}
 	} else {
 		logger.Info("gRPC communication is not encrypted")
-		opts = append(opts, grpc.WithInsecure())
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
 	conn, err := grpc.Dial(cfg.thingsAuthURL, opts...)

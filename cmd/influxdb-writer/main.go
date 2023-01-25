@@ -9,8 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
@@ -20,8 +18,10 @@ import (
 	"github.com/mainflux/mainflux/consumers/writers/api"
 	"github.com/mainflux/mainflux/consumers/writers/influxdb"
 	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/messaging/brokers"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -97,34 +97,31 @@ func main() {
 	repo = api.LoggingMiddleware(repo, logger)
 	repo = api.MetricsMiddleware(repo, counter, latency)
 
-	if err := consumers.Start(pubSub, repo, cfg.configPath, logger); err != nil {
+	if err := consumers.Start(svcName, pubSub, repo, cfg.configPath, logger); err != nil {
 		logger.Error(fmt.Sprintf("Failed to start InfluxDB writer: %s", err))
 		os.Exit(1)
 	}
 
-	errs := make(chan error, 2)
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
+	g.Go(func() error {
+		return startHTTPService(ctx, cfg.port, logger)
+	})
 
-	go startHTTPService(cfg.port, logger, errs)
+	g.Go(func() error {
+		if sig := errors.SignalHandler(ctx); sig != nil {
+			cancel()
+			logger.Info(fmt.Sprintf("InfluxDB reader service shutdown by signal: %s", sig))
+		}
+		return nil
+	})
 
-	err = <-errs
-	logger.Error(fmt.Sprintf("InfluxDB writer service terminated: %s", err))
-
+	if err := g.Wait(); err != nil {
+		logger.Error(fmt.Sprintf("InfluxDB reader service terminated: %s", err))
+	}
 }
 
 func connectToInfluxDB(cfg config) (influxdb2.Client, error) {
 	client := influxdb2.NewClient(cfg.dbUrl, cfg.dbToken)
-	_, err := client.Ping(context.Background())
-	return client, err
-}
-
-func connectToInfluxDB(cfg config) (influxdb2.Client, error) {
-	client := influxdb2.NewClient(cfg.dbUrl, cfg.dbToken)
-	_, err := client.Ping(context.Background())
+	_, err := client.Ready(context.Background())
 	return client, err
 }
 

@@ -1,6 +1,6 @@
 # Generated types and API client
 
-`oss.yml` is copied from InfluxDB and customized, until changes are meged. Must be periodically sync with latest changes
+`swagger.yml` is copied from InfluxDB and customized. Must be periodically sync with latest changes
  and types and client must be re-generated
 
 
@@ -10,14 +10,14 @@
 `git checkout dev-master`
 `go install ./cmd/oapi-codegen/oapi-codegen.go`
 ## Download and sync latest swagger
-`wget https://raw.githubusercontent.com/influxdata/openapi/master/contracts/oss.yml`
+`wget https://raw.githubusercontent.com/influxdata/influxdb/master/http/swagger.yml`
  
 ## Generate
 `cd domain`
  
 Generate types
-`oapi-codegen -generate types -o types.gen.go -package domain oss.yml`
+`oapi-codegen -generate types -o types.gen.go -package domain swagger.yml`
 
 Generate client
-`oapi-codegen -generate client -o client.gen.go -package domain -templates .\templates oss.yml`
+`oapi-codegen -generate client -o client.gen.go -package domain -templates .\templates swagger.yml`
 

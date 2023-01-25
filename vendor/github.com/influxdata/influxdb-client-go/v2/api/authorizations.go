@@ -86,13 +86,7 @@ func (a *authorizationsAPI) listAuthorizations(ctx context.Context, query *domai
 
 func (a *authorizationsAPI) CreateAuthorization(ctx context.Context, authorization *domain.Authorization) (*domain.Authorization, error) {
 	params := &domain.PostAuthorizationsParams{}
-	req := domain.PostAuthorizationsJSONRequestBody{
-		AuthorizationUpdateRequest: authorization.AuthorizationUpdateRequest,
-		OrgID:                      authorization.OrgID,
-		Permissions:                authorization.Permissions,
-		UserID:                     authorization.UserID,
-	}
-	response, err := a.apiClient.PostAuthorizationsWithResponse(ctx, params, req)
+	response, err := a.apiClient.PostAuthorizationsWithResponse(ctx, params, domain.PostAuthorizationsJSONRequestBody(*authorization))
 	if err != nil {
 		return nil, err
 	}

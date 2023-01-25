@@ -10,12 +10,9 @@ import (
 
 // ErrorToHTTPError creates http.Error from domain.Error
 func ErrorToHTTPError(error *Error, statusCode int) *http.Error {
-	err := &http.Error{
+	return &http.Error{
 		StatusCode: statusCode,
 		Code:       string(error.Code),
+		Message:    error.Message,
 	}
-	if error.Message != nil {
-		err.Message = *error.Message
-	}
-	return err
 }

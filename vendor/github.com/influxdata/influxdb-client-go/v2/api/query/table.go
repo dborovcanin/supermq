@@ -7,7 +7,6 @@ package query
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 )
@@ -147,10 +146,9 @@ func NewFluxRecord(table int, values map[string]interface{}) *FluxRecord {
 	return &FluxRecord{table: table, values: values}
 }
 
-// Table returns value of the table column
-// It returns zero if the table column is not found
+// Table returns index of the table record belongs to
 func (r *FluxRecord) Table() int {
-	return int(intValue(r.values, "table"))
+	return r.table
 }
 
 // Start returns the inclusive lower time bound of all records in the current table.
@@ -182,12 +180,6 @@ func (r *FluxRecord) Field() string {
 	return stringValue(r.values, "_field")
 }
 
-// Result returns the value of the _result column, which represents result name.
-// Returns empty string if there is no column "result".
-func (r *FluxRecord) Result() string {
-	return stringValue(r.values, "result")
-}
-
 // Measurement returns the measurement name of the record
 // Returns empty string if there is no column "_measurement".
 func (r *FluxRecord) Measurement() string {
@@ -206,22 +198,14 @@ func (r *FluxRecord) ValueByKey(key string) interface{} {
 
 // String returns FluxRecord string dump
 func (r *FluxRecord) String() string {
-	if len(r.values) == 0 {
-		return ""
-	}
-
-	i := 0
-	keys := make([]string, len(r.values))
-	for k := range r.values {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
 	var buffer strings.Builder
-	buffer.WriteString(fmt.Sprintf("%s:%v", keys[0], r.values[keys[0]]))
-	for _, k := range keys[1:] {
-		buffer.WriteString(",")
-		buffer.WriteString(fmt.Sprintf("%s:%v", k, r.values[k]))
+	i := 0
+	for k, v := range r.values {
+		if i > 0 {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString(fmt.Sprintf("%s:%v", k, v))
+		i++
 	}
 	return buffer.String()
 }
@@ -237,7 +221,7 @@ func timeValue(values map[string]interface{}, key string) time.Time {
 	return time.Time{}
 }
 
-// stringValue returns string value from values map according to the key
+// timeValue returns string value from values map according to the key
 // Empty string is returned if key is not found
 func stringValue(values map[string]interface{}, key string) string {
 	if val, ok := values[key]; ok {
@@ -246,15 +230,4 @@ func stringValue(values map[string]interface{}, key string) string {
 		}
 	}
 	return ""
-}
-
-// intValue returns int64 value from values map according to the key
-// Zero value is returned if key is not found
-func intValue(values map[string]interface{}, key string) int64 {
-	if val, ok := values[key]; ok {
-		if i, ok := val.(int64); ok {
-			return i
-		}
-	}
-	return 0
 }

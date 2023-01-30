@@ -33,9 +33,9 @@ const (
 
 var (
 	v   float64 = 5
-	vs          = "a"
-	vb          = true
-	vd          = "dataValue"
+	vs  string  = "a"
+	vb  bool    = true
+	vd  string  = "dataValue"
 	sum float64 = 42
 
 	client  influxdb2.Client

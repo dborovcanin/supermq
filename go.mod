@@ -20,7 +20,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/vault/api v1.8.1
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
-	github.com/influxdata/influxdb-client-go/v2 v2.3.1-0.20210518120617-5d1fff431040
+	github.com/influxdata/influxdb-client-go/v2 v2.12.2
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgtype v1.13.0
 	github.com/jackc/pgx/v5 v5.2.0

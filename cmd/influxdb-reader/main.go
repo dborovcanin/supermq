@@ -12,7 +12,7 @@ import (
 	"time"
 
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	influxdata "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/mainflux/mainflux"
 	authapi "github.com/mainflux/mainflux/auth/api/grpc"
 	"github.com/mainflux/mainflux/logger"
@@ -174,8 +174,8 @@ func connectToAuth(cfg config, logger logger.Logger) *grpc.ClientConn {
 	return conn
 }
 
-func connectToInfluxDB(cfg config) (influxdb2.Client, error) {
-	client := influxdb2.NewClient(cfg.dbUrl, cfg.dbToken)
+func connectToInfluxDB(cfg config) (influxdata.Client, error) {
+	client := influxdata.NewClient(cfg.dbUrl, cfg.dbToken)
 	_, err := client.Ready(context.Background())
 	return client, err
 }
@@ -277,7 +277,7 @@ func initJaeger(svcName, url string, logger logger.Logger) (opentracing.Tracer, 
 	return tracer, closer
 }
 
-func newService(client influxdb2.Client, repoCfg influxdb.RepoConfig, logger logger.Logger) readers.MessageRepository {
+func newService(client influxdata.Client, repoCfg influxdb.RepoConfig, logger logger.Logger) readers.MessageRepository {
 	repo := influxdb.New(client, repoCfg)
 	repo = api.LoggingMiddleware(repo, logger)
 	repo = api.MetricsMiddleware(

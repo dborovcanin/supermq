@@ -12,7 +12,7 @@ import (
 	"time"
 
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	influxdata "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/consumers"
 	"github.com/mainflux/mainflux/consumers/writers/api"
@@ -119,8 +119,8 @@ func main() {
 	}
 }
 
-func connectToInfluxDB(cfg config) (influxdb2.Client, error) {
-	client := influxdb2.NewClient(cfg.dbUrl, cfg.dbToken)
+func connectToInfluxDB(cfg config) (influxdata.Client, error) {
+	client := influxdata.NewClient(cfg.dbUrl, cfg.dbToken)
 	_, err := client.Ready(context.Background())
 	return client, err
 }

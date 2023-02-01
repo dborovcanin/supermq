@@ -12,7 +12,7 @@ import (
 
 	"github.com/mainflux/mainflux/pkg/errors"
 
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	influxdata "github.com/influxdata/influxdb-client-go/v2"
 	writer "github.com/mainflux/mainflux/consumers/writers/influxdb"
 	log "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/transformers/json"
@@ -42,7 +42,7 @@ var (
 	|> yield(name: "count")`, repoCfg.Bucket)
 	subtopic = "topic"
 
-	client  influxdb2.Client
+	client  influxdata.Client
 	v       float64 = 5
 	stringV         = "value"
 	boolV           = true

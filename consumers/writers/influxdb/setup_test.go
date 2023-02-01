@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	influxdata "github.com/influxdata/influxdb-client-go/v2"
 	dockertest "github.com/ory/dockertest/v3"
 )
 
@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 	pool.MaxWait = poolMaxWait
 
 	if err := pool.Retry(func() error {
-		client = influxdb2.NewClientWithOptions(address, dbToken, influxdb2.DefaultOptions())
+		client = influxdata.NewClientWithOptions(address, dbToken, influxdata.DefaultOptions())
 		_, err = client.Ready(context.Background())
 		return err
 	}); err != nil {

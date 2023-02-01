@@ -74,7 +74,7 @@ func TestReadAll(t *testing.T) {
 	stringMsgs := []senml.Message{}
 	dataMsgs := []senml.Message{}
 	queryMsgs := []senml.Message{}
-	now := time.Now().UnixNano()
+	now := time.Now().Unix() * 1e9
 
 	for i := 0; i < msgsNum; i++ {
 		// Mix possible values as well as value sum.
@@ -412,7 +412,7 @@ func TestReadJSON(t *testing.T) {
 	m := json.Message{
 		Channel:   id1,
 		Publisher: id1,
-		Created:   time.Now().UnixNano(),
+		Created:   time.Now().Unix() * 1e9,
 		Subtopic:  "subtopic/format/some_json",
 		Protocol:  "coap",
 		Payload: map[string]interface{}{
@@ -439,7 +439,7 @@ func TestReadJSON(t *testing.T) {
 	m = json.Message{
 		Channel:   id2,
 		Publisher: id2,
-		Created:   time.Now().UnixNano() + msgsNum,
+		Created:   time.Now().Unix()*1e9 + msgsNum,
 		Subtopic:  "subtopic/other_format/some_other_json",
 		Protocol:  "udp",
 		Payload: map[string]interface{}{

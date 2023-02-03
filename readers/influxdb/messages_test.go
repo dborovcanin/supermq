@@ -49,7 +49,7 @@ var (
 	idProvider = uuid.New()
 )
 
-func TestReadAll(t *testing.T) {
+func TestReadSenml(t *testing.T) {
 	writer := iwriter.New(client, repoCfg)
 
 	chanID, err := idProvider.ID()
@@ -74,13 +74,12 @@ func TestReadAll(t *testing.T) {
 	stringMsgs := []senml.Message{}
 	dataMsgs := []senml.Message{}
 	queryMsgs := []senml.Message{}
-	now := time.Now().Unix() * 1e9
+	now := float64(time.Now().Unix())
 
 	for i := 0; i < msgsNum; i++ {
 		// Mix possible values as well as value sum.
 		msg := m
-		// now is unixnano, now/1e9 is seconds
-		msg.Time = float64(now)/float64(1e9) - messageDelay*float64(i)
+		msg.Time = now - float64(i)
 
 		count := i % valueFields
 		switch count {

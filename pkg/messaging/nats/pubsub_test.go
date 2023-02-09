@@ -10,6 +10,7 @@ import (
 
 	"github.com/mainflux/mainflux/pkg/messaging"
 	"github.com/mainflux/mainflux/pkg/messaging/nats"
+	broker "github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,9 +30,20 @@ var (
 )
 
 func TestPublisher(t *testing.T) {
-	err := pubsub.Subscribe(clientID, fmt.Sprintf("%s.%s", chansPrefix, topic), handler{})
+	// err := pubsub.Subscribe(clientID, fmt.Sprintf("%s.%s", chansPrefix, topic), handler{})
+	// require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	// err = pubsub.Subscribe(clientID, fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic), handler{})
+	// require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+
+	received := make(chan *broker.Msg)
+
+	_, err := conn.Subscribe(fmt.Sprintf("%s.%s", chansPrefix, topic), func(msg *broker.Msg) {
+		received <- msg
+	})
 	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
-	err = pubsub.Subscribe(clientID, fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic), handler{})
+	_, err = conn.Subscribe(fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic), func(msg *broker.Msg) {
+		received <- msg
+	})
 	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 
 	cases := []struct {

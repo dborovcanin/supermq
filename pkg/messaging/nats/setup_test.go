@@ -14,12 +14,19 @@ import (
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/messaging"
 	"github.com/mainflux/mainflux/pkg/messaging/nats"
+	broker "github.com/nats-io/nats.go"
 	dockertest "github.com/ory/dockertest/v3"
+)
+
+const (
+	version = "1.3.0"
+	port    = "4222/tcp"
 )
 
 var (
 	publisher messaging.Publisher
 	pubsub    messaging.PubSub
+	conn      *broker.Conn
 )
 
 func TestMain(m *testing.M) {
@@ -28,21 +35,29 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 
-	container, err := pool.Run("nats", "1.3.0", []string{})
+	container, err := pool.Run("nats", version, []string{})
 	if err != nil {
 		log.Fatalf("Could not start container: %s", err)
 	}
 	handleInterrupt(pool, container)
 
-	address := fmt.Sprintf("%s:%s", "localhost", container.GetPort("4222/tcp"))
+	logger, err := logger.New(os.Stdout, "error")
+	address := fmt.Sprintf("%s:%s", "localhost", container.GetPort(port))
+
+	if err := pool.Retry(func() error {
+		conn, err = broker.Connect(address)
+		return err
+	}); err != nil {
+		log.Fatalf("Could not connect client to docker: %s", err)
+	}
+
 	if err := pool.Retry(func() error {
 		publisher, err = nats.NewPublisher(address)
 		return err
 	}); err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
+		log.Fatalf("Could not connect publisher to docker: %s", err)
 	}
 
-	logger, err := logger.New(os.Stdout, "error")
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -50,7 +65,7 @@ func TestMain(m *testing.M) {
 		pubsub, err = nats.NewPubSub(address, "", logger)
 		return err
 	}); err != nil {
-		log.Fatalf("Could not connect to docker: %s", err)
+		log.Fatalf("Could not connect pubsub to docker: %s", err)
 	}
 
 	code := m.Run()

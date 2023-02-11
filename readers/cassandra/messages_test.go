@@ -53,7 +53,7 @@ func TestReadSenml(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("failed to connect to Cassandra: %s", err))
 	defer session.Close()
 	err = casClient.InitDB(session, cassandra.Table)
-	require.Nil(t, err, fmt.Sprintf("failed to initialize to Cassandra: %s", err))
+	assert.Nil(t, err, fmt.Sprintf("failed to initialize to Cassandra: %s", err))
 	writer := cwriter.New(session)
 
 	chanID, err := idProvider.ID()

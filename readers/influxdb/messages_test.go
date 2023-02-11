@@ -17,18 +17,17 @@ import (
 )
 
 const (
-	subtopic     = "topic"
-	msgsNum      = 100
-	limit        = 10
-	valueFields  = 5
-	mqttProt     = "mqtt"
-	httpProt     = "http"
-	msgName      = "temperature"
-	offset       = 21
-	messageDelay = 10
-	format1      = "format1"
-	format2      = "format2"
-	wrongID      = "wrong_id"
+	subtopic    = "topic"
+	msgsNum     = 100
+	limit       = 10
+	valueFields = 5
+	mqttProt    = "mqtt"
+	httpProt    = "http"
+	msgName     = "temperature"
+	offset      = 21
+	format1     = "format1"
+	format2     = "format2"
+	wrongID     = "wrong_id"
 )
 
 var (

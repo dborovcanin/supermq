@@ -6,3 +6,39 @@ services:
       - ./../nats/:/etc/nats
     ports:
       - ${MF_NATS_PORT}:${MF_NATS_PORT}
+
+  # nats-1:
+  #   container_name: nats-1
+  #   image: nats:2.9.14-alpine
+  #   entrypoint: /nats-server
+  #   command: --name N1 --cluster_name JSC --js --sd /data --cluster nats://0.0.0.0:4245 --routes nats://nats-1:4245,nats://n2:4245,nats://n3:4245 -p 4222
+  #   networks:
+  #     - mainflux-base-net
+  #   ports:
+  #   - ${MF_NATS_PORT}:${MF_NATS_PORT}
+  #   volumes:
+  #   - ./jetstream-cluster/nats-1:/data
+
+  # nats-2:
+  #   container_name: nats-2
+  #   image: nats:2.9.14-alpine
+  #   dns_search: example.net
+  #   command: --name N2 --cluster_name JSC --js --sd /data --cluster nats://0.0.0.0:4245 --routes nats://nats-1:4245,nats://nats-2:4245,nats://nats-3:4245 -p 4222
+  #   networks:
+  #     - mainflux-base-net
+  #   ports:
+  #   - 4223:${MF_NATS_PORT}
+  #   volumes:
+  #   - ./jetstream-cluster/nats-2:/data
+
+  # nats-3:
+  #   container_name: nats-3
+  #   image: nats:2.9.14-alpine
+  #   entrypoint: /nats-server
+  #   command: --name N3 --cluster_name JSC --js --sd /data --cluster nats://0.0.0.0:4245 --routes nats://nats-1:4245,nats://nats-2:4245,nats://nats-3:4245 -p 4222
+  #   networks:
+  #     - mainflux-base-net
+  #   ports:
+  #   - 4224:${MF_NATS_PORT}
+  #   volumes:
+  #   - ./jetstream-cluster/nats-3:/data

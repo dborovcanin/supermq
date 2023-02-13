@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/messaging"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	version = "1.3.0"
+	version = "2.9.14-alpine"
 	port    = "4222/tcp"
 )
 
@@ -40,6 +41,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not start container: %s", err)
 	}
 	handleInterrupt(pool, container)
+	time.Sleep(time.Millisecond * 200)
 
 	logger, err := logger.New(os.Stdout, "error")
 	address := fmt.Sprintf("%s:%s", "localhost", container.GetPort(port))

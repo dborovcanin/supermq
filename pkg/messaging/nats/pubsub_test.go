@@ -13,6 +13,7 @@ import (
 	broker "github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -34,15 +35,16 @@ func TestPublisher(t *testing.T) {
 	// require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 	// err = pubsub.Subscribe(clientID, fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic), handler{})
 	// require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
-
-	received := make(chan *broker.Msg)
-
 	_, err := conn.Subscribe(fmt.Sprintf("%s.%s", chansPrefix, topic), func(msg *broker.Msg) {
-		received <- msg
+		var m messaging.Message
+		proto.Unmarshal(msg.Data, &m)
+		msgChan <- &m
 	})
 	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 	_, err = conn.Subscribe(fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic), func(msg *broker.Msg) {
-		received <- msg
+		var m messaging.Message
+		proto.Unmarshal(msg.Data, &m)
+		msgChan <- &m
 	})
 	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 
@@ -89,8 +91,185 @@ func TestPublisher(t *testing.T) {
 		err = pubsub.Publish(topic, &expectedMsg)
 		require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 
+		fmt.Println("Waiting for message")
 		receivedMsg := <-msgChan
+		fmt.Println("Waiting done")
 		assert.Equal(t, expectedMsg.Payload, receivedMsg.Payload, fmt.Sprintf("%s: expected %+v got %+v\n", tc.desc, &expectedMsg.Payload, receivedMsg.Payload))
+	}
+}
+
+func TestSubscriber(t *testing.T) {
+	// Test Subscribe and Unsubscribe
+	subCases := []struct {
+		desc         string
+		topic        string
+		clientID     string
+		errorMessage error
+		handler      messaging.MessageHandler
+	}{
+		{
+			desc:         "Subscribe to a topic with an ID",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "clientid1",
+			errorMessage: nil,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Subscribe to the same topic with a different ID",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "clientid2",
+			errorMessage: nil,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Subscribe to an already subscribed topic with an ID",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "clientid1",
+			errorMessage: nil,
+			handler:      handler{false},
+		},
+
+		{
+			desc:         "Subscribe to a topic with a subtopic with an ID",
+			topic:        fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic),
+			clientID:     "clientidd1",
+			errorMessage: nil,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Subscribe to an already subscribed topic with a subtopic with an ID",
+			topic:        fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic),
+			clientID:     "clientidd1",
+			errorMessage: nil,
+			handler:      handler{false},
+		},
+
+		{
+			desc:         "Subscribe to an empty topic with an ID",
+			topic:        "",
+			clientID:     "clientid1",
+			errorMessage: nats.ErrEmptyTopic,
+			handler:      handler{false},
+		},
+
+		{
+			desc:         "Subscribe to a topic with empty id",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "",
+			errorMessage: nats.ErrEmptyID,
+			handler:      handler{false},
+		},
+
+		{
+			desc:         "Subscribe to another topic with an ID",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic+"1"),
+			clientID:     "clientid3",
+			errorMessage: nil,
+			handler:      handler{true},
+		},
+		{
+			desc:         "Subscribe to another already subscribed topic with an ID with Unsubscribe failing",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic+"1"),
+			clientID:     "clientid3",
+			errorMessage: errFailed,
+			handler:      handler{true},
+		},
+		{
+			desc:         "Subscribe to a new topic with an ID",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic+"2"),
+			clientID:     "clientid4",
+			errorMessage: nil,
+			handler:      handler{true},
+		},
+	}
+
+	unsubCases := []struct {
+		desc         string
+		topic        string
+		clientID     string
+		errorMessage error
+		handler      messaging.MessageHandler
+	}{
+		{
+			desc:         "Unsubscribe from a topic with an ID",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "clientid1",
+			errorMessage: nil,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from a non-existent topic with an ID",
+			topic:        "h",
+			clientID:     "clientid1",
+			errorMessage: nats.ErrNotSubscribed,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from the same topic with a different ID",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "clientidd2",
+			errorMessage: nats.ErrNotSubscribed,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from the same topic with a different ID not subscribed",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "clientidd3",
+			errorMessage: nats.ErrNotSubscribed,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from an already unsubscribed topic with an ID",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "clientid1",
+			errorMessage: nats.ErrNotSubscribed,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from a topic with a subtopic with an ID",
+			topic:        fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic),
+			clientID:     "clientidd1",
+			errorMessage: nil,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from an empty topic with an ID",
+			topic:        "",
+			clientID:     "clientid1",
+			errorMessage: nats.ErrEmptyTopic,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from an already unsubscribed topic with a subtopic with an ID",
+			topic:        fmt.Sprintf("%s.%s.%s", chansPrefix, topic, subtopic),
+			clientID:     "clientid1",
+			errorMessage: nats.ErrNotSubscribed,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from a topic with empty id",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic),
+			clientID:     "",
+			errorMessage: nats.ErrEmptyID,
+			handler:      handler{false},
+		},
+		{
+			desc:         "Unsubscribe from a topic with an ID with failing handler",
+			topic:        fmt.Sprintf("%s.%s", chansPrefix, topic+"2"),
+			clientID:     "clientid4",
+			errorMessage: errFailed,
+			handler:      handler{true},
+		},
+	}
+
+	for _, pc := range subCases {
+		err := pubsub.Subscribe(pc.clientID, pc.topic, pc.handler)
+		assert.Equal(t, err, pc.errorMessage, fmt.Sprintf("%s got unexpected error: %s", pc.desc, err))
+	}
+
+	for _, pc := range unsubCases {
+		err := pubsub.Unsubscribe(pc.clientID, pc.topic)
+		assert.Equal(t, err, pc.errorMessage, fmt.Sprintf("%s got unexpected error: %s", pc.desc, err))
 	}
 }
 

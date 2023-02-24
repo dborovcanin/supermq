@@ -7,7 +7,6 @@ package http
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/messaging"
@@ -35,9 +34,6 @@ func New(publisher messaging.Publisher, things mainflux.ThingsServiceClient) Ser
 }
 
 func (as *adapterService) Publish(ctx context.Context, token string, msg *messaging.Message) error {
-	fmt.Println()
-	fmt.Println("Inside svc.Publish")
-	fmt.Println()
 	ar := &mainflux.AccessByKeyReq{
 		Token:  token,
 		ChanID: msg.Channel,
@@ -47,9 +43,6 @@ func (as *adapterService) Publish(ctx context.Context, token string, msg *messag
 		return err
 	}
 	msg.Publisher = thid.GetValue()
-	fmt.Println()
-	fmt.Println("Called as.pubslisher.publish")
-	fmt.Println()
 
 	return as.publisher.Publish(msg.Channel, msg)
 }

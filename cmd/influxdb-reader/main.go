@@ -14,7 +14,7 @@ import (
 	"github.com/mainflux/mainflux/internal/env"
 	"github.com/mainflux/mainflux/internal/server"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
-	mflog "github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/readers"
 	"github.com/mainflux/mainflux/readers/api"
 	"github.com/mainflux/mainflux/readers/influxdb"
@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("failed to load %s configuration : %s", svcName, err)
 	}
 
-	logger, err := mflog.New(os.Stdout, cfg.LogLevel)
+	logger, err := logger.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
 		log.Fatalf("failed to init logger: %s", err)
 	}
@@ -66,6 +66,13 @@ func main() {
 	if err := env.Parse(&influxDBConfig, env.Options{Prefix: envPrefixInfluxdb}); err != nil {
 		logger.Fatal(fmt.Sprintf("failed to load InfluxDB client configuration from environment variable : %s", err))
 	}
+	influxDBConfig.DBUrl = fmt.Sprintf("%s://%s:%s", influxDBConfig.Protocol, influxDBConfig.Host, influxDBConfig.Port)
+
+	repocfg := influxdb.RepoConfig{
+		Bucket: influxDBConfig.Bucket,
+		Org:    influxDBConfig.Org,
+	}
+
 	client, err := influxDBClient.Connect(influxDBConfig)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("failed to connect to InfluxDB : %s", err))
@@ -95,8 +102,6 @@ func main() {
 
 func newService(client influxdb2.Client, repocfg influxdb.RepoConfig, logger logger.Logger) readers.MessageRepository {
 	repo := influxdb.New(client, repocfg)
-func newService(client influxdata.Client, dbName string, logger mflog.Logger) readers.MessageRepository {
-	repo := influxdb.New(client, dbName)
 	repo = api.LoggingMiddleware(repo, logger)
 	counter, latency := internal.MakeMetrics("influxdb", "message_reader")
 	repo = api.MetricsMiddleware(repo, counter, latency)

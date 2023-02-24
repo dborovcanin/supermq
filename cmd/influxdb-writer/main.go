@@ -101,8 +101,6 @@ func main() {
 
 func newService(client influxdb2.Client, repocfg influxdb.RepoConfig, logger logger.Logger) consumers.Consumer {
 	repo := influxdb.New(client, repocfg)
-func newService(client influxdata.Client, dbName string, logger mflog.Logger) consumers.Consumer {
-	repo := influxdb.New(client, dbName)
 	repo = api.LoggingMiddleware(repo, logger)
 	counter, latency := internal.MakeMetrics("influxdb", "message_writer")
 	repo = api.MetricsMiddleware(repo, counter, latency)

@@ -14,7 +14,7 @@ import (
 	"github.com/mainflux/mainflux/internal/env"
 	"github.com/mainflux/mainflux/internal/server"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
-	"github.com/mainflux/mainflux/logger"
+	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/readers"
 	"github.com/mainflux/mainflux/readers/api"
 	"github.com/mainflux/mainflux/readers/influxdb"
@@ -40,42 +40,35 @@ func main() {
 
 	cfg := config{}
 	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("failed to load %s configuration : %s", svcName, err.Error())
+		log.Fatalf("failed to load %s configuration : %s", svcName, err)
 	}
 
-	logger, err := logger.New(os.Stdout, cfg.LogLevel)
+	logger, err := mflog.New(os.Stdout, cfg.LogLevel)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("failed to init logger: %s", err)
 	}
 
 	tc, tcHandler, err := thingsClient.Setup(envPrefix, cfg.JaegerURL)
 	if err != nil {
-		log.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 	defer tcHandler.Close()
 	logger.Info("Successfully connected to things grpc server " + tcHandler.Secure())
 
 	auth, authHandler, err := authClient.Setup(envPrefix, cfg.JaegerURL)
 	if err != nil {
-		log.Fatal(err.Error())
+		logger.Fatal(err.Error())
 	}
 	defer authHandler.Close()
 	logger.Info("Successfully connected to auth grpc server " + authHandler.Secure())
 
 	influxDBConfig := influxDBClient.Config{}
 	if err := env.Parse(&influxDBConfig, env.Options{Prefix: envPrefixInfluxdb}); err != nil {
-		log.Fatalf("failed to load InfluxDB client configuration from environment variable : %s", err.Error())
+		logger.Fatal(fmt.Sprintf("failed to load InfluxDB client configuration from environment variable : %s", err))
 	}
-	influxDBConfig.DBUrl = fmt.Sprintf("%s://%s:%s", influxDBConfig.Protocol, influxDBConfig.Host, influxDBConfig.Port)
-
-	repocfg := influxdb.RepoConfig{
-		Bucket: influxDBConfig.Bucket,
-		Org:    influxDBConfig.Org,
-	}
-
 	client, err := influxDBClient.Connect(influxDBConfig)
 	if err != nil {
-		log.Fatalf("failed to connect to InfluxDB : %s", err.Error())
+		logger.Fatal(fmt.Sprintf("failed to connect to InfluxDB : %s", err))
 	}
 	defer client.Close()
 
@@ -83,7 +76,7 @@ func main() {
 
 	httpServerConfig := server.Config{Port: defSvcHttpPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHttp, AltPrefix: envPrefix}); err != nil {
-		log.Fatalf("failed to load %s HTTP server configuration : %s", svcName, err.Error())
+		logger.Fatal(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err))
 	}
 	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(repo, tc, auth, svcName, logger), logger)
 
@@ -102,6 +95,8 @@ func main() {
 
 func newService(client influxdb2.Client, repocfg influxdb.RepoConfig, logger logger.Logger) readers.MessageRepository {
 	repo := influxdb.New(client, repocfg)
+func newService(client influxdata.Client, dbName string, logger mflog.Logger) readers.MessageRepository {
+	repo := influxdb.New(client, dbName)
 	repo = api.LoggingMiddleware(repo, logger)
 	counter, latency := internal.MakeMetrics("influxdb", "message_reader")
 	repo = api.MetricsMiddleware(repo, counter, latency)

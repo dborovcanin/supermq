@@ -17,6 +17,7 @@ import (
 	"github.com/mainflux/mainflux/readers"
 	creader "github.com/mainflux/mainflux/readers/cassandra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -54,6 +55,8 @@ func TestReadSenml(t *testing.T) {
 	defer session.Close()
 	err = casClient.InitDB(session, cassandra.Table)
 	assert.Nil(t, err, fmt.Sprintf("failed to initialize to Cassandra: %s", err))
+	err = casClient.InitDB(session, cwriter.Table)
+	require.Nil(t, err, fmt.Sprintf("failed to initialize to Cassandra: %s", err))
 	writer := cwriter.New(session)
 
 	chanID, err := idProvider.ID()

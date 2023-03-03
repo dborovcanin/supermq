@@ -104,7 +104,6 @@ func (repo *influxRepository) ReadAll(chanID string, rpm readers.PageMetadata) (
 }
 
 func (repo *influxRepository) count(measurement, condition string, timeRange string) (uint64, error) {
-
 	cmd := fmt.Sprintf(`
 	import "influxdata/influxdb/v1" from(bucket: "%s")
 	%s

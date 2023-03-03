@@ -4,7 +4,6 @@
 package influxdb
 
 import (
-	"context"
 	"math"
 	"time"
 
@@ -53,9 +52,23 @@ func (repo *influxRepo) Consume(message interface{}) error {
 	if err != nil {
 		return err
 	}
-	writeAPI := repo.client.WriteAPIBlocking(repo.cfg.Org, repo.cfg.Bucket)
-	err = writeAPI.WritePoint(context.Background(), pts...)
-	return err
+
+	writeAPI := repo.client.WriteAPI(repo.cfg.Org, repo.cfg.Bucket)
+	errCh := writeAPI.Errors()
+
+	go func() {
+		for e := range errCh {
+			err = e
+		}
+	}()
+
+	for _, pt := range pts {
+		writeAPI.WritePoint(pt)
+	}
+
+	writeAPI.Flush()
+	repo.client.Close()
+	return nil
 }
 
 func (repo *influxRepo) senmlPoints(messages interface{}) ([]*write.Point, error) {

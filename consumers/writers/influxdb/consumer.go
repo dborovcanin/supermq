@@ -4,6 +4,7 @@
 package influxdb
 
 import (
+	"context"
 	"math"
 	"time"
 
@@ -30,6 +31,7 @@ type RepoConfig struct {
 type influxRepo struct {
 	client influxdb2.Client
 	cfg    RepoConfig
+	async  bool
 }
 
 // New returns new InfluxDB writer.
@@ -37,6 +39,7 @@ func New(client influxdb2.Client, config RepoConfig) consumers.Consumer {
 	return &influxRepo{
 		client: client,
 		cfg:    config,
+		async:  true, // Default to async
 	}
 }
 
@@ -53,22 +56,29 @@ func (repo *influxRepo) Consume(message interface{}) error {
 		return err
 	}
 
-	writeAPI := repo.client.WriteAPI(repo.cfg.Org, repo.cfg.Bucket)
-	errCh := writeAPI.Errors()
+	switch repo.async {
+	case true:
+		writeAPI := repo.client.WriteAPI(repo.cfg.Org, repo.cfg.Bucket)
+		errCh := writeAPI.Errors()
 
-	go func() {
-		for e := range errCh {
-			err = e
+		go func() {
+			for e := range errCh {
+				err = e
+			}
+		}()
+
+		for _, pt := range pts {
+			writeAPI.WritePoint(pt)
 		}
-	}()
 
-	for _, pt := range pts {
-		writeAPI.WritePoint(pt)
+		writeAPI.Flush()
+		repo.client.Close()
+	default:
+		writeAPI := repo.client.WriteAPIBlocking(repo.cfg.Org, repo.cfg.Bucket)
+		err = writeAPI.WritePoint(context.Background(), pts...)
 	}
 
-	writeAPI.Flush()
-	repo.client.Close()
-	return nil
+	return err
 }
 
 func (repo *influxRepo) senmlPoints(messages interface{}) ([]*write.Point, error) {

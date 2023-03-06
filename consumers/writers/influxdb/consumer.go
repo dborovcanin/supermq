@@ -5,6 +5,7 @@ package influxdb
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/mainflux/mainflux/pkg/transformers/senml"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api"
 	"github.com/influxdata/influxdb-client-go/v2/api/write"
 )
 
@@ -29,17 +31,21 @@ type RepoConfig struct {
 }
 
 type influxRepo struct {
-	client influxdb2.Client
-	cfg    RepoConfig
-	async  bool
+	client           influxdb2.Client
+	cfg              RepoConfig
+	async            bool
+	writeAPI         api.WriteAPI
+	writeAPIBlocking api.WriteAPIBlocking
 }
 
 // New returns new InfluxDB writer.
 func New(client influxdb2.Client, config RepoConfig, async bool) consumers.Consumer {
 	return &influxRepo{
-		client: client,
-		cfg:    config,
-		async:  async,
+		client:           client,
+		cfg:              config,
+		async:            async,
+		writeAPI:         client.WriteAPI(config.Org, config.Bucket),
+		writeAPIBlocking: client.WriteAPIBlocking(config.Org, config.Bucket),
 	}
 }
 
@@ -58,24 +64,28 @@ func (repo *influxRepo) Consume(message interface{}) error {
 
 	switch repo.async {
 	case true:
-		writeAPI := repo.client.WriteAPI(repo.cfg.Org, repo.cfg.Bucket)
-		errCh := writeAPI.Errors()
+		ch := make(chan bool)
+		errCh := repo.writeAPI.Errors()
 
-		go func() {
-			for e := range errCh {
-				err = e
+		go func(ch <-chan bool) {
+			for {
+				select {
+				case err := <-errCh:
+					fmt.Println(err) // Send this error to channel in Consume parameter (not yet implemented)
+				case <-ch:
+					return
+				}
 			}
-		}()
+
+		}(ch)
 
 		for _, pt := range pts {
-			writeAPI.WritePoint(pt)
+			repo.writeAPI.WritePoint(pt)
 		}
-
-		writeAPI.Flush()
-		repo.client.Close()
+		close(ch)
+		repo.writeAPI.Flush()
 	default:
-		writeAPI := repo.client.WriteAPIBlocking(repo.cfg.Org, repo.cfg.Bucket)
-		err = writeAPI.WritePoint(context.Background(), pts...)
+		err = repo.writeAPIBlocking.WritePoint(context.Background(), pts...)
 	}
 
 	return err

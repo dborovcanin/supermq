@@ -31,19 +31,20 @@ type Config struct {
 }
 
 // Setup load configuration from environment variable, create InfluxDB client and connect to InfluxDB server
-func Setup(envPrefix string) (influxdb2.Client, error) {
+func Setup(envPrefix string, ctx context.Context) (influxdb2.Client, error) {
 	config := Config{}
 	if err := env.Parse(&config, env.Options{Prefix: envPrefix}); err != nil {
 		return nil, errors.Wrap(errConfig, err)
 	}
-	return Connect(config)
+	return Connect(config, ctx)
 }
 
 // Connect create InfluxDB client and connect to InfluxDB server
-func Connect(config Config) (influxdb2.Client, error) {
+func Connect(config Config, ctx context.Context) (influxdb2.Client, error) {
 	client := influxdb2.NewClient(config.DBUrl, config.Token)
-	_, err := client.Ready(context.Background())
-	if err != nil {
+	ctx, cancel := context.WithTimeout(ctx, 1000*time.Millisecond)
+	defer cancel()
+	if _, err := client.Ready(ctx); err != nil {
 		return nil, errors.Wrap(errConnect, err)
 	}
 	return client, nil

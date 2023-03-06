@@ -73,7 +73,7 @@ func main() {
 		Org:    influxDBConfig.Org,
 	}
 
-	client, err := influxDBClient.Connect(influxDBConfig)
+	client, err := influxDBClient.Connect(influxDBConfig, context.Background())
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("failed to connect to InfluxDB : %s", err))
 	}

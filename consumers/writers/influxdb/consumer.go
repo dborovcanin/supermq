@@ -35,11 +35,11 @@ type influxRepo struct {
 }
 
 // New returns new InfluxDB writer.
-func New(client influxdb2.Client, config RepoConfig) consumers.Consumer {
+func New(client influxdb2.Client, config RepoConfig, async bool) consumers.Consumer {
 	return &influxRepo{
 		client: client,
 		cfg:    config,
-		async:  true, // Default to async
+		async:  async,
 	}
 }
 

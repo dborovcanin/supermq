@@ -49,7 +49,7 @@ var (
 )
 
 func TestReadSenml(t *testing.T) {
-	writer := iwriter.New(client, repoCfg)
+	writer := iwriter.New(client, repoCfg, true)
 
 	chanID, err := idProvider.ID()
 	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
@@ -402,7 +402,7 @@ func TestReadSenml(t *testing.T) {
 }
 
 func TestReadJSON(t *testing.T) {
-	writer := iwriter.New(client, repoCfg)
+	writer := iwriter.New(client, repoCfg, true)
 
 	id1, err := idProvider.ID()
 	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))

@@ -5,7 +5,6 @@ package influxdb
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"time"
 
@@ -33,8 +32,6 @@ type RepoConfig struct {
 type influxRepo struct {
 	client           influxdb2.Client
 	cfg              RepoConfig
-	async            bool
-	writeAPI         api.WriteAPI
 	writeAPIBlocking api.WriteAPIBlocking
 }
 
@@ -43,8 +40,6 @@ func New(client influxdb2.Client, config RepoConfig, async bool) consumers.Consu
 	return &influxRepo{
 		client:           client,
 		cfg:              config,
-		async:            async,
-		writeAPI:         client.WriteAPI(config.Org, config.Bucket),
 		writeAPIBlocking: client.WriteAPIBlocking(config.Org, config.Bucket),
 	}
 }
@@ -62,33 +57,7 @@ func (repo *influxRepo) Consume(message interface{}) error {
 		return err
 	}
 
-	switch repo.async {
-	case true:
-		ch := make(chan bool)
-		errCh := repo.writeAPI.Errors()
-
-		go func(ch <-chan bool) {
-			for {
-				select {
-				case err := <-errCh:
-					fmt.Println(err) // Send this error to channel in Consume parameter (not yet implemented)
-				case <-ch:
-					return
-				}
-			}
-
-		}(ch)
-
-		for _, pt := range pts {
-			repo.writeAPI.WritePoint(pt)
-		}
-		close(ch)
-		repo.writeAPI.Flush()
-	default:
-		err = repo.writeAPIBlocking.WritePoint(context.Background(), pts...)
-	}
-
-	return err
+	return repo.writeAPIBlocking.WritePoint(context.Background(), pts...)
 }
 
 func (repo *influxRepo) senmlPoints(messages interface{}) ([]*write.Point, error) {

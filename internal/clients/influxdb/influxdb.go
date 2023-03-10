@@ -42,7 +42,7 @@ func Setup(envPrefix string, ctx context.Context) (influxdb2.Client, error) {
 // Connect create InfluxDB client and connect to InfluxDB server
 func Connect(config Config, ctx context.Context) (influxdb2.Client, error) {
 	client := influxdb2.NewClient(config.DBUrl, config.Token)
-	ctx, cancel := context.WithTimeout(ctx, 1000*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, config.Timeout)
 	defer cancel()
 	if _, err := client.Ready(ctx); err != nil {
 		return nil, errors.Wrap(errConnect, err)

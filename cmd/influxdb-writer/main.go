@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/mainflux/mainflux/consumers"
@@ -62,7 +63,9 @@ func main() {
 		logger.Fatal(fmt.Sprintf("failed to load InfluxDB client configuration from environment variable : %s", err))
 	}
 	influxDBConfig.DBUrl = fmt.Sprintf("%s://%s:%s", influxDBConfig.Protocol, influxDBConfig.Host, influxDBConfig.Port)
-
+	if influxDBConfig.Timeout == 0 {
+		influxDBConfig.Timeout = 1000 * time.Millisecond
+	}
 	repocfg := influxdb.RepoConfig{
 		Bucket: influxDBConfig.Bucket,
 		Org:    influxDBConfig.Org,

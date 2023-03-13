@@ -341,7 +341,7 @@ func (tr thingRepository) SearchThingsParams(ctx context.Context, devices []stri
 }
 
 func (tr thingRepository) searchModems(ctx context.Context, devices []string) (things.Page, error) {
-	q := `SELECT DISTINCT th.id, th.name, th.key, th.metadata, ch.metadata
+	q := `SELECT DISTINCT ON th.id th.id, th.name, th.key, th.metadata, ch.metadata
 	FROM things th
 	JOIN connections conn on th.id = conn.thing_id
 	JOIN channels ch ON conn.channel_id = ch.id
@@ -412,7 +412,7 @@ func (tr thingRepository) searchModems(ctx context.Context, devices []string) (t
 }
 
 func (tr thingRepository) searchMeters(ctx context.Context, devices []string) (things.Page, error) {
-	q := `SELECT DISTINCT CONCAT(th.id, '#1'), th.name, th.key, th.metadata, ch.metadata
+	q := `SELECT DISTINCT ON th.id CONCAT(th.id, '#1'), th.name, th.key, th.metadata, ch.metadata
 	FROM things th
 	JOIN connections conn on th.id = conn.thing_id
 	JOIN channels ch ON conn.channel_id = ch.id

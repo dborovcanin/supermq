@@ -15,19 +15,17 @@ var (
 )
 
 type Config struct {
-	Protocol           string        `env:"PROTOCOL"              envDefault:"http"`
-	Host               string        `env:"HOST"                  envDefault:"localhost"`
-	Port               string        `env:"PORT"                  envDefault:"8086"`
-	Username           string        `env:"ADMIN_USER"            envDefault:"mainflux"`
-	Password           string        `env:"ADMIN_PASSWORD"        envDefault:"mainflux"`
-	DbName             string        `env:"DB"                    envDefault:"mainflux"`
-	Bucket             string        `env:"BUCKET"                envDefault:"mainflux-bucket"`
-	Org                string        `env:"ORG"                   envDefault:"mainflux"`
-	Token              string        `env:"TOKEN"                 envDefault:"mainflux-token"`
-	DBUrl              string        `env:"DBURL"                 envDefault:""`
-	UserAgent          string        `env:"USER_AGENT"            envDefault:"InfluxDBClient"`
-	InsecureSkipVerify bool          `env:"INSECURE_SKIP_VERIFY"  envDefault:"false"`
-	Timeout            time.Duration `env:"TIMEOUT"               envDefault:"1s"`
+	Protocol string        `env:"PROTOCOL"              envDefault:"http"`
+	Host     string        `env:"HOST"                  envDefault:"localhost"`
+	Port     string        `env:"PORT"                  envDefault:"8086"`
+	Username string        `env:"ADMIN_USER"            envDefault:"mainflux"`
+	Password string        `env:"ADMIN_PASSWORD"        envDefault:"mainflux"`
+	DbName   string        `env:"DB"                    envDefault:"mainflux"`
+	Bucket   string        `env:"BUCKET"                envDefault:"mainflux-bucket"`
+	Org      string        `env:"ORG"                   envDefault:"mainflux"`
+	Token    string        `env:"TOKEN"                 envDefault:"mainflux-token"`
+	DBUrl    string        `env:"DBURL"                 envDefault:""`
+	Timeout  time.Duration `env:"TIMEOUT"               envDefault:"1s"`
 }
 
 // Setup load configuration from environment variable, create InfluxDB client and connect to InfluxDB server

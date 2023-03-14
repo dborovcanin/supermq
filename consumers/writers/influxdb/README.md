@@ -18,6 +18,14 @@ default values.
 | MF_INFLUXDB_ADMIN_USER        | Default user of InfluxDB database                                                 | mainflux               |
 | MF_INFLUXDB_ADMIN_PASSWORD    | Default password of InfluxDB user                                                 | mainflux               |
 | MF_INFLUXDB_DB                | InfluxDB database name                                                            | mainflux               |
+| MF_INFLUXDB_HOST              | InfluxDB host name                                                                | mainflux-influxdb      |
+| MF_INFLUXDB_PROTOCOL          | InfluxDB protocol                                                                 | http                   |
+| MF_INFLUXDB_TIMEOUT           | InfluxDB timeout value                                                            | 1s                     |
+| MF_INFLUXDB_ORG               | InfluxDB org name                                                                 | mainflux               |
+| MF_INFLUXDB_BUCKET            | InfluxDB bucket name                                                              | mainflux-bucket        |
+| MF_INFLUXDB_TOKEN             | InfluxDB token                                                                    | mainflux-token         |
+| MF_INFLUXDB_HTTP_ENABLED      | InfluxDB http enabled status                                                      | true                   |
+| MF_INFLUXDB_INIT_MODE         | InfluxDB init mode                                                                | setup                  |
 | MF_INFLUX_WRITER_CONFIG_PATH  | Config file path with message broker subjects list, payload type and content-type | /configs.toml          |
 
 ## Deployment
@@ -47,6 +55,13 @@ MF_INFLUXDB_HOST=[InfluxDB database host] \
 MF_INFLUXDB_PORT=[InfluxDB database port] \
 MF_INFLUXDB_ADMIN_USER=[InfluxDB admin user] \
 MF_INFLUXDB_ADMIN_PASSWORD=[InfluxDB admin password] \
+MF_INFLUXDB_PROTOCOL=[InfluxDB protocol] \
+MF_INFLUXDB_TIMEOUT=[InfluxDB timeout] \
+MF_INFLUXDB_ORG=[InfluxDB org] \
+MF_INFLUXDB_BUCKET=[InfluxDB bucket] \
+MF_INFLUXDB_TOKEN=[InfluxDB token] \
+MF_INFLUXDB_HTTP_ENABLED=[InfluxDB http enabled] \
+MF_INFLUXDB_INIT_MODE=[InfluxDB init mode] \
 MF_INFLUX_WRITER_CONFIG_PATH=[Config file path with Message broker subjects list, payload type and content-type] \
 $GOBIN/mainflux-influxdb
 ```

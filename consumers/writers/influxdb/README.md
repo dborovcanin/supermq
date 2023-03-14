@@ -20,12 +20,12 @@ default values.
 | MF_INFLUXDB_DB                | InfluxDB database name                                                            | mainflux               |
 | MF_INFLUXDB_HOST              | InfluxDB host name                                                                | mainflux-influxdb      |
 | MF_INFLUXDB_PROTOCOL          | InfluxDB protocol                                                                 | http                   |
-| MF_INFLUXDB_TIMEOUT           | InfluxDB timeout value                                                            | 1s                     |
-| MF_INFLUXDB_ORG               | InfluxDB org name                                                                 | mainflux               |
+| MF_INFLUXDB_TIMEOUT           | InfluxDB client connection readiness timeout                                      | 1s                     |
+| MF_INFLUXDB_ORG               | InfluxDB organisation name                                                        | mainflux               |
 | MF_INFLUXDB_BUCKET            | InfluxDB bucket name                                                              | mainflux-bucket        |
-| MF_INFLUXDB_TOKEN             | InfluxDB token                                                                    | mainflux-token         |
+| MF_INFLUXDB_TOKEN             | InfluxDB API token                                                                | mainflux-token         |
 | MF_INFLUXDB_HTTP_ENABLED      | InfluxDB http enabled status                                                      | true                   |
-| MF_INFLUXDB_INIT_MODE         | InfluxDB init mode                                                                | setup                  |
+| MF_INFLUXDB_INIT_MODE         | InfluxDB initialization mode                                                      | setup                  |
 | MF_INFLUX_WRITER_CONFIG_PATH  | Config file path with message broker subjects list, payload type and content-type | /configs.toml          |
 
 ## Deployment

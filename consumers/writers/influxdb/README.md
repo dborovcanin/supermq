@@ -12,7 +12,7 @@ default values.
 | ----------------------------- | --------------------------------------------------------------------------------- | ---------------------- |
 | MF_BROKER_URL                 | Message broker instance URL                                                       | nats://localhost:4222  |
 | MF_INFLUX_WRITER_LOG_LEVEL    | Log level for InfluxDB writer (debug, info, warn, error)                          | info                   |
-| MF_INFLUX_WRITER_PORT         | Service HTTP port                                                                 | 8180                   |
+| MF_INFLUX_WRITER_PORT         | Service HTTP port                                                                 | 8900                   |
 | MF_INFLUX_WRITER_DB_HOST      | InfluxDB host                                                                     | localhost              |
 | MF_INFLUXDB_PORT              | Default port of InfluxDB database                                                 | 8086                   |
 | MF_INFLUXDB_ADMIN_USER        | Default user of InfluxDB database                                                 | mainflux               |
@@ -55,11 +55,16 @@ $GOBIN/mainflux-influxdb
 
 This service can be deployed using docker containers.
 Docker compose file is available in `<project_root>/docker/addons/influxdb-writer/docker-compose.yml`. Besides database
-and writer service, it contains [Grafana platform](https://grafana.com/) which can be used for database
+and writer service, it contains InfluxData Web Admin Interface which can be used for database
 exploration and data visualization and analytics. In order to run Mainflux InfluxDB writer, execute the following command:
 
 ```bash
 docker-compose -f docker/addons/influxdb-writer/docker-compose.yml up -d
+```
+
+And, to use the default .env file, execute the following command:
+```bash
+docker-compose -f docker/addons/influxdb-writer/docker-compose.yml up --env-file docker/.env -d
 ```
 
 _Please note that you need to start core services before the additional ones._

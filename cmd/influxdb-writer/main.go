@@ -67,6 +67,8 @@ func main() {
 		Org:    influxDBConfig.Org,
 	}
 
+	fmt.Println("TEST tst typo hre is a typo")
+
 	client, err := influxDBClient.Connect(influxDBConfig, ctx)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("failed to connect to InfluxDB : %s", err))

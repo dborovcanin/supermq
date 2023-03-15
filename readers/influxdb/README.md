@@ -20,7 +20,7 @@ default values.
 | MF_INFLUXDB_HOST             | InfluxDB host name                                  | mainflux-influxdb |
 | MF_INFLUXDB_PROTOCOL         | InfluxDB protocol                                   | http              |
 | MF_INFLUXDB_TIMEOUT          | InfluxDB client connection readiness timeout        | 1s                |
-| MF_INFLUXDB_ORG              | InfluxDB organisation name                          | mainflux          |
+| MF_INFLUXDB_ORG              | InfluxDB organization name                          | mainflux          |
 | MF_INFLUXDB_BUCKET           | InfluxDB bucket name                                | mainflux-bucket   |
 | MF_INFLUXDB_TOKEN            | InfluxDB API token                                  | mainflux-token    |
 | MF_INFLUXDB_HTTP_ENABLED     | InfluxDB http enabled status                        | true              |
@@ -92,6 +92,7 @@ docker-compose -f docker/addons/influxdb-reader/docker-compose.yml up -d
 ```
 
 And, to use the default .env file, execute the following command:
+
 ```bash
 docker-compose -f docker/addons/influxdb-reader/docker-compose.yml up --env-file docker/.env -d
 ```
@@ -99,5 +100,3 @@ docker-compose -f docker/addons/influxdb-reader/docker-compose.yml up --env-file
 ## Usage
 
 Service exposes [HTTP API](https://api.mainflux.io/?urls.primaryName=readers-openapi.yml) for fetching messages.
-
-[doc]: https://docs.mainflux.io

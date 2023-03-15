@@ -100,3 +100,5 @@ docker-compose -f docker/addons/influxdb-reader/docker-compose.yml up --env-file
 ## Usage
 
 Service exposes [HTTP API](https://api.mainflux.io/?urls.primaryName=readers-openapi.yml) for fetching messages.
+
+Official docs can be found [here](https://docs.mainflux.io).

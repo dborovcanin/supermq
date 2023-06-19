@@ -13,13 +13,19 @@ import (
 )
 
 const (
-	ReadAction       = "m_read"
-	WriteAction      = "m_write"
-	addPolicyAction  = "g_add"
-	ClientEntityType = "client"
-	GroupEntityType  = "group"
-	ThingEntityType  = "thing"
-	thingsObjectKey  = "things"
+	ReadAction        = "m_read"
+	WriteAction       = "m_write"
+	addPolicyAction   = "g_add"
+	sharePolicyAction = "c_share"
+	ClientEntityType  = "client"
+	GroupEntityType   = "group"
+	ThingEntityType   = "thing"
+	thingsObjectKey   = "things"
+
+	// ThinClient is used to identify you are adding a policy for a thing.
+	ThingClient = "thing"
+	// UserClient is used to identify you are adding a policy for a user.
+	UserClient = "user"
 )
 
 var (
@@ -101,7 +107,7 @@ func (svc service) Authorize(ctx context.Context, ar AccessRequest) (Policy, err
 //  1. The client is admin
 //
 //  2. The client has `g_add` action on the object or is the owner of the object.
-func (svc service) AddPolicy(ctx context.Context, token string, p Policy) (Policy, error) {
+func (svc service) AddPolicy(ctx context.Context, token, client string, p Policy) (Policy, error) {
 	userID, err := svc.identify(ctx, token)
 	if err != nil {
 		return Policy{}, err
@@ -123,16 +129,63 @@ func (svc service) AddPolicy(ctx context.Context, token string, p Policy) (Polic
 
 	// If the client is admin, add the policy
 	if err := svc.checkAdmin(ctx, userID); err == nil {
+		if err := svc.checkSubject(ctx, userID, client, p); err != nil {
+			return Policy{}, err
+		}
+
 		return svc.policies.Save(ctx, p)
 	}
 
 	// If the client has `g_add` action on the object or is the owner of the object, add the policy
 	ar := AccessRequest{Subject: userID, Object: p.Object, Action: "g_add"}
 	if _, err := svc.policies.EvaluateGroupAccess(ctx, ar); err == nil {
+		if err := svc.checkSubject(ctx, userID, client, p); err != nil {
+			return Policy{}, err
+		}
+
 		return svc.policies.Save(ctx, p)
 	}
 
 	return Policy{}, errors.ErrAuthorization
+}
+
+// checkSubject is used to check if the subject is valid.
+//
+// 1. If the subject is a thing, check the following:
+//   - The user is an admin
+//   - The user is the owner of the thing
+//   - The user has `c_share` action on the thing
+//
+// 2. If the subject is a user, check the following:
+//   - The user is an admin
+//   - The user is the owner of the user
+//   - The user has `c_share` action on the user
+func (svc service) checkSubject(ctx context.Context, userID, client string, p Policy) error {
+	switch client {
+	case ThingClient:
+		if err := svc.checkAdmin(ctx, userID); err == nil {
+			return nil
+		}
+
+		ar := AccessRequest{Subject: userID, Object: p.Subject, Action: sharePolicyAction}
+		if _, err := svc.policies.EvaluateThingAccess(ctx, ar); err == nil {
+			return nil
+		}
+
+		return errors.ErrAuthorization
+	case UserClient:
+		if err := svc.checkAdmin(ctx, userID); err == nil {
+			return nil
+		}
+
+		if err := svc.usersAuthorize(ctx, userID, p.Subject, sharePolicyAction, ClientEntityType); err == nil {
+			return nil
+		}
+
+		return errors.ErrAuthorization
+	default:
+		return errors.New("invalid client")
+	}
 }
 
 func (svc service) UpdatePolicy(ctx context.Context, token string, p Policy) (Policy, error) {
@@ -223,11 +276,15 @@ func (svc service) identify(ctx context.Context, token string) (string, error) {
 
 func (svc service) checkAdmin(ctx context.Context, id string) error {
 	// for checking admin rights policy object, action and entity type are not important
+	return svc.usersAuthorize(ctx, id, thingsObjectKey, addPolicyAction, GroupEntityType)
+}
+
+func (svc service) usersAuthorize(ctx context.Context, sub, obj, act, entity string) error {
 	req := &upolicies.AuthorizeReq{
-		Sub:        id,
-		Obj:        thingsObjectKey,
-		Act:        addPolicyAction,
-		EntityType: GroupEntityType,
+		Sub:        sub,
+		Obj:        obj,
+		Act:        act,
+		EntityType: entity,
 	}
 	res, err := svc.auth.Authorize(ctx, req)
 	if err != nil {

@@ -22,11 +22,12 @@ const (
 	updateRelationKey = "c_update"
 	listRelationKey   = "c_list"
 	deleteRelationKey = "c_delete"
+	shareRelationKey  = "c_share"
 	groupEntityType   = "group"
 	clientEntityType  = "client"
 )
 
-var AdminRelationKey = []string{updateRelationKey, listRelationKey, deleteRelationKey}
+var AdminRelationKey = []string{updateRelationKey, listRelationKey, deleteRelationKey, shareRelationKey}
 
 type service struct {
 	uauth       upolicies.AuthServiceClient

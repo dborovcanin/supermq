@@ -37,15 +37,16 @@ func (tm *tracingMiddleware) Authorize(ctx context.Context, ar policies.AccessRe
 }
 
 // AddPolicy traces the "AddPolicy" operation of the wrapped policies.Service.
-func (tm *tracingMiddleware) AddPolicy(ctx context.Context, token string, p policies.Policy) (policies.Policy, error) {
+func (tm *tracingMiddleware) AddPolicy(ctx context.Context, token, client string, p policies.Policy) (policies.Policy, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_connect", trace.WithAttributes(
+		attribute.String("client", client),
 		attribute.String("subject", p.Subject),
 		attribute.String("object", p.Object),
 		attribute.StringSlice("actions", p.Actions),
 	))
 	defer span.End()
 
-	return tm.psvc.AddPolicy(ctx, token, p)
+	return tm.psvc.AddPolicy(ctx, token, client, p)
 }
 
 // UpdatePolicy traces the "UpdatePolicy" operation of the wrapped policies.Service.

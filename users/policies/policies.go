@@ -27,7 +27,10 @@ import (
 // Message policies
 //  9. m_write - write a message
 //  10. m_read - read a message
-var PolicyTypes = []string{"g_add", "g_delete", "g_update", "g_list", "c_delete", "c_update", "c_list", "m_write", "m_read"}
+//
+// Sharing policies
+//  11. c_share - share a client
+var PolicyTypes = []string{"g_add", "g_delete", "g_update", "g_list", "c_delete", "c_update", "c_list", "m_write", "m_read", "c_share"}
 
 // Policy represents an argument struct for making a policy related function calls.
 type Policy struct {

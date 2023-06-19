@@ -30,8 +30,7 @@ var (
 	adminToken   = "token"
 	adminID      = generateUUID(&testing.T{})
 	users        = map[string]string{adminToken: adminID}
-	ID           = testsutil.GenerateUUID(&testing.T{}, idProvider)
-	uadminPolicy = cmocks.SubjectSet{Subject: ID, Relation: clients.AdminRelationKey}
+	uadminPolicy = cmocks.SubjectSet{Subject: adminID, Relation: clients.AdminRelationKey}
 )
 
 func newThingsServer(svc clients.Service, psvc policies.Service) *httptest.Server {
@@ -1365,7 +1364,8 @@ func TestIdentify(t *testing.T) {
 func TestShareThing(t *testing.T) {
 	cRepo := new(mocks.Repository)
 	gRepo := new(gmocks.Repository)
-	uauth := cmocks.NewAuthService(users, map[string][]cmocks.SubjectSet{adminID: {uadminPolicy}})
+	aPolicy := cmocks.SubjectSet{Subject: "things", Relation: []string{"g_add", "c_share"}}
+	uauth := cmocks.NewAuthService(users, map[string][]cmocks.SubjectSet{adminID: {aPolicy}})
 	thingCache := mocks.NewCache()
 	policiesCache := pmocks.NewCache()
 
@@ -1406,18 +1406,16 @@ func TestShareThing(t *testing.T) {
 
 	for _, tc := range cases {
 		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall1 := pRepo.On("EvaluateThingAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall3 := pRepo.On("Retrieve", mock.Anything, mock.Anything).Return(policies.PolicyPage{}, nil)
-		repoCall4 := pRepo.On("Save", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		repoCall1 := pRepo.On("Retrieve", mock.Anything, mock.Anything).Return(policies.PolicyPage{}, nil)
+		repoCall2 := pRepo.On("Save", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
 		err := mfsdk.ShareThing(tc.groupID, tc.userID, []string{"c_list", "c_delete"}, tc.token)
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))
 		if tc.err == nil {
-			ok := repoCall4.Parent.AssertCalled(t, "Save", mock.Anything, mock.Anything)
+			ok := repoCall2.Parent.AssertCalled(t, "Save", mock.Anything, mock.Anything)
 			assert.True(t, ok, fmt.Sprintf("Save was not called on %s", tc.desc))
 		}
 		repoCall.Unset()
 		repoCall1.Unset()
-		repoCall3.Unset()
-		repoCall4.Unset()
+		repoCall2.Unset()
 	}
 }

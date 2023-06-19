@@ -56,8 +56,8 @@ func (es eventStore) Authorize(ctx context.Context, ar policies.AccessRequest) (
 	return id, nil
 }
 
-func (es eventStore) AddPolicy(ctx context.Context, token string, policy policies.Policy) (policies.Policy, error) {
-	policy, err := es.svc.AddPolicy(ctx, token, policy)
+func (es eventStore) AddPolicy(ctx context.Context, token, client string, policy policies.Policy) (policies.Policy, error) {
+	policy, err := es.svc.AddPolicy(ctx, token, client, policy)
 	if err != nil {
 		return policies.Policy{}, err
 	}

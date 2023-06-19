@@ -79,7 +79,8 @@ type Service interface {
 	// AddPolicy creates a policy for the given subject, so that, after
 	// AddPolicy, `subject` has a `relation` on `object`. Returns a non-nil
 	// error in case of failures.
-	AddPolicy(ctx context.Context, token string, p Policy) (Policy, error)
+	// The client can be a thing or a user.
+	AddPolicy(ctx context.Context, token, client string, p Policy) (Policy, error)
 
 	// DeletePolicy removes a policy.
 	DeletePolicy(ctx context.Context, token string, p Policy) error

@@ -31,11 +31,17 @@ func TestPoliciesSave(t *testing.T) {
 	t.Cleanup(func() { testsutil.CleanUpDB(t, db) })
 	repo := ppostgres.NewRepository(database)
 	crepo := cpostgres.NewRepository(database)
+	grepo := gpostgres.NewRepository(database)
 
-	uid := testsutil.GenerateUUID(t, idProvider)
+	group := mfgroups.Group{
+		ID:   testsutil.GenerateUUID(t, idProvider),
+		Name: "policy-save",
+	}
+	group, err := grepo.Save(context.Background(), group)
+	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 
 	client := mfclients.Client{
-		ID:   uid,
+		ID:   testsutil.GenerateUUID(t, idProvider),
 		Name: "policy-save@example.com",
 		Credentials: mfclients.Credentials{
 			Identity: "policy-save@example.com",
@@ -48,8 +54,6 @@ func TestPoliciesSave(t *testing.T) {
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 	client = clients[0]
 
-	uid = testsutil.GenerateUUID(t, idProvider)
-
 	cases := []struct {
 		desc   string
 		policy policies.Policy
@@ -60,7 +64,7 @@ func TestPoliciesSave(t *testing.T) {
 			policy: policies.Policy{
 				OwnerID: client.ID,
 				Subject: client.ID,
-				Object:  uid,
+				Object:  group.ID,
 				Actions: []string{"c_delete"},
 			},
 			err: nil,
@@ -70,7 +74,7 @@ func TestPoliciesSave(t *testing.T) {
 			policy: policies.Policy{
 				OwnerID: client.ID,
 				Subject: client.ID,
-				Object:  uid,
+				Object:  group.ID,
 				Actions: []string{"c_delete"},
 			},
 			err: nil,
@@ -176,11 +180,17 @@ func TestPoliciesRetrieve(t *testing.T) {
 	t.Cleanup(func() { testsutil.CleanUpDB(t, db) })
 	repo := ppostgres.NewRepository(database)
 	crepo := cpostgres.NewRepository(database)
+	grepo := gpostgres.NewRepository(database)
 
-	uid := testsutil.GenerateUUID(t, idProvider)
+	group := mfgroups.Group{
+		ID:   testsutil.GenerateUUID(t, idProvider),
+		Name: "policy-save",
+	}
+	group, err := grepo.Save(context.Background(), group)
+	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 
 	client := mfclients.Client{
-		ID:   uid,
+		ID:   testsutil.GenerateUUID(t, idProvider),
 		Name: "single-policy-retrieval@example.com",
 		Credentials: mfclients.Credentials{
 			Identity: "single-policy-retrieval@example.com",
@@ -193,13 +203,10 @@ func TestPoliciesRetrieve(t *testing.T) {
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 	client = clients[0]
 
-	uid, err = idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
-
 	policy := policies.Policy{
 		OwnerID: client.ID,
 		Subject: client.ID,
-		Object:  uid,
+		Object:  group.ID,
 		Actions: []string{"c_delete"},
 	}
 
@@ -211,7 +218,7 @@ func TestPoliciesRetrieve(t *testing.T) {
 		Object  string
 		err     error
 	}{
-		"retrieve existing policy":     {uid, uid, nil},
+		"retrieve existing policy":     {client.ID, group.ID, nil},
 		"retrieve non-existing policy": {"unknown", "unknown", nil},
 	}
 
@@ -229,12 +236,17 @@ func TestPoliciesUpdate(t *testing.T) {
 	t.Cleanup(func() { testsutil.CleanUpDB(t, db) })
 	repo := ppostgres.NewRepository(database)
 	crepo := cpostgres.NewRepository(database)
+	grepo := gpostgres.NewRepository(database)
 
-	cid := testsutil.GenerateUUID(t, idProvider)
-	pid := testsutil.GenerateUUID(t, idProvider)
+	group := mfgroups.Group{
+		ID:   testsutil.GenerateUUID(t, idProvider),
+		Name: "policy-save",
+	}
+	group, err := grepo.Save(context.Background(), group)
+	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 
 	client := mfclients.Client{
-		ID:   cid,
+		ID:   testsutil.GenerateUUID(t, idProvider),
 		Name: "policy-update@example.com",
 		Credentials: mfclients.Credentials{
 			Identity: "policy-update@example.com",
@@ -243,13 +255,13 @@ func TestPoliciesUpdate(t *testing.T) {
 		Status: mfclients.EnabledStatus,
 	}
 
-	_, err := crepo.Save(context.Background(), client)
+	_, err = crepo.Save(context.Background(), client)
 	require.Nil(t, err, fmt.Sprintf("unexpected error during saving client: %s", err))
 
 	policy := policies.Policy{
-		OwnerID: cid,
-		Subject: cid,
-		Object:  pid,
+		OwnerID: testsutil.GenerateUUID(t, idProvider),
+		Subject: client.ID,
+		Object:  group.ID,
 		Actions: []string{"c_delete"},
 	}
 	err = repo.Save(context.Background(), policy)
@@ -264,64 +276,45 @@ func TestPoliciesUpdate(t *testing.T) {
 		{
 			desc: "update policy successfully",
 			policy: policies.Policy{
-				OwnerID: cid,
-				Subject: cid,
-				Object:  pid,
+				Subject: client.ID,
+				Object:  group.ID,
 				Actions: []string{"c_update"},
 			},
 			resp: policies.Policy{
-				OwnerID: cid,
-				Subject: cid,
-				Object:  pid,
+				OwnerID: policy.OwnerID,
+				Subject: client.ID,
+				Object:  group.ID,
 				Actions: []string{"c_update"},
-			},
-			err: nil,
-		},
-		{
-			desc: "update policy with missing owner id",
-			policy: policies.Policy{
-				OwnerID: "",
-				Subject: cid,
-				Object:  pid,
-				Actions: []string{"c_delete"},
-			},
-			resp: policies.Policy{
-				OwnerID: cid,
-				Subject: cid,
-				Object:  pid,
-				Actions: []string{"c_delete"},
 			},
 			err: nil,
 		},
 		{
 			desc: "update policy with missing subject",
 			policy: policies.Policy{
-				OwnerID: cid,
 				Subject: "",
-				Object:  pid,
+				Object:  group.ID,
 				Actions: []string{"c_add"},
 			},
 			resp: policies.Policy{
-				OwnerID: cid,
-				Subject: cid,
-				Object:  pid,
-				Actions: []string{"c_delete"},
+				OwnerID: policy.OwnerID,
+				Subject: client.ID,
+				Object:  group.ID,
+				Actions: []string{"c_update"},
 			},
 			err: apiutil.ErrMissingPolicySub,
 		},
 		{
 			desc: "update policy with missing object",
 			policy: policies.Policy{
-				OwnerID: cid,
-				Subject: cid,
+				Subject: client.ID,
 				Object:  "",
 				Actions: []string{"c_add"},
 			},
 			resp: policies.Policy{
-				OwnerID: cid,
-				Subject: cid,
-				Object:  pid,
-				Actions: []string{"c_delete"},
+				OwnerID: policy.OwnerID,
+				Subject: client.ID,
+				Object:  group.ID,
+				Actions: []string{"c_update"},
 			},
 
 			err: apiutil.ErrMissingPolicyObj,
@@ -329,16 +322,15 @@ func TestPoliciesUpdate(t *testing.T) {
 		{
 			desc: "update policy with missing action",
 			policy: policies.Policy{
-				OwnerID: cid,
-				Subject: cid,
-				Object:  pid,
+				Subject: client.ID,
+				Object:  group.ID,
 				Actions: []string{""},
 			},
 			resp: policies.Policy{
-				OwnerID: cid,
-				Subject: cid,
-				Object:  pid,
-				Actions: []string{"c_delete"},
+				OwnerID: policy.OwnerID,
+				Subject: client.ID,
+				Object:  group.ID,
+				Actions: []string{"c_update"},
 			},
 			err: apiutil.ErrMalformedPolicyAct,
 		},
@@ -363,6 +355,7 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 	postgres.NewDatabase(db, tracer)
 	repo := ppostgres.NewRepository(database)
 	crepo := cpostgres.NewRepository(database)
+	grepo := gpostgres.NewRepository(database)
 
 	var nPolicies = uint64(10)
 
@@ -392,21 +385,30 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 	clientB = clientsB[0]
 
+	grps := []string{}
 	for i := uint64(0); i < nPolicies; i++ {
-		obj := fmt.Sprintf("TestRetrieveAll%d@example.com", i)
+		group := mfgroups.Group{
+			ID:   testsutil.GenerateUUID(t, idProvider),
+			Name: fmt.Sprintf("policy-retrievalall-%d", i),
+		}
+		group, err := grepo.Save(context.Background(), group)
+		require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
+		grps = append(grps, group.ID)
+
 		if i%2 == 0 {
 			policy := policies.Policy{
 				OwnerID: clientA.ID,
 				Subject: clientA.ID,
-				Object:  obj,
+				Object:  group.ID,
 				Actions: []string{"c_delete"},
 			}
 			err = repo.Save(context.Background(), policy)
 			require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 		}
 		policy := policies.Policy{
+			OwnerID: clientB.ID,
 			Subject: clientB.ID,
-			Object:  obj,
+			Object:  group.ID,
 			Actions: []string{"c_add", "c_update"},
 		}
 		err = repo.Save(context.Background(), policy)
@@ -438,7 +440,7 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Offset:  0,
 				Limit:   nPolicies,
 				Total:   nPolicies,
-				OwnerID: clientB.ID,
+				OwnerID: "wrong",
 			},
 			size: 0,
 		},
@@ -466,9 +468,9 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Offset: 0,
 				Limit:  nPolicies,
 				Total:  nPolicies,
-				Object: "TestRetrieveAll1@example.com",
+				Object: grps[0],
 			},
-			size: 1,
+			size: 2,
 		},
 		"retrieve policies by wrong Object": {
 			pm: policies.Page{
@@ -523,7 +525,7 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Limit:   nPolicies,
 				Total:   nPolicies,
 				OwnerID: clientA.ID,
-				Subject: "wrongSubject",
+				Subject: "wrong",
 			},
 			size: 0,
 		},
@@ -532,7 +534,7 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Offset:  0,
 				Limit:   nPolicies,
 				Total:   nPolicies,
-				OwnerID: clientB.ID,
+				OwnerID: "wrong",
 			},
 			size: 0,
 		},
@@ -542,7 +544,7 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Limit:   nPolicies,
 				Total:   nPolicies,
 				OwnerID: clientA.ID,
-				Object:  "TestRetrieveAll2@example.com",
+				Object:  grps[0],
 			},
 			size: 1,
 		},
@@ -551,8 +553,8 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Offset:  0,
 				Limit:   nPolicies,
 				Total:   nPolicies,
-				OwnerID: clientB.ID,
-				Object:  "TestRetrieveAll1@example.com",
+				OwnerID: "wrong",
+				Object:  grps[0],
 			},
 			size: 0,
 		},
@@ -562,7 +564,7 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Limit:   nPolicies,
 				Total:   nPolicies,
 				OwnerID: clientA.ID,
-				Object:  "TestRetrieveAll45@example.com",
+				Object:  "wrong",
 			},
 			size: 0,
 		},
@@ -571,8 +573,8 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Offset:  0,
 				Limit:   nPolicies,
 				Total:   nPolicies,
-				OwnerID: clientB.ID,
-				Object:  "TestRetrieveAll45@example.com",
+				OwnerID: "wrong",
+				Object:  "wrong",
 			},
 			size: 0,
 		},
@@ -602,7 +604,7 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Limit:   nPolicies,
 				Total:   nPolicies,
 				OwnerID: clientA.ID,
-				Action:  "wrongAction",
+				Action:  "wrong",
 			},
 			size: 0,
 		},
@@ -612,7 +614,7 @@ func TestPoliciesRetrievalAll(t *testing.T) {
 				Limit:   nPolicies,
 				Total:   nPolicies,
 				OwnerID: clientB.ID,
-				Action:  "wrongAction",
+				Action:  "wrong",
 			},
 			size: 0,
 		},
@@ -629,6 +631,14 @@ func TestPoliciesDelete(t *testing.T) {
 	t.Cleanup(func() { testsutil.CleanUpDB(t, db) })
 	repo := ppostgres.NewRepository(database)
 	crepo := cpostgres.NewRepository(database)
+	grepo := gpostgres.NewRepository(database)
+
+	group := mfgroups.Group{
+		ID:   testsutil.GenerateUUID(t, idProvider),
+		Name: "policy-save",
+	}
+	group, err := grepo.Save(context.Background(), group)
+	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 
 	client := mfclients.Client{
 		ID:   testsutil.GenerateUUID(t, idProvider),
@@ -640,15 +650,14 @@ func TestPoliciesDelete(t *testing.T) {
 		Status: mfclients.EnabledStatus,
 	}
 
-	subject, err := crepo.Save(context.Background(), client)
+	clients, err := crepo.Save(context.Background(), client)
 	require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
-
-	objectID := testsutil.GenerateUUID(t, idProvider)
+	client = clients[0]
 
 	policy := policies.Policy{
-		OwnerID: subject[0].ID,
-		Subject: subject[0].ID,
-		Object:  objectID,
+		OwnerID: client.ID,
+		Subject: client.ID,
+		Object:  group.ID,
 		Actions: []string{"c_delete"},
 	}
 
@@ -661,9 +670,9 @@ func TestPoliciesDelete(t *testing.T) {
 		err     error
 	}{
 		"delete non-existing policy":                      {"unknown", "unknown", nil},
-		"delete non-existing policy with correct subject": {subject[0].ID, "unknown", nil},
-		"delete non-existing policy with correct object":  {"unknown", objectID, nil},
-		"delete existing policy":                          {subject[0].ID, objectID, nil},
+		"delete non-existing policy with correct subject": {client.ID, "unknown", nil},
+		"delete non-existing policy with correct object":  {"unknown", group.ID, nil},
+		"delete existing policy":                          {client.ID, group.ID, nil},
 	}
 
 	for desc, tc := range cases {
@@ -675,9 +684,9 @@ func TestPoliciesDelete(t *testing.T) {
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
 	}
 	pm := policies.Page{
-		OwnerID: subject[0].ID,
-		Subject: subject[0].ID,
-		Object:  objectID,
+		OwnerID: client.ID,
+		Subject: client.ID,
+		Object:  group.ID,
 		Action:  "c_delete",
 	}
 	policyPage, err := repo.RetrieveAll(context.Background(), pm)

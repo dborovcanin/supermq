@@ -14,6 +14,7 @@ type createPolicyReq struct {
 	ClientID string   `json:"client,omitempty"`
 	GroupID  string   `json:"group,omitempty"`
 	Actions  []string `json:"actions,omitempty"`
+	External bool     `json:"external,omitempty"`
 }
 
 func (req createPolicyReq) validate() error {
@@ -32,6 +33,7 @@ type createPoliciesReq struct {
 	ClientIDs []string `json:"client_ids,omitempty"`
 	GroupIDs  []string `json:"group_ids,omitempty"`
 	Actions   []string `json:"actions,omitempty"`
+	External  bool     `json:"external,omitempty"`
 }
 
 func (req createPoliciesReq) validate() error {

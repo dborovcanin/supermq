@@ -21,11 +21,6 @@ const (
 	GroupEntityType   = "group"
 	ThingEntityType   = "thing"
 	thingsObjectKey   = "things"
-
-	// ThinClient is used to identify you are adding a policy for a thing.
-	ThingClient = "thing"
-	// UserClient is used to identify you are adding a policy for a user.
-	UserClient = "user"
 )
 
 var (
@@ -107,7 +102,7 @@ func (svc service) Authorize(ctx context.Context, ar AccessRequest) (Policy, err
 //  1. The client is admin
 //
 //  2. The client has `g_add` action on the object or is the owner of the object.
-func (svc service) AddPolicy(ctx context.Context, token, client string, p Policy) (Policy, error) {
+func (svc service) AddPolicy(ctx context.Context, token string, external bool, p Policy) (Policy, error) {
 	userID, err := svc.identify(ctx, token)
 	if err != nil {
 		return Policy{}, err
@@ -129,7 +124,7 @@ func (svc service) AddPolicy(ctx context.Context, token, client string, p Policy
 
 	// If the client is admin, add the policy
 	if err := svc.checkAdmin(ctx, userID); err == nil {
-		if err := svc.checkSubject(ctx, userID, client, p); err != nil {
+		if err := svc.checkSubject(ctx, userID, external, p); err != nil {
 			return Policy{}, err
 		}
 
@@ -139,7 +134,7 @@ func (svc service) AddPolicy(ctx context.Context, token, client string, p Policy
 	// If the client has `g_add` action on the object or is the owner of the object, add the policy
 	ar := AccessRequest{Subject: userID, Object: p.Object, Action: "g_add"}
 	if _, err := svc.policies.EvaluateGroupAccess(ctx, ar); err == nil {
-		if err := svc.checkSubject(ctx, userID, client, p); err != nil {
+		if err := svc.checkSubject(ctx, userID, external, p); err != nil {
 			return Policy{}, err
 		}
 
@@ -151,18 +146,18 @@ func (svc service) AddPolicy(ctx context.Context, token, client string, p Policy
 
 // checkSubject is used to check if the subject is valid.
 //
-// 1. If the subject is a thing, check the following:
+// 1. If the subject is a thing (external is false), check the following:
 //   - The user is an admin
 //   - The user is the owner of the thing
 //   - The user has `c_share` action on the thing
 //
-// 2. If the subject is a user, check the following:
+// 2. If the subject is a user (external is true), check the following:
 //   - The user is an admin
 //   - The user is the owner of the user
 //   - The user has `c_share` action on the user
-func (svc service) checkSubject(ctx context.Context, userID, client string, p Policy) error {
-	switch client {
-	case ThingClient:
+func (svc service) checkSubject(ctx context.Context, userID string, external bool, p Policy) error {
+	switch external {
+	case false:
 		if err := svc.checkAdmin(ctx, userID); err == nil {
 			return nil
 		}
@@ -173,7 +168,7 @@ func (svc service) checkSubject(ctx context.Context, userID, client string, p Po
 		}
 
 		return errors.ErrAuthorization
-	case UserClient:
+	case true:
 		if err := svc.checkAdmin(ctx, userID); err == nil {
 			return nil
 		}

@@ -124,10 +124,6 @@ func (svc service) AddPolicy(ctx context.Context, token string, external bool, p
 
 	// If the client is admin, add the policy
 	if err := svc.checkAdmin(ctx, userID); err == nil {
-		if err := svc.checkSubject(ctx, userID, external, p); err != nil {
-			return Policy{}, err
-		}
-
 		return svc.policies.Save(ctx, p)
 	}
 
@@ -147,21 +143,15 @@ func (svc service) AddPolicy(ctx context.Context, token string, external bool, p
 // checkSubject is used to check if the subject is valid.
 //
 // 1. If the subject is a thing (external is false), check the following:
-//   - The user is an admin
 //   - The user is the owner of the thing
 //   - The user has `c_share` action on the thing
 //
 // 2. If the subject is a user (external is true), check the following:
-//   - The user is an admin
 //   - The user is the owner of the user
 //   - The user has `c_share` action on the user
 func (svc service) checkSubject(ctx context.Context, userID string, external bool, p Policy) error {
 	switch external {
 	case false:
-		if err := svc.checkAdmin(ctx, userID); err == nil {
-			return nil
-		}
-
 		ar := AccessRequest{Subject: userID, Object: p.Subject, Action: sharePolicyAction}
 		if _, err := svc.policies.EvaluateThingAccess(ctx, ar); err == nil {
 			return nil
@@ -169,10 +159,6 @@ func (svc service) checkSubject(ctx context.Context, userID string, external boo
 
 		return errors.ErrAuthorization
 	case true:
-		if err := svc.checkAdmin(ctx, userID); err == nil {
-			return nil
-		}
-
 		if err := svc.usersAuthorize(ctx, userID, p.Subject, sharePolicyAction, ClientEntityType); err == nil {
 			return nil
 		}

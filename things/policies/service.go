@@ -26,6 +26,9 @@ const (
 var (
 	// ErrInvalidEntityType indicates that the entity type is invalid.
 	ErrInvalidEntityType = errors.New("invalid entity type")
+
+	// ErrInvalidClient indicates that the client is invalid.
+	ErrInvalidClient = errors.New("invalid client")
 )
 
 type service struct {
@@ -165,7 +168,7 @@ func (svc service) checkSubject(ctx context.Context, userID string, external boo
 
 		return errors.ErrAuthorization
 	default:
-		return errors.New("invalid client")
+		return ErrInvalidClient
 	}
 }
 

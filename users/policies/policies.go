@@ -29,7 +29,7 @@ import (
 //  10. m_read - read a message
 //
 // Sharing policies
-//  11. c_share - share a client
+//  11. c_share - share a client - allows a user to add another user to a group.
 var PolicyTypes = []string{"g_add", "g_delete", "g_update", "g_list", "c_delete", "c_update", "c_list", "m_write", "m_read", "c_share"}
 
 // Policy represents an argument struct for making a policy related function calls.

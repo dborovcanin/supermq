@@ -16,15 +16,18 @@ import (
 )
 
 const (
-	MyKey             = "mine"
-	thingsObjectKey   = "things"
+	MyKey = "mine"
+
+	thingsObjectKey = "things"
+
 	addRelationKey    = "g_add"
 	updateRelationKey = "c_update"
 	listRelationKey   = "c_list"
 	deleteRelationKey = "c_delete"
 	shareRelationKey  = "c_share"
-	groupEntityType   = "group"
-	clientEntityType  = "client"
+
+	groupEntityType  = "group"
+	clientEntityType = "client"
 )
 
 var AdminRelationKey = []string{updateRelationKey, listRelationKey, deleteRelationKey, shareRelationKey}

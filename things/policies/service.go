@@ -13,14 +13,21 @@ import (
 )
 
 const (
-	ReadAction        = "m_read"
-	WriteAction       = "m_write"
-	addPolicyAction   = "g_add"
+	// messaging policy actions.
+	ReadAction  = "m_read"
+	WriteAction = "m_write"
+
+	// add policy actions to check if the client is admin.
+	addPolicyAction = "g_add"
+
 	sharePolicyAction = "c_share"
-	ClientEntityType  = "client"
-	GroupEntityType   = "group"
-	ThingEntityType   = "thing"
-	thingsObjectKey   = "things"
+
+	// entity types.
+	ClientEntityType = "client"
+	GroupEntityType  = "group"
+	ThingEntityType  = "thing"
+
+	thingsObjectKey = "things"
 )
 
 var (

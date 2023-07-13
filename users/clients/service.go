@@ -17,12 +17,15 @@ import (
 )
 
 const (
-	MyKey             = "mine"
-	clientsObjectKey  = "clients"
+	MyKey = "mine"
+
+	clientsObjectKey = "clients"
+
 	updateRelationKey = "c_update"
 	listRelationKey   = "c_list"
 	deleteRelationKey = "c_delete"
-	entityType        = "client"
+
+	entityType = "client"
 )
 
 var (

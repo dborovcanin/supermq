@@ -1418,4 +1418,58 @@ func TestShareThing(t *testing.T) {
 		repoCall1.Unset()
 		repoCall2.Unset()
 	}
+
+	aPolicy = cmocks.SubjectSet{Subject: "things", Relation: []string{}}
+	uauth = cmocks.NewAuthService(users, map[string][]cmocks.SubjectSet{adminID: {aPolicy}})
+
+	psvc = policies.NewService(uauth, pRepo, policiesCache, idProvider)
+
+	svc = clients.NewService(uauth, psvc, cRepo, gRepo, thingCache, idProvider)
+	ts = newThingsServer(svc, psvc)
+	defer ts.Close()
+
+	conf = sdk.Config{
+		ThingsURL: ts.URL,
+	}
+	mfsdk = sdk.NewSDK(conf)
+
+	cases = []struct {
+		desc    string
+		groupID string
+		userID  string
+		token   string
+		err     errors.SDKError
+	}{
+		{
+			desc:    "share thing with valid token for unauthorized user",
+			groupID: generateUUID(t),
+			userID:  generateUUID(t),
+			token:   "adminToken",
+			err:     errors.NewSDKErrorWithStatus(errors.ErrAuthorization, http.StatusUnauthorized),
+		},
+		{
+			desc:    "share thing with invalid token for unauthorized user",
+			groupID: generateUUID(t),
+			userID:  generateUUID(t),
+			token:   invalidToken,
+			err:     errors.NewSDKErrorWithStatus(errors.ErrAuthorization, http.StatusUnauthorized),
+		},
+	}
+
+	for _, tc := range cases {
+		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		repoCall1 := pRepo.On("EvaluateThingAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		repoCall2 := pRepo.On("Retrieve", mock.Anything, mock.Anything).Return(policies.PolicyPage{}, nil)
+		repoCall3 := pRepo.On("Save", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		err := mfsdk.ShareThing(tc.groupID, tc.userID, []string{"c_list", "c_delete"}, tc.token)
+		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))
+		if tc.err == nil {
+			ok := repoCall2.Parent.AssertCalled(t, "Save", mock.Anything, mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("Save was not called on %s", tc.desc))
+		}
+		repoCall.Unset()
+		repoCall1.Unset()
+		repoCall2.Unset()
+		repoCall3.Unset()
+	}
 }

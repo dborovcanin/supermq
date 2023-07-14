@@ -28,8 +28,10 @@ import (
 
 var (
 	adminToken   = "token"
+	userToken    = "userToken"
 	adminID      = generateUUID(&testing.T{})
-	users        = map[string]string{adminToken: adminID}
+	userID       = generateUUID(&testing.T{})
+	users        = map[string]string{adminToken: adminID, userToken: userID}
 	uadminPolicy = cmocks.SubjectSet{Subject: adminID, Relation: clients.AdminRelationKey}
 )
 
@@ -1365,7 +1367,9 @@ func TestShareThing(t *testing.T) {
 	cRepo := new(mocks.Repository)
 	gRepo := new(gmocks.Repository)
 	aPolicy := cmocks.SubjectSet{Subject: "things", Relation: []string{"g_add", "c_share"}}
-	uauth := cmocks.NewAuthService(users, map[string][]cmocks.SubjectSet{adminID: {aPolicy}})
+	uPolicy := cmocks.SubjectSet{Subject: "things", Relation: []string{"g_add"}}
+
+	uauth := cmocks.NewAuthService(users, map[string][]cmocks.SubjectSet{adminID: {aPolicy}, userID: {uPolicy}})
 	thingCache := mocks.NewCache()
 	policiesCache := pmocks.NewCache()
 
@@ -1402,44 +1406,6 @@ func TestShareThing(t *testing.T) {
 			token:   invalidToken,
 			err:     errors.NewSDKErrorWithStatus(errors.ErrAuthorization, http.StatusUnauthorized),
 		},
-	}
-
-	for _, tc := range cases {
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall1 := pRepo.On("Retrieve", mock.Anything, mock.Anything).Return(policies.PolicyPage{}, nil)
-		repoCall2 := pRepo.On("Save", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		err := mfsdk.ShareThing(tc.groupID, tc.userID, []string{"c_list", "c_delete"}, tc.token)
-		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))
-		if tc.err == nil {
-			ok := repoCall2.Parent.AssertCalled(t, "Save", mock.Anything, mock.Anything)
-			assert.True(t, ok, fmt.Sprintf("Save was not called on %s", tc.desc))
-		}
-		repoCall.Unset()
-		repoCall1.Unset()
-		repoCall2.Unset()
-	}
-
-	aPolicy = cmocks.SubjectSet{Subject: "things", Relation: []string{}}
-	uauth = cmocks.NewAuthService(users, map[string][]cmocks.SubjectSet{adminID: {aPolicy}})
-
-	psvc = policies.NewService(uauth, pRepo, policiesCache, idProvider)
-
-	svc = clients.NewService(uauth, psvc, cRepo, gRepo, thingCache, idProvider)
-	ts = newThingsServer(svc, psvc)
-	defer ts.Close()
-
-	conf = sdk.Config{
-		ThingsURL: ts.URL,
-	}
-	mfsdk = sdk.NewSDK(conf)
-
-	cases = []struct {
-		desc    string
-		groupID string
-		userID  string
-		token   string
-		err     errors.SDKError
-	}{
 		{
 			desc:    "share thing with valid token for unauthorized user",
 			groupID: generateUUID(t),
@@ -1458,9 +1424,8 @@ func TestShareThing(t *testing.T) {
 
 	for _, tc := range cases {
 		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall1 := pRepo.On("EvaluateThingAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall2 := pRepo.On("Retrieve", mock.Anything, mock.Anything).Return(policies.PolicyPage{}, nil)
-		repoCall3 := pRepo.On("Save", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		repoCall1 := pRepo.On("Retrieve", mock.Anything, mock.Anything).Return(policies.PolicyPage{}, nil)
+		repoCall2 := pRepo.On("Save", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
 		err := mfsdk.ShareThing(tc.groupID, tc.userID, []string{"c_list", "c_delete"}, tc.token)
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))
 		if tc.err == nil {
@@ -1470,6 +1435,5 @@ func TestShareThing(t *testing.T) {
 		repoCall.Unset()
 		repoCall1.Unset()
 		repoCall2.Unset()
-		repoCall3.Unset()
 	}
 }

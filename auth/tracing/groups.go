@@ -12,17 +12,19 @@ import (
 )
 
 const (
-	assign              = "assign"
-	saveGroup           = "save_group"
-	deleteGroup         = "delete_group"
-	updateGroup         = "update_group"
-	retrieveByID        = "retrieve_by_id"
-	retrieveAllParents  = "retrieve_all_parents"
-	retrieveAllChildren = "retrieve_all_children"
-	retrieveAll         = "retrieve_all_groups"
-	memberships         = "memberships"
-	members             = "members"
-	unassign            = "unassign"
+	assign                = "assign"
+	saveGroup             = "save_group"
+	deleteGroup           = "delete_group"
+	updateGroup           = "update_group"
+	retrieveByID          = "retrieve_by_id"
+	retrieveByIDs         = "retrieve_by_ids"
+	retrieveAllParents    = "retrieve_all_parents"
+	retrieveAllChildren   = "retrieve_all_children"
+	retrieveAll           = "retrieve_all_groups"
+	memberships           = "memberships"
+	membershipsByGroupIDs = "memberships_by_group_ids"
+	members               = "members"
+	unassign              = "unassign"
 )
 
 var _ auth.GroupRepository = (*groupRepositoryMiddleware)(nil)
@@ -72,6 +74,14 @@ func (grm groupRepositoryMiddleware) RetrieveByID(ctx context.Context, id string
 	return grm.repo.RetrieveByID(ctx, id)
 }
 
+func (grm groupRepositoryMiddleware) RetrieveByIDs(ctx context.Context, groupID []string, pm auth.PageMetadata) (auth.GroupPage, error) {
+	span := createSpan(ctx, grm.tracer, retrieveByIDs)
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
+	return grm.repo.RetrieveByIDs(ctx, groupID, pm)
+}
+
 func (grm groupRepositoryMiddleware) RetrieveAllParents(ctx context.Context, groupID string, pm auth.PageMetadata) (auth.GroupPage, error) {
 	span := createSpan(ctx, grm.tracer, retrieveAllParents)
 	defer span.Finish()
@@ -102,6 +112,14 @@ func (grm groupRepositoryMiddleware) Memberships(ctx context.Context, memberID s
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	return grm.repo.Memberships(ctx, memberID, pm)
+}
+
+func (grm groupRepositoryMiddleware) MembershipsByGroupIDs(ctx context.Context, groupIDs []string, memberID string, pm auth.PageMetadata) (auth.GroupPage, error) {
+	span := createSpan(ctx, grm.tracer, membershipsByGroupIDs)
+	defer span.Finish()
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
+	return grm.repo.MembershipsByGroupIDs(ctx, groupIDs, memberID, pm)
 }
 
 func (grm groupRepositoryMiddleware) Members(ctx context.Context, groupID, groupType string, pm auth.PageMetadata) (auth.MemberPage, error) {

@@ -24,8 +24,22 @@ type deletePolicyRes struct {
 	deleted bool
 }
 
-type listPoliciesRes struct {
-	policies []string
+type listObjectsRes struct {
+	policies      []string
+	nextPageToken string
+}
+
+type countObjectsRes struct {
+	count int
+}
+
+type listSubjectsRes struct {
+	policies      []string
+	nextPageToken string
+}
+
+type countSubjectsRes struct {
+	count int
 }
 
 type membersRes struct {

@@ -182,16 +182,34 @@ func (tr thingRepository) RetrieveByIDs(ctx context.Context, thingIDs []string, 
 	nq, name := getNameQuery(pm.Name)
 	oq := getOrderQuery(pm.Order)
 	dq := getDirQuery(pm.Dir)
-	idq := fmt.Sprintf("WHERE id IN ('%s') ", strings.Join(thingIDs, "','"))
-
+	idq := fmt.Sprintf(" id IN ('%s') ", strings.Join(thingIDs, "', '"))
+	// SELECT id, owner, name, key, metadata FROM things
+	// WHERE  id IN ('dc0b1691-9ef9-48aa-80dc-5f305d4e5bc4')  ORDER BY name ASC LIMIT :limit OFFSET :offset;
 	m, mq, err := getMetadataQuery(pm.Metadata)
 	if err != nil {
 		return things.Page{}, errors.Wrap(errors.ErrViewEntity, err)
 	}
 
-	q := fmt.Sprintf(`SELECT id, owner, name, key, metadata FROM things
-					   %s%s%s ORDER BY %s %s LIMIT :limit OFFSET :offset;`, idq, mq, nq, oq, dq)
+	var query []string
+	if idq != "" {
+		query = append(query, idq)
+	}
+	if mq != "" {
+		query = append(query, mq)
+	}
+	if nq != "" {
+		query = append(query, nq)
+	}
 
+	var whereClause string
+	if len(query) > 0 {
+		whereClause = fmt.Sprintf("WHERE %s", strings.Join(query, " AND "))
+	}
+
+	q := fmt.Sprintf(`SELECT id, owner, name, key, metadata FROM things
+					   %s ORDER BY %s %s LIMIT :limit OFFSET :offset;`, whereClause, oq, dq)
+
+	// fmt.Println(q)
 	params := map[string]interface{}{
 		"limit":    pm.Limit,
 		"offset":   pm.Offset,
@@ -199,6 +217,7 @@ func (tr thingRepository) RetrieveByIDs(ctx context.Context, thingIDs []string, 
 		"metadata": m,
 	}
 
+	fmt.Println(ctx.Deadline())
 	rows, err := tr.db.NamedQueryContext(ctx, q, params)
 	if err != nil {
 		return things.Page{}, errors.Wrap(errors.ErrViewEntity, err)
@@ -220,7 +239,7 @@ func (tr thingRepository) RetrieveByIDs(ctx context.Context, thingIDs []string, 
 		items = append(items, th)
 	}
 
-	cq := fmt.Sprintf(`SELECT COUNT(*) FROM things %s%s%s;`, idq, mq, nq)
+	cq := fmt.Sprintf(`SELECT COUNT(*) FROM things %s;`, whereClause)
 
 	total, err := total(ctx, tr.db, cq, params)
 	if err != nil {

@@ -1,0 +1,10 @@
+{
+    "namespace": "Thing",
+    "object": "thing_1",
+    "relation": "owner",
+    "subject_set" : {
+        "namespace" : "User",
+        "object" :"mainflux",
+        "relation":"admin"
+    }
+}

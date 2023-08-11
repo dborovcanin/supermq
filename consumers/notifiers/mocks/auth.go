@@ -52,7 +52,7 @@ func (svc authServiceMock) DeletePolicy(ctx context.Context, in *mainflux.Delete
 	panic("not implemented")
 }
 
-func (svc authServiceMock) ListPolicies(ctx context.Context, in *mainflux.ListPoliciesReq, opts ...grpc.CallOption) (*mainflux.ListPoliciesRes, error) {
+func (svc authServiceMock) ListObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
 	panic("not implemented")
 }
 
@@ -61,5 +61,22 @@ func (svc authServiceMock) Members(ctx context.Context, req *mainflux.MembersReq
 }
 
 func (svc authServiceMock) Assign(ctx context.Context, req *mainflux.Assignment, _ ...grpc.CallOption) (r *empty.Empty, err error) {
+	panic("not implemented")
+}
+
+func (svc authServiceMock) ListAllObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
+	panic("not implemented")
+}
+func (svc authServiceMock) CountObjects(ctx context.Context, req *mainflux.CountObjectsReq, _ ...grpc.CallOption) (r *mainflux.CountObjectsRes, err error) {
+	panic("not implemented")
+}
+
+func (svc authServiceMock) ListSubjects(ctx context.Context, req *mainflux.ListSubjectsReq, _ ...grpc.CallOption) (r *mainflux.ListSubjectsRes, err error) {
+	panic("not implemented")
+}
+func (svc authServiceMock) ListAllSubjects(ctx context.Context, req *mainflux.ListSubjectsReq, _ ...grpc.CallOption) (r *mainflux.ListSubjectsRes, err error) {
+	panic("not implemented")
+}
+func (svc authServiceMock) CountSubjects(ctx context.Context, req *mainflux.CountSubjectsReq, _ ...grpc.CallOption) (r *mainflux.CountSubjectsRes, err error) {
 	panic("not implemented")
 }

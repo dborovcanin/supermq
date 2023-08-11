@@ -23,15 +23,20 @@ const (
 var _ mainflux.AuthServiceClient = (*grpcClient)(nil)
 
 type grpcClient struct {
-	issue        endpoint.Endpoint
-	identify     endpoint.Endpoint
-	authorize    endpoint.Endpoint
-	addPolicy    endpoint.Endpoint
-	deletePolicy endpoint.Endpoint
-	listPolicies endpoint.Endpoint
-	assign       endpoint.Endpoint
-	members      endpoint.Endpoint
-	timeout      time.Duration
+	issue           endpoint.Endpoint
+	identify        endpoint.Endpoint
+	authorize       endpoint.Endpoint
+	addPolicy       endpoint.Endpoint
+	deletePolicy    endpoint.Endpoint
+	listObjects     endpoint.Endpoint
+	listAllObjects  endpoint.Endpoint
+	countObjects    endpoint.Endpoint
+	listSubjects    endpoint.Endpoint
+	listAllSubjects endpoint.Endpoint
+	countSubjects   endpoint.Endpoint
+	assign          endpoint.Endpoint
+	members         endpoint.Endpoint
+	timeout         time.Duration
 }
 
 // NewClient returns new gRPC client instance.
@@ -77,13 +82,53 @@ func NewClient(tracer opentracing.Tracer, conn *grpc.ClientConn, timeout time.Du
 			decodeDeletePolicyResponse,
 			mainflux.DeletePolicyRes{},
 		).Endpoint()),
-		listPolicies: kitot.TraceClient(tracer, "list_policies")(kitgrpc.NewClient(
+		listObjects: kitot.TraceClient(tracer, "list_objects")(kitgrpc.NewClient(
 			conn,
 			svcName,
-			"ListPolicies",
-			encodeListPoliciesRequest,
-			decodeListPoliciesResponse,
-			mainflux.ListPoliciesRes{},
+			"ListObjects",
+			encodeListObjectsRequest,
+			decodeListObjectsResponse,
+			mainflux.ListObjectsRes{},
+		).Endpoint()),
+		listAllObjects: kitot.TraceClient(tracer, "list_all_objects")(kitgrpc.NewClient(
+			conn,
+			svcName,
+			"ListAllObjects",
+			encodeListObjectsRequest,
+			decodeListObjectsResponse,
+			mainflux.ListObjectsRes{},
+		).Endpoint()),
+		countObjects: kitot.TraceClient(tracer, "count_objects")(kitgrpc.NewClient(
+			conn,
+			svcName,
+			"CountObjects",
+			encodeCountObjectsRequest,
+			decodeCountObjectsResponse,
+			mainflux.CountObjectsRes{},
+		).Endpoint()),
+		listSubjects: kitot.TraceClient(tracer, "list_subjects")(kitgrpc.NewClient(
+			conn,
+			svcName,
+			"ListSubjects",
+			encodeListSubjectsRequest,
+			decodeListSubjectsResponse,
+			mainflux.ListSubjectsRes{},
+		).Endpoint()),
+		listAllSubjects: kitot.TraceClient(tracer, "list_all_subjects")(kitgrpc.NewClient(
+			conn,
+			svcName,
+			"ListAllSubjects",
+			encodeListSubjectsRequest,
+			decodeListSubjectsResponse,
+			mainflux.ListSubjectsRes{},
+		).Endpoint()),
+		countSubjects: kitot.TraceClient(tracer, "count_subjects")(kitgrpc.NewClient(
+			conn,
+			svcName,
+			"CountSubjects",
+			encodeCountSubjectsRequest,
+			decodeCountSubjectsResponse,
+			mainflux.CountSubjectsRes{},
 		).Endpoint()),
 		assign: kitot.TraceClient(tracer, "assign")(kitgrpc.NewClient(
 			conn,
@@ -156,7 +201,15 @@ func (client grpcClient) Authorize(ctx context.Context, req *mainflux.AuthorizeR
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.authorize(ctx, authReq{Act: req.GetAct(), Obj: req.GetObj(), Sub: req.GetSub()})
+	res, err := client.authorize(ctx, authReq{
+		Namespace:   req.GetNamespace(),
+		SubjectType: req.GetSubjectType(),
+		Subject:     req.GetSubject(),
+		Relation:    req.GetRelation(),
+		Permission:  req.GetPermission(),
+		ObjectType:  req.GetObjectType(),
+		Object:      req.GetObject(),
+	})
 	if err != nil {
 		return &mainflux.AuthorizeRes{}, err
 	}
@@ -173,9 +226,13 @@ func decodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{
 func encodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(authReq)
 	return &mainflux.AuthorizeReq{
-		Sub: req.Sub,
-		Obj: req.Obj,
-		Act: req.Act,
+		Namespace:   req.Namespace,
+		SubjectType: req.SubjectType,
+		Subject:     req.Subject,
+		Relation:    req.Relation,
+		Permission:  req.Permission,
+		ObjectType:  req.ObjectType,
+		Object:      req.Object,
 	}, nil
 }
 
@@ -183,7 +240,15 @@ func (client grpcClient) AddPolicy(ctx context.Context, in *mainflux.AddPolicyRe
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.addPolicy(ctx, policyReq{Act: in.GetAct(), Obj: in.GetObj(), Sub: in.GetSub()})
+	res, err := client.addPolicy(ctx, policyReq{
+		Namespace:   in.GetNamespace(),
+		SubjectType: in.GetSubjectType(),
+		Subject:     in.GetSubject(),
+		Relation:    in.GetRelation(),
+		Permission:  in.GetPermission(),
+		ObjectType:  in.GetObjectType(),
+		Object:      in.GetObject(),
+	})
 	if err != nil {
 		return &mainflux.AddPolicyRes{}, err
 	}
@@ -200,9 +265,13 @@ func decodeAddPolicyResponse(_ context.Context, grpcRes interface{}) (interface{
 func encodeAddPolicyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(policyReq)
 	return &mainflux.AddPolicyReq{
-		Sub: req.Sub,
-		Obj: req.Obj,
-		Act: req.Act,
+		Namespace:   req.Namespace,
+		SubjectType: req.SubjectType,
+		Subject:     req.Subject,
+		Relation:    req.Relation,
+		Permission:  req.Permission,
+		ObjectType:  req.ObjectType,
+		Object:      req.Object,
 	}, nil
 }
 
@@ -210,7 +279,15 @@ func (client grpcClient) DeletePolicy(ctx context.Context, in *mainflux.DeletePo
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.deletePolicy(ctx, policyReq{Act: in.GetAct(), Obj: in.GetObj(), Sub: in.GetSub()})
+	res, err := client.deletePolicy(ctx, policyReq{
+		Namespace:   in.GetNamespace(),
+		SubjectType: in.GetSubjectType(),
+		Subject:     in.GetSubject(),
+		Relation:    in.GetRelation(),
+		Permission:  in.GetPermission(),
+		ObjectType:  in.GetObjectType(),
+		Object:      in.GetObject(),
+	})
 	if err != nil {
 		return &mainflux.DeletePolicyRes{}, err
 	}
@@ -227,36 +304,211 @@ func decodeDeletePolicyResponse(_ context.Context, grpcRes interface{}) (interfa
 func encodeDeletePolicyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(policyReq)
 	return &mainflux.DeletePolicyReq{
-		Sub: req.Sub,
-		Obj: req.Obj,
-		Act: req.Act,
+		Namespace:   req.Namespace,
+		SubjectType: req.SubjectType,
+		Subject:     req.Subject,
+		Relation:    req.Relation,
+		Permission:  req.Permission,
+		ObjectType:  req.ObjectType,
+		Object:      req.Object,
 	}, nil
 }
 
-func (client grpcClient) ListPolicies(ctx context.Context, in *mainflux.ListPoliciesReq, opts ...grpc.CallOption) (*mainflux.ListPoliciesRes, error) {
+func (client grpcClient) ListObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.listPolicies(ctx, listPoliciesReq{Obj: in.GetObj(), Act: in.GetAct(), Sub: in.GetSub()})
+	res, err := client.listObjects(ctx, listObjectsReq{
+		Namespace:   in.GetNamespace(),
+		SubjectType: in.GetSubjectType(),
+		Subject:     in.GetSubject(),
+		Relation:    in.GetRelation(),
+		Permission:  in.GetPermission(),
+		ObjectType:  in.GetObjectType(),
+		Object:      in.GetObject(),
+	})
 	if err != nil {
-		return &mainflux.ListPoliciesRes{}, err
+		return &mainflux.ListObjectsRes{}, err
 	}
 
-	lpr := res.(listPoliciesRes)
-	return &mainflux.ListPoliciesRes{Policies: lpr.policies}, err
+	lpr := res.(listObjectsRes)
+	return &mainflux.ListObjectsRes{Policies: lpr.policies}, err
 }
 
-func decodeListPoliciesResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(*mainflux.ListPoliciesRes)
-	return listPoliciesRes{policies: res.GetPolicies()}, nil
+func decodeListObjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	res := grpcRes.(*mainflux.ListObjectsRes)
+	return listObjectsRes{policies: res.GetPolicies()}, nil
 }
 
-func encodeListPoliciesRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(listPoliciesReq)
-	return &mainflux.ListPoliciesReq{
-		Sub: req.Sub,
-		Obj: req.Obj,
-		Act: req.Act,
+func encodeListObjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(listObjectsReq)
+	return &mainflux.ListObjectsReq{
+		Namespace:   req.Namespace,
+		SubjectType: req.SubjectType,
+		Subject:     req.Subject,
+		Relation:    req.Relation,
+		Permission:  req.Permission,
+		ObjectType:  req.ObjectType,
+		Object:      req.Object,
+	}, nil
+}
+
+func (client grpcClient) ListAllObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
+	ctx, close := context.WithTimeout(ctx, client.timeout)
+	defer close()
+
+	res, err := client.listAllObjects(ctx, listObjectsReq{
+		Namespace:   in.GetNamespace(),
+		SubjectType: in.GetSubjectType(),
+		Subject:     in.GetSubject(),
+		Relation:    in.GetRelation(),
+		Permission:  in.GetPermission(),
+		ObjectType:  in.GetObjectType(),
+		Object:      in.GetObject(),
+	})
+	if err != nil {
+		return &mainflux.ListObjectsRes{}, err
+	}
+
+	lpr := res.(listObjectsRes)
+	return &mainflux.ListObjectsRes{Policies: lpr.policies}, err
+}
+
+func (client grpcClient) CountObjects(ctx context.Context, in *mainflux.CountObjectsReq, opts ...grpc.CallOption) (*mainflux.CountObjectsRes, error) {
+	ctx, close := context.WithTimeout(ctx, client.timeout)
+	defer close()
+
+	res, err := client.countObjects(ctx, listObjectsReq{
+		Namespace:   in.GetNamespace(),
+		SubjectType: in.GetSubjectType(),
+		Subject:     in.GetSubject(),
+		Relation:    in.GetRelation(),
+		Permission:  in.GetPermission(),
+		ObjectType:  in.GetObjectType(),
+		Object:      in.GetObject(),
+	})
+	if err != nil {
+		return &mainflux.CountObjectsRes{}, err
+	}
+
+	cp := res.(countObjectsRes)
+	return &mainflux.CountObjectsRes{Count: int64(cp.count)}, err
+}
+
+func decodeCountObjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	res := grpcRes.(*mainflux.CountObjectsRes)
+	return countObjectsRes{count: int(res.GetCount())}, nil
+}
+
+func encodeCountObjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(countObjectsReq)
+	return &mainflux.CountObjectsReq{
+		Namespace:   req.Namespace,
+		SubjectType: req.SubjectType,
+		Subject:     req.Subject,
+		Relation:    req.Relation,
+		Permission:  req.Permission,
+		ObjectType:  req.ObjectType,
+		Object:      req.Object,
+	}, nil
+}
+
+func (client grpcClient) ListSubjects(ctx context.Context, in *mainflux.ListSubjectsReq, opts ...grpc.CallOption) (*mainflux.ListSubjectsRes, error) {
+	ctx, close := context.WithTimeout(ctx, client.timeout)
+	defer close()
+
+	res, err := client.listSubjects(ctx, listSubjectsReq{
+		Namespace:     in.GetNamespace(),
+		SubjectType:   in.GetSubjectType(),
+		Subject:       in.GetSubject(),
+		Relation:      in.GetRelation(),
+		Permission:    in.GetPermission(),
+		ObjectType:    in.GetObjectType(),
+		Object:        in.GetObject(),
+		NextPageToken: in.GetNextPageToken()})
+	if err != nil {
+		return &mainflux.ListSubjectsRes{}, err
+	}
+
+	lpr := res.(listSubjectsRes)
+	return &mainflux.ListSubjectsRes{Policies: lpr.policies}, err
+}
+
+func decodeListSubjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	res := grpcRes.(*mainflux.ListSubjectsRes)
+	return listSubjectsRes{policies: res.GetPolicies()}, nil
+}
+
+func encodeListSubjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(listSubjectsReq)
+	return &mainflux.ListSubjectsReq{
+		Namespace:   req.Namespace,
+		SubjectType: req.SubjectType,
+		Subject:     req.Subject,
+		Relation:    req.Relation,
+		Permission:  req.Permission,
+		ObjectType:  req.ObjectType,
+		Object:      req.Object,
+	}, nil
+}
+
+func (client grpcClient) ListAllSubjects(ctx context.Context, in *mainflux.ListSubjectsReq, opts ...grpc.CallOption) (*mainflux.ListSubjectsRes, error) {
+	ctx, close := context.WithTimeout(ctx, client.timeout)
+	defer close()
+
+	res, err := client.listAllSubjects(ctx, listSubjectsReq{
+		Namespace:   in.GetNamespace(),
+		SubjectType: in.GetSubjectType(),
+		Subject:     in.GetSubject(),
+		Relation:    in.GetRelation(),
+		Permission:  in.GetPermission(),
+		ObjectType:  in.GetObjectType(),
+		Object:      in.GetObject(),
+	})
+	if err != nil {
+		return &mainflux.ListSubjectsRes{}, err
+	}
+
+	lpr := res.(listSubjectsRes)
+	return &mainflux.ListSubjectsRes{Policies: lpr.policies}, err
+}
+
+func (client grpcClient) CountSubjects(ctx context.Context, in *mainflux.CountSubjectsReq, opts ...grpc.CallOption) (*mainflux.CountSubjectsRes, error) {
+	ctx, close := context.WithTimeout(ctx, client.timeout)
+	defer close()
+
+	res, err := client.countSubjects(ctx, countSubjectsReq{
+		Namespace:   in.GetNamespace(),
+		SubjectType: in.GetSubjectType(),
+		Subject:     in.GetSubject(),
+		Relation:    in.GetRelation(),
+		Permission:  in.GetPermission(),
+		ObjectType:  in.GetObjectType(),
+		Object:      in.GetObject(),
+	})
+	if err != nil {
+		return &mainflux.CountSubjectsRes{}, err
+	}
+
+	cp := res.(countSubjectsRes)
+	return &mainflux.CountSubjectsRes{Count: int64(cp.count)}, err
+}
+
+func decodeCountSubjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	res := grpcRes.(*mainflux.CountSubjectsRes)
+	return countSubjectsRes{count: int(res.GetCount())}, nil
+}
+
+func encodeCountSubjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(countSubjectsReq)
+	return &mainflux.CountSubjectsReq{
+		Namespace:   req.Namespace,
+		SubjectType: req.SubjectType,
+		Subject:     req.Subject,
+		Relation:    req.Relation,
+		Permission:  req.Permission,
+		ObjectType:  req.ObjectType,
+		Object:      req.Object,
 	}, nil
 }
 
@@ -327,8 +579,12 @@ func encodeAssignRequest(_ context.Context, grpcRes interface{}) (interface{}, e
 func decodeAssignResponse(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(authReq)
 	return &mainflux.AuthorizeReq{
-		Sub: req.Sub,
-		Obj: req.Obj,
-		Act: req.Act,
+		Namespace:   req.Namespace,
+		SubjectType: req.SubjectType,
+		Subject:     req.Subject,
+		Relation:    req.Relation,
+		Permission:  req.Permission,
+		ObjectType:  req.ObjectType,
+		Object:      req.Object,
 	}, nil
 }

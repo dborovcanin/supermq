@@ -137,6 +137,10 @@ func (grm *groupRepositoryMock) RetrieveByID(ctx context.Context, id string) (au
 	return val, nil
 }
 
+func (grm *groupRepositoryMock) RetrieveByIDs(ctx context.Context, ids []string, pm auth.PageMetadata) (auth.GroupPage, error) {
+	return auth.GroupPage{}, nil
+}
+
 func (grm *groupRepositoryMock) RetrieveAll(ctx context.Context, pm auth.PageMetadata) (auth.GroupPage, error) {
 	grm.mu.Lock()
 	defer grm.mu.Unlock()
@@ -198,6 +202,9 @@ func (grm *groupRepositoryMock) Assign(ctx context.Context, groupID, groupType s
 
 }
 
+func (grm *groupRepositoryMock) MembershipsByGroupIDs(ctx context.Context, groupIDs []string, memberID string, pm auth.PageMetadata) (auth.GroupPage, error) {
+	return auth.GroupPage{}, nil
+}
 func (grm *groupRepositoryMock) Memberships(ctx context.Context, memberID string, pm auth.PageMetadata) (auth.GroupPage, error) {
 	grm.mu.Lock()
 	defer grm.mu.Unlock()

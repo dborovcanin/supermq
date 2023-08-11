@@ -30,13 +30,56 @@ func MetricsMiddleware(svc auth.Service, counter metrics.Counter, latency metric
 	}
 }
 
-func (ms *metricsMiddleware) ListPolicies(ctx context.Context, pr auth.PolicyReq) (p auth.PolicyPage, err error) {
+func (ms *metricsMiddleware) ListObjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) (p auth.PolicyPage, err error) {
 	defer func(begin time.Time) {
-		ms.counter.With("method", "list_policies").Add(1)
-		ms.latency.With("method", "list_policies").Observe(time.Since(begin).Seconds())
+		ms.counter.With("method", "list_objects").Add(1)
+		ms.latency.With("method", "list_objects").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return ms.svc.ListPolicies(ctx, pr)
+	return ms.svc.ListObjects(ctx, pr, nextPageToken, limit)
+}
+
+func (ms *metricsMiddleware) ListAllObjects(ctx context.Context, pr auth.PolicyReq) (p auth.PolicyPage, err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "list_all_objects").Add(1)
+		ms.latency.With("method", "list_all_objects").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.ListAllObjects(ctx, pr)
+}
+
+func (ms *metricsMiddleware) CountObjects(ctx context.Context, pr auth.PolicyReq) (count int, err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "count_objects").Add(1)
+		ms.latency.With("method", "count_objects").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return ms.svc.CountObjects(ctx, pr)
+}
+
+func (ms *metricsMiddleware) ListSubjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) (p auth.PolicyPage, err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "list_subjects").Add(1)
+		ms.latency.With("method", "list_subjects").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.ListSubjects(ctx, pr, nextPageToken, limit)
+}
+
+func (ms *metricsMiddleware) ListAllSubjects(ctx context.Context, pr auth.PolicyReq) (p auth.PolicyPage, err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "list_all_subjects").Add(1)
+		ms.latency.With("method", "list_all_subjects").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.ListAllSubjects(ctx, pr)
+}
+
+func (ms *metricsMiddleware) CountSubjects(ctx context.Context, pr auth.PolicyReq) (count int, err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "count_subjects").Add(1)
+		ms.latency.With("method", "count_subjects").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return ms.svc.CountSubjects(ctx, pr)
 }
 
 func (ms *metricsMiddleware) Issue(ctx context.Context, token string, key auth.Key) (auth.Key, string, error) {

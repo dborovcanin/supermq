@@ -11,14 +11,60 @@ volumes:
   mainflux-auth-db-volume:
   mainflux-users-db-volume:
   mainflux-things-db-volume:
+  mainflux-spicedb-db-volume:
   mainflux-keto-db-volume:
   mainflux-auth-redis-volume:
   mainflux-es-redis-volume:
   mainflux-mqtt-broker-volume:
 
 services:
+  spicedb:
+    image: "authzed/spicedb"
+    container_name: mainflux-spicedb
+    command: "serve"
+    restart: "always"
+    networks:
+      - mainflux-base-net
+    ports:
+      # - "8080:8080"
+      # - "9090:9090"
+      - "50051:50051"
+    environment:
+      SPICEDB_GRPC_PRESHARED_KEY: ${MF_SPICEDB_GRPC_PRESHARED_KEY}
+      SPICEDB_DATASTORE_ENGINE: ${MF_SPICEDB_DATASTORE_ENGINE}
+      SPICEDB_DATASTORE_CONN_URI: "${MF_SPICEDB_DATASTORE_ENGINE}://${MF_SPICEDB_DB_USER}:${MF_SPICEDB_DB_PASS}@spicedb-db:${MF_SPICEDB_DB_PORT}/${MF_SPICEDB_DB_NAME}?sslmode=disable"
+    depends_on:
+      - spicedb-migrate
+
+  spicedb-migrate:
+    image: "authzed/spicedb"
+    container_name: mainflux-spicedb-migrate
+    command: "migrate head"
+    restart: "on-failure"
+    networks:
+      - mainflux-base-net
+    environment:
+      SPICEDB_DATASTORE_ENGINE: ${MF_SPICEDB_DATASTORE_ENGINE}
+      SPICEDB_DATASTORE_CONN_URI: "${MF_SPICEDB_DATASTORE_ENGINE}://${MF_SPICEDB_DB_USER}:${MF_SPICEDB_DB_PASS}@spicedb-db:${MF_SPICEDB_DB_PORT}/${MF_SPICEDB_DB_NAME}?sslmode=disable"
+    depends_on:
+      - spicedb-db
+
+  spicedb-db:
+    image: "postgres:15.3-alpine"
+    container_name: mainflux-spicedb-db
+    networks:
+      - mainflux-base-net
+    ports:
+      - "6010:5432"
+    environment:
+      POSTGRES_USER: ${MF_SPICEDB_DB_USER}
+      POSTGRES_PASSWORD: ${MF_SPICEDB_DB_PASS}
+      POSTGRES_DB: ${MF_SPICEDB_DB_NAME}
+    volumes:
+      - mainflux-spicedb-db-volume:/var/lib/postgresql/data
+
   keto:
-    image: oryd/keto:v0.6.0-alpha.3
+    image: oryd/keto:v0.11.1-alpha.0
     container_name: mainflux-keto
     ports:
       - ${MF_KETO_READ_REMOTE_PORT}:${MF_KETO_READ_REMOTE_PORT}
@@ -35,9 +81,10 @@ services:
       - mainflux-base-net
     depends_on:
       - keto-db
+      - keto-migrate
 
   keto-migrate:
-    image: oryd/keto:v0.6.0-alpha.3
+    image: oryd/keto:v0.11.1-alpha.0
     container_name: mainflux-keto-migrate
     environment:
       - KETO_WRITE_REMOTE=keto:${MF_KETO_WRITE_REMOTE_PORT}
@@ -47,7 +94,7 @@ services:
       - type: bind
         source: ./keto
         target: /home/ory
-    command: migrate up --all-namespaces -c /home/ory/keto.yml --yes
+    command: migrate up -c /home/ory/keto.yml --yes
     restart: on-failure
     networks:
       - mainflux-base-net
@@ -58,6 +105,8 @@ services:
     image: postgres:13.3-alpine
     container_name: mainflux-keto-db
     restart: on-failure
+    ports:
+      - 6003:5432
     environment:
       POSTGRES_USER: ${MF_KETO_DB_USER}
       POSTGRES_PASSWORD: ${MF_KETO_DB_PASS}
@@ -112,6 +161,8 @@ services:
     image: postgres:13.3-alpine
     container_name: mainflux-auth-db
     restart: on-failure
+    ports:
+      - 6004:5432
     environment:
       POSTGRES_USER: ${MF_AUTH_DB_USER}
       POSTGRES_PASSWORD: ${MF_AUTH_DB_PASS}
@@ -127,10 +178,14 @@ services:
     depends_on:
       - auth-db
       - keto
+      - spicedb
     expose:
       - ${MF_AUTH_GRPC_PORT}
     restart: on-failure
     environment:
+      MF_SPICEDB_SCHEMA_FILE: ${MF_SPICEDB_SCHEMA_FILE}
+      MF_SPICEDB_HOST: ${MF_SPICEDB_HOST}
+      MF_SPICEDB_PORT: ${MF_SPICEDB_PORT}
       MF_AUTH_LOG_LEVEL: ${MF_AUTH_LOG_LEVEL}
       MF_AUTH_DB_HOST: auth-db
       MF_AUTH_DB_PORT: ${MF_AUTH_DB_PORT}
@@ -151,11 +206,15 @@ services:
       - ${MF_AUTH_GRPC_PORT}:${MF_AUTH_GRPC_PORT}
     networks:
       - mainflux-base-net
+    volumes:
+      - ./spicedb/schema.zed:/schema.zed
 
   users-db:
     image: postgres:13.3-alpine
     container_name: mainflux-users-db
     restart: on-failure
+    ports:
+      - 6000:5432
     environment:
       POSTGRES_USER: ${MF_USERS_DB_USER}
       POSTGRES_PASSWORD: ${MF_USERS_DB_PASS}
@@ -205,6 +264,8 @@ services:
     image: postgres:13.3-alpine
     container_name: mainflux-things-db
     restart: on-failure
+    ports:
+      - 6001:5432
     environment:
       POSTGRES_USER: ${MF_THINGS_DB_USER}
       POSTGRES_PASSWORD: ${MF_THINGS_DB_PASS}

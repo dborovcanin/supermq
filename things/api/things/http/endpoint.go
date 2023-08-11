@@ -89,7 +89,7 @@ func shareThingEndpoint(svc things.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		if err := svc.ShareThing(ctx, req.token, req.thingID, req.Policies, req.UserIDs); err != nil {
+		if err := svc.ShareThing(ctx, req.token, req.thingID, req.Relations, req.UserIDs); err != nil {
 			return nil, err
 		}
 
@@ -348,6 +348,21 @@ func updateChannelEndpoint(svc things.Service) endpoint.Endpoint {
 	}
 }
 
+func shareChannelEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(shareChannelReq)
+		if err := req.validate(); err != nil {
+			return nil, err
+		}
+
+		if err := svc.ShareChannel(ctx, req.token, req.channelID, req.Relations, req.UserIDs); err != nil {
+			return nil, err
+		}
+
+		return shareChannelRes{}, nil
+	}
+}
+
 func viewChannelEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(viewResourceReq)
@@ -528,19 +543,35 @@ func disconnectThingEndpoint(svc things.Service) endpoint.Endpoint {
 	}
 }
 
-func listMembersEndpoint(svc things.Service) endpoint.Endpoint {
+func listThingMembersEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listThingsGroupReq)
 		if err := req.validate(); err != nil {
 			return thingsPageRes{}, errors.Wrap(errors.ErrMalformedEntity, err)
 		}
 
-		page, err := svc.ListMembers(ctx, req.token, req.groupID, req.pageMetadata)
+		page, err := svc.ListThingMembers(ctx, req.token, req.groupID, req.pageMetadata)
 		if err != nil {
 			return thingsPageRes{}, err
 		}
 
 		return buildThingsResponse(page), nil
+	}
+}
+
+func listChannelMembersEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(listChannelsGroupReq)
+		if err := req.validate(); err != nil {
+			return channelsPageRes{}, errors.Wrap(errors.ErrMalformedEntity, err)
+		}
+
+		page, err := svc.ListChannelMembers(ctx, req.token, req.groupID, req.pageMetadata)
+		if err != nil {
+			return channelsPageRes{}, err
+		}
+
+		return buildChannelsResponse(page), nil
 	}
 }
 
@@ -562,6 +593,27 @@ func buildThingsResponse(up things.Page) thingsPageRes {
 			Name:     th.Name,
 		}
 		res.Things = append(res.Things, view)
+	}
+	return res
+}
+
+func buildChannelsResponse(up things.ChannelsPage) channelsPageRes {
+	res := channelsPageRes{
+		pageRes: pageRes{
+			Total:  up.Total,
+			Offset: up.Offset,
+			Limit:  up.Limit,
+		},
+		Channels: []viewChannelRes{},
+	}
+	for _, ch := range up.Channels {
+		view := viewChannelRes{
+			ID:       ch.ID,
+			Owner:    ch.Owner,
+			Metadata: ch.Metadata,
+			Name:     ch.Name,
+		}
+		res.Channels = append(res.Channels, view)
 	}
 	return res
 }

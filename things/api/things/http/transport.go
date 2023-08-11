@@ -135,6 +135,12 @@ func MakeHandler(tracer opentracing.Tracer, svc things.Service, logger log.Logge
 		opts...,
 	))
 
+	r.Post("/channels/:id/share", kithttp.NewServer(
+		kitot.TraceServer(tracer, "share_channel")(shareChannelEndpoint(svc)),
+		decodeShareChannel,
+		encodeResponse,
+		opts...,
+	))
 	r.Delete("/channels/:id", kithttp.NewServer(
 		kitot.TraceServer(tracer, "remove_channel")(removeChannelEndpoint(svc)),
 		decodeView,
@@ -191,9 +197,16 @@ func MakeHandler(tracer opentracing.Tracer, svc things.Service, logger log.Logge
 		opts...,
 	))
 
-	r.Get("/groups/:groupId", kithttp.NewServer(
-		kitot.TraceServer(tracer, "list_members")(listMembersEndpoint(svc)),
-		decodeListMembersRequest,
+	r.Get("/groups/things/:groupId", kithttp.NewServer(
+		kitot.TraceServer(tracer, "list_thing_members")(listThingMembersEndpoint(svc)),
+		decodeListThingMembersRequest,
+		encodeResponse,
+		opts...,
+	))
+
+	r.Get("/groups/channels/:groupId", kithttp.NewServer(
+		kitot.TraceServer(tracer, "list_channel_members")(listChannelMembersEndpoint(svc)),
+		decodeListChannelMembersRequest,
 		encodeResponse,
 		opts...,
 	))
@@ -238,6 +251,22 @@ func decodeShareThing(ctx context.Context, r *http.Request) (interface{}, error)
 	req := shareThingReq{
 		token:   apiutil.ExtractBearerToken(r),
 		thingID: bone.GetValue(r, "id"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(errors.ErrMalformedEntity, err)
+	}
+
+	return req, nil
+}
+
+func decodeShareChannel(ctx context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), contentType) {
+		return nil, errors.ErrUnsupportedContentType
+	}
+
+	req := shareChannelReq{
+		token:     apiutil.ExtractBearerToken(r),
+		channelID: bone.GetValue(r, "id"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(errors.ErrMalformedEntity, err)
@@ -453,7 +482,7 @@ func decodeConnectList(_ context.Context, r *http.Request) (interface{}, error) 
 	return req, nil
 }
 
-func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeListThingMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	o, err := apiutil.ReadUintQuery(r, offsetKey, defOffset)
 	if err != nil {
 		return nil, err
@@ -470,6 +499,34 @@ func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 	}
 
 	req := listThingsGroupReq{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: bone.GetValue(r, "groupId"),
+		pageMetadata: things.PageMetadata{
+			Offset:   o,
+			Limit:    l,
+			Metadata: m,
+		},
+	}
+	return req, nil
+}
+
+func decodeListChannelMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	o, err := apiutil.ReadUintQuery(r, offsetKey, defOffset)
+	if err != nil {
+		return nil, err
+	}
+
+	l, err := apiutil.ReadUintQuery(r, limitKey, defLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := apiutil.ReadMetadataQuery(r, metadataKey, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req := listChannelsGroupReq{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: bone.GetValue(r, "groupId"),
 		pageMetadata: things.PageMetadata{

@@ -88,21 +88,26 @@ func (req membersReq) validate() error {
 // 2. object - an entity over which action will be executed
 // 3. action - type of action that will be executed (read/write)
 type authReq struct {
-	Sub string
-	Obj string
-	Act string
+	Namespace   string
+	SubjectType string
+	Subject     string
+	Relation    string
+	Permission  string
+	ObjectType  string
+	Object      string
 }
 
 func (req authReq) validate() error {
-	if req.Sub == "" {
+
+	if req.Subject == "" {
 		return apiutil.ErrMissingPolicySub
 	}
 
-	if req.Obj == "" {
+	if req.Object == "" {
 		return apiutil.ErrMissingPolicyObj
 	}
 
-	if req.Act == "" {
+	if req.Permission == "" {
 		return apiutil.ErrMissingPolicyAct
 	}
 
@@ -110,29 +115,73 @@ func (req authReq) validate() error {
 }
 
 type policyReq struct {
-	Sub string
-	Obj string
-	Act string
+	Namespace   string
+	SubjectType string
+	Subject     string
+	Relation    string
+	Permission  string
+	ObjectType  string
+	Object      string
 }
 
 func (req policyReq) validate() error {
-	if req.Sub == "" {
+	if req.Subject == "" {
 		return apiutil.ErrMissingPolicySub
 	}
 
-	if req.Obj == "" {
+	if req.Object == "" {
 		return apiutil.ErrMissingPolicyObj
 	}
 
-	if req.Act == "" {
+	if req.Relation == "" {
 		return apiutil.ErrMissingPolicyAct
 	}
 
 	return nil
 }
 
-type listPoliciesReq struct {
-	Sub string
-	Obj string
-	Act string
+type listObjectsReq struct {
+	Namespace     string
+	SubjectType   string
+	Subject       string
+	Relation      string
+	Permission    string
+	ObjectType    string
+	Object        string
+	NextPageToken string
+	Limit         int32
+}
+
+type countObjectsReq struct {
+	Namespace     string
+	SubjectType   string
+	Subject       string
+	Relation      string
+	Permission    string
+	ObjectType    string
+	Object        string
+	NextPageToken string
+}
+
+type listSubjectsReq struct {
+	Namespace     string
+	SubjectType   string
+	Subject       string
+	Relation      string
+	Permission    string
+	ObjectType    string
+	Object        string
+	NextPageToken string
+	Limit         int32
+}
+
+type countSubjectsReq struct {
+	Namespace     string
+	SubjectType   string
+	Subject       string
+	Relation      string
+	Permission    string
+	ObjectType    string
+	Object        string
+	NextPageToken string
 }

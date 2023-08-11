@@ -10,15 +10,14 @@ import (
 )
 
 const (
-	maxLimitSize = 100
-	maxNameSize  = 1024
-	nameOrder    = "name"
-	idOrder      = "id"
-	ascDir       = "asc"
-	descDir      = "desc"
-	readPolicy   = "read"
-	writePolicy  = "write"
-	deletePolicy = "delete"
+	maxLimitSize   = 100
+	maxNameSize    = 1024
+	nameOrder      = "name"
+	idOrder        = "id"
+	ascDir         = "asc"
+	descDir        = "desc"
+	editorRelation = "editor"
+	viewerRelation = "viewer"
 )
 
 type createThingReq struct {
@@ -85,10 +84,10 @@ func (req createThingsReq) validate() error {
 }
 
 type shareThingReq struct {
-	token    string
-	thingID  string
-	UserIDs  []string `json:"user_ids"`
-	Policies []string `json:"policies"`
+	token     string
+	thingID   string
+	UserIDs   []string `json:"user_ids"`
+	Relations []string `json:"relations"`
 }
 
 func (req shareThingReq) validate() error {
@@ -100,12 +99,40 @@ func (req shareThingReq) validate() error {
 		return apiutil.ErrMissingID
 	}
 
-	if len(req.Policies) == 0 {
+	if len(req.Relations) == 0 {
 		return apiutil.ErrEmptyList
 	}
 
-	for _, p := range req.Policies {
-		if p != readPolicy && p != writePolicy && p != deletePolicy {
+	for _, p := range req.Relations {
+		if p != editorRelation && p != viewerRelation {
+			return apiutil.ErrMalformedPolicy
+		}
+	}
+	return nil
+}
+
+type shareChannelReq struct {
+	token     string
+	channelID string
+	UserIDs   []string `json:"user_ids"`
+	Relations []string `json:"relations"`
+}
+
+func (req shareChannelReq) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.channelID == "" || len(req.UserIDs) == 0 {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.Relations) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	for _, p := range req.Relations {
+		if p != editorRelation && p != viewerRelation {
 			return apiutil.ErrMalformedPolicy
 		}
 	}
@@ -367,6 +394,43 @@ type listThingsGroupReq struct {
 }
 
 func (req listThingsGroupReq) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if req.pageMetadata.Limit > maxLimitSize || req.pageMetadata.Limit < 1 {
+		return apiutil.ErrLimitSize
+	}
+
+	if len(req.pageMetadata.Name) > maxNameSize {
+		return apiutil.ErrNameSize
+	}
+
+	if req.pageMetadata.Order != "" &&
+		req.pageMetadata.Order != nameOrder && req.pageMetadata.Order != idOrder {
+		return apiutil.ErrInvalidOrder
+	}
+
+	if req.pageMetadata.Dir != "" &&
+		req.pageMetadata.Dir != ascDir && req.pageMetadata.Dir != descDir {
+		return apiutil.ErrInvalidDirection
+	}
+
+	return nil
+
+}
+
+type listChannelsGroupReq struct {
+	token        string
+	groupID      string
+	pageMetadata things.PageMetadata
+}
+
+func (req listChannelsGroupReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}

@@ -159,6 +159,19 @@ func (lm *loggingMiddleware) UpdateChannel(ctx context.Context, token string, ch
 	return lm.svc.UpdateChannel(ctx, token, channel)
 }
 
+func (lm *loggingMiddleware) ShareChannel(ctx context.Context, token, channelID string, actions, userIDs []string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method share_channel for token %s and channel %s took %s to complete", token, channelID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+
+	return lm.svc.ShareChannel(ctx, token, channelID, actions, userIDs)
+}
+
 func (lm *loggingMiddleware) ViewChannel(ctx context.Context, token, id string) (channel things.Channel, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method view_channel for token %s and channel %s took %s to complete", token, id, time.Since(begin))
@@ -292,9 +305,9 @@ func (lm *loggingMiddleware) Identify(ctx context.Context, key string) (id strin
 	return lm.svc.Identify(ctx, key)
 }
 
-func (lm *loggingMiddleware) ListMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (tp things.Page, err error) {
+func (lm *loggingMiddleware) ListThingMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (tp things.Page, err error) {
 	defer func(begin time.Time) {
-		message := fmt.Sprintf("Method list_members for token %s and group id %s took %s to complete", token, groupID, time.Since(begin))
+		message := fmt.Sprintf("Method list_thing_members for token %s and group id %s took %s to complete", token, groupID, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return
@@ -302,5 +315,18 @@ func (lm *loggingMiddleware) ListMembers(ctx context.Context, token, groupID str
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
 
-	return lm.svc.ListMembers(ctx, token, groupID, pm)
+	return lm.svc.ListThingMembers(ctx, token, groupID, pm)
+}
+
+func (lm *loggingMiddleware) ListChannelMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (cp things.ChannelsPage, err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method list_channel_members for token %s and group id %s took %s to complete", token, groupID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+
+	return lm.svc.ListChannelMembers(ctx, token, groupID, pm)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,6 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
+	"github.com/authzed/authzed-go/v1"
+	"github.com/authzed/grpcutil"
 	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/jmoiron/sqlx"
 	"github.com/mainflux/mainflux"
@@ -22,15 +26,17 @@ import (
 	"github.com/mainflux/mainflux/auth/jwt"
 	"github.com/mainflux/mainflux/auth/keto"
 	"github.com/mainflux/mainflux/auth/postgres"
+	"github.com/mainflux/mainflux/auth/spicedb"
 	"github.com/mainflux/mainflux/auth/tracing"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/opentracing/opentracing-go"
-	acl "github.com/ory/keto/proto/ory/keto/acl/v1alpha1"
+	acl "github.com/ory/keto/proto/ory/keto/relation_tuples/v1alpha2"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	jconfig "github.com/uber/jaeger-client-go/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -55,6 +61,14 @@ const (
 	defKetoReadPort  = "4466"
 	defKetoWritePort = "4467"
 	defLoginDuration = "10h"
+
+	defSpiceDBHost       = "localhost"
+	defSpiceDBPort       = "50051"
+	defSpicePreSharedKey = "12345678"
+	defSpiceDBSchemaFile = "./docker/spicedb/schema.zed"
+	envSpiceDBhost       = "MF_SPICEDB_HOST"
+	envSpiceDBport       = "MF_SPICEDB_PORT"
+	envSpiceDBSchemaFile = "MF_SPICEDB_SCHEMA_FILE"
 
 	envLogLevel      = "MF_AUTH_LOG_LEVEL"
 	envDBHost        = "MF_AUTH_DB_HOST"
@@ -94,6 +108,10 @@ type config struct {
 	ketoWritePort string
 	ketoReadPort  string
 	loginDuration time.Duration
+
+	spicedbHost       string
+	spicedbPort       string
+	spicedbSchemaFile string
 }
 
 type tokenConfig struct {
@@ -120,7 +138,13 @@ func main() {
 
 	readerConn, writerConn := initKeto(cfg.ketoReadHost, cfg.ketoReadPort, cfg.ketoWriteHost, cfg.ketoWritePort, logger)
 
-	svc := newService(db, dbTracer, cfg.secret, logger, readerConn, writerConn, cfg.loginDuration)
+	spicedbclient, err := initSpiceDB(cfg)
+
+	if err != nil {
+		log.Fatalf("failed to init spicedb grpc client : %s\n", err.Error())
+	}
+
+	svc := newService(db, dbTracer, cfg.secret, logger, readerConn, writerConn, spicedbclient, cfg.loginDuration)
 	errs := make(chan error, 2)
 
 	go startHTTPServer(tracer, svc, cfg.httpPort, cfg.serverCert, cfg.serverKey, logger, errs)
@@ -168,6 +192,10 @@ func loadConfig() config {
 		ketoReadPort:  mainflux.Env(envKetoReadPort, defKetoReadPort),
 		ketoWritePort: mainflux.Env(envKetoWritePort, defKetoWritePort),
 		loginDuration: loginDuration,
+
+		spicedbHost:       mainflux.Env(envSpiceDBhost, defSpiceDBHost),
+		spicedbPort:       mainflux.Env(envSpiceDBport, defSpiceDBPort),
+		spicedbSchemaFile: mainflux.Env(envSpiceDBSchemaFile, defSpiceDBSchemaFile),
 	}
 
 }
@@ -212,6 +240,35 @@ func initKeto(hostReadAddress, readPort, hostWriteAddress, writePort string, log
 	return readConn, writeConn
 }
 
+func initSpiceDB(cfg config) (*authzed.Client, error) {
+	client, err := authzed.NewClient(
+		fmt.Sprintf("%s:%s", cfg.spicedbHost, cfg.spicedbPort),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpcutil.WithInsecureBearerToken(defSpicePreSharedKey),
+	)
+	if err != nil {
+		return client, err
+	}
+
+	if err := initSchema(client, cfg.spicedbSchemaFile); err != nil {
+		return client, err
+	}
+	return client, nil
+}
+
+func initSchema(client *authzed.Client, schemaFilePath string) error {
+	schemaContent, err := os.ReadFile(schemaFilePath)
+
+	if err != nil {
+		return fmt.Errorf("failed to read spice db schema file : %w", err)
+	}
+	_, err = client.SchemaServiceClient.WriteSchema(context.Background(), &v1.WriteSchemaRequest{Schema: string(schemaContent)})
+	if err != nil {
+		return fmt.Errorf("failed to create schema in spicedb : %w", err)
+	}
+	return nil
+}
+
 func connectToDB(dbConfig postgres.Config, logger logger.Logger) *sqlx.DB {
 	db, err := postgres.Connect(dbConfig)
 	if err != nil {
@@ -221,7 +278,7 @@ func connectToDB(dbConfig postgres.Config, logger logger.Logger) *sqlx.DB {
 	return db
 }
 
-func newService(db *sqlx.DB, tracer opentracing.Tracer, secret string, logger logger.Logger, readerConn, writerConn *grpc.ClientConn, duration time.Duration) auth.Service {
+func newService(db *sqlx.DB, tracer opentracing.Tracer, secret string, logger logger.Logger, readerConn, writerConn *grpc.ClientConn, spicedbClient *authzed.Client, duration time.Duration) auth.Service {
 	database := postgres.NewDatabase(db)
 	keysRepo := tracing.New(postgres.New(database), tracer)
 
@@ -230,6 +287,7 @@ func newService(db *sqlx.DB, tracer opentracing.Tracer, secret string, logger lo
 
 	pa := keto.NewPolicyAgent(acl.NewCheckServiceClient(readerConn), acl.NewWriteServiceClient(writerConn), acl.NewReadServiceClient(readerConn))
 
+	pa = spicedb.NewPolicyAgent(spicedbClient)
 	idProvider := uuid.New()
 	t := jwt.New(secret)
 

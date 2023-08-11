@@ -46,28 +46,48 @@ func (repo singleUserRepo) Identify(ctx context.Context, token *mainflux.Token, 
 }
 
 func (repo singleUserRepo) Authorize(ctx context.Context, req *mainflux.AuthorizeReq, _ ...grpc.CallOption) (r *mainflux.AuthorizeRes, err error) {
-	if repo.email != req.Sub {
+	if repo.email != req.Subject {
 		return &mainflux.AuthorizeRes{}, errUnsupported
 	}
 	return &mainflux.AuthorizeRes{Authorized: true}, nil
 }
 
 func (repo singleUserRepo) AddPolicy(ctx context.Context, req *mainflux.AddPolicyReq, opts ...grpc.CallOption) (*mainflux.AddPolicyRes, error) {
-	if repo.email != req.Sub {
+	if repo.email != req.Subject {
 		return &mainflux.AddPolicyRes{}, errUnsupported
 	}
 	return &mainflux.AddPolicyRes{Authorized: true}, nil
 }
 
 func (repo singleUserRepo) DeletePolicy(ctx context.Context, req *mainflux.DeletePolicyReq, opts ...grpc.CallOption) (*mainflux.DeletePolicyRes, error) {
-	if repo.email != req.Sub {
+	if repo.email != req.Subject {
 		return &mainflux.DeletePolicyRes{}, errUnsupported
 	}
 	return &mainflux.DeletePolicyRes{Deleted: true}, nil
 }
 
-func (repo singleUserRepo) ListPolicies(ctx context.Context, in *mainflux.ListPoliciesReq, opts ...grpc.CallOption) (*mainflux.ListPoliciesRes, error) {
-	return &mainflux.ListPoliciesRes{}, errUnsupported
+func (repo singleUserRepo) ListObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
+	return &mainflux.ListObjectsRes{}, errUnsupported
+}
+
+func (repo singleUserRepo) ListAllObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
+	return &mainflux.ListObjectsRes{}, errUnsupported
+}
+
+func (repo singleUserRepo) CountObjects(ctx context.Context, in *mainflux.CountObjectsReq, opts ...grpc.CallOption) (*mainflux.CountObjectsRes, error) {
+	return &mainflux.CountObjectsRes{}, errUnsupported
+}
+
+func (repo singleUserRepo) ListSubjects(ctx context.Context, in *mainflux.ListSubjectsReq, opts ...grpc.CallOption) (*mainflux.ListSubjectsRes, error) {
+	return &mainflux.ListSubjectsRes{}, errUnsupported
+}
+
+func (repo singleUserRepo) ListAllSubjects(ctx context.Context, in *mainflux.ListSubjectsReq, opts ...grpc.CallOption) (*mainflux.ListSubjectsRes, error) {
+	return &mainflux.ListSubjectsRes{}, errUnsupported
+}
+
+func (repo singleUserRepo) CountSubjects(ctx context.Context, in *mainflux.CountSubjectsReq, opts ...grpc.CallOption) (*mainflux.CountSubjectsRes, error) {
+	return &mainflux.CountSubjectsRes{}, errUnsupported
 }
 
 func (repo singleUserRepo) Members(ctx context.Context, req *mainflux.MembersReq, _ ...grpc.CallOption) (r *mainflux.MembersRes, err error) {

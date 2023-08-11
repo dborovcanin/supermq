@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/mainflux/mainflux"
@@ -15,10 +16,26 @@ import (
 
 const (
 	recoveryDuration = 5 * time.Minute
-	thingsGroupType  = "things"
+	thingsKind       = "things"
+	channelsKind     = "channels"
+	usersKind        = "users"
 
-	authoritiesObject = "authorities"
-	memberRelation    = "member"
+	thingType   = "thing"
+	channelType = "channel"
+	userType    = "user"
+	groupType   = "group"
+
+	memberRelation        = "member"
+	groupRelation         = "group"
+	administratorRelation = "administrator"
+	parentGroupRelation   = "parent_group"
+	viewerRelation        = "viewer"
+
+	adminPermission = "admin"
+	editPermission  = "edit"
+	viewPermission  = "view"
+
+	mainfluxObject = "mainflux"
 )
 
 var (
@@ -162,20 +179,24 @@ func (svc service) Identify(ctx context.Context, token string) (Identity, error)
 }
 
 func (svc service) Authorize(ctx context.Context, pr PolicyReq) error {
-	return svc.agent.CheckPolicy(ctx, pr)
+	if err := svc.agent.CheckPolicy(ctx, pr); err != nil {
+		return errors.Wrap(errors.ErrAuthorization, err)
+	}
+	return nil
 }
 
 func (svc service) AddPolicy(ctx context.Context, pr PolicyReq) error {
 	return svc.agent.AddPolicy(ctx, pr)
 }
 
+// Yet to do
 func (svc service) AddPolicies(ctx context.Context, token, object string, subjectIDs, relations []string) error {
 	user, err := svc.Identify(ctx, token)
 	if err != nil {
 		return err
 	}
 
-	if err := svc.Authorize(ctx, PolicyReq{Object: authoritiesObject, Relation: memberRelation, Subject: user.ID}); err != nil {
+	if err := svc.Authorize(ctx, PolicyReq{Object: mainfluxObject, Subject: user.ID}); err != nil {
 		return err
 	}
 
@@ -194,6 +215,7 @@ func (svc service) DeletePolicy(ctx context.Context, pr PolicyReq) error {
 	return svc.agent.DeletePolicy(ctx, pr)
 }
 
+// Yet to do
 func (svc service) DeletePolicies(ctx context.Context, token, object string, subjectIDs, relations []string) error {
 	user, err := svc.Identify(ctx, token)
 	if err != nil {
@@ -201,7 +223,7 @@ func (svc service) DeletePolicies(ctx context.Context, token, object string, sub
 	}
 
 	// Check if the user identified by token is the admin.
-	if err := svc.Authorize(ctx, PolicyReq{Object: authoritiesObject, Relation: memberRelation, Subject: user.ID}); err != nil {
+	if err := svc.Authorize(ctx, PolicyReq{Object: mainfluxObject, Subject: user.ID}); err != nil {
 		return err
 	}
 
@@ -220,19 +242,71 @@ func (svc service) AssignGroupAccessRights(ctx context.Context, token, thingGrou
 	if _, err := svc.Identify(ctx, token); err != nil {
 		return err
 	}
-	return svc.agent.AddPolicy(ctx, PolicyReq{Object: thingGroupID, Relation: memberRelation, Subject: fmt.Sprintf("%s:%s#%s", "members", userGroupID, memberRelation)})
+	return svc.agent.AddPolicy(ctx, PolicyReq{SubjectType: groupType, Subject: userGroupID, Relation: groupRelation, ObjectType: groupType, Object: thingGroupID})
 }
 
-func (svc service) ListPolicies(ctx context.Context, pr PolicyReq) (PolicyPage, error) {
-	res, err := svc.agent.RetrievePolicies(ctx, pr)
+func (svc service) ListObjects(ctx context.Context, pr PolicyReq, nextPageToken string, limit int32) (PolicyPage, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	res, npt, err := svc.agent.RetrieveObjects(ctx, pr, nextPageToken, limit)
 	if err != nil {
 		return PolicyPage{}, err
 	}
 	var page PolicyPage
 	for _, tuple := range res {
-		page.Policies = append(page.Policies, tuple.GetObject())
+		page.Policies = append(page.Policies, tuple.Object)
+	}
+	page.NextPageToken = npt
+	return page, err
+}
+
+func (svc service) ListAllObjects(ctx context.Context, pr PolicyReq) (PolicyPage, error) {
+	res, err := svc.agent.RetrieveAllObjects(ctx, pr)
+	if err != nil {
+		return PolicyPage{}, err
+	}
+	var page PolicyPage
+	for _, tuple := range res {
+		page.Policies = append(page.Policies, tuple.Object)
 	}
 	return page, err
+}
+
+func (svc service) CountObjects(ctx context.Context, pr PolicyReq) (int, error) {
+	return svc.agent.RetrieveAllObjectsCount(ctx, pr)
+}
+
+func (svc service) ListSubjects(ctx context.Context, pr PolicyReq, nextPageToken string, limit int32) (PolicyPage, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	res, npt, err := svc.agent.RetrieveSubjects(ctx, pr, nextPageToken, limit)
+	if err != nil {
+		return PolicyPage{}, err
+	}
+	var page PolicyPage
+	for _, tuple := range res {
+		page.Policies = append(page.Policies, tuple.Subject)
+	}
+	page.NextPageToken = npt
+	return page, err
+}
+
+func (svc service) ListAllSubjects(ctx context.Context, pr PolicyReq) (PolicyPage, error) {
+	res, err := svc.agent.RetrieveAllSubjects(ctx, pr)
+	if err != nil {
+		return PolicyPage{}, err
+	}
+	var page PolicyPage
+	for _, tuple := range res {
+		page.Policies = append(page.Policies, tuple.Subject)
+	}
+	return page, err
+}
+
+func (svc service) CountSubjects(ctx context.Context, pr PolicyReq) (int, error) {
+	return svc.agent.RetrieveAllSubjectsCount(ctx, pr)
 }
 
 func (svc service) tmpKey(duration time.Duration, key Key) (Key, string, error) {
@@ -287,6 +361,7 @@ func (svc service) login(token string) (string, string, error) {
 	return key.IssuerID, key.Subject, nil
 }
 
+// Done
 func (svc service) CreateGroup(ctx context.Context, token string, group Group) (Group, error) {
 	user, err := svc.Identify(ctx, token)
 	if err != nil {
@@ -310,129 +385,290 @@ func (svc service) CreateGroup(ctx context.Context, token string, group Group) (
 		return Group{}, err
 	}
 
-	if err := svc.agent.AddPolicy(ctx, PolicyReq{Object: group.ID, Relation: memberRelation, Subject: user.ID}); err != nil {
+	if group.ParentID != "" {
+		if err := svc.agent.AddPolicy(ctx, PolicyReq{SubjectType: groupType, Subject: group.ID, Relation: parentGroupRelation, ObjectType: groupType, Object: group.ParentID}); err != nil {
+			return Group{}, fmt.Errorf("failed to add policy for parent group : %w", err)
+		}
+	}
+	if err := svc.agent.AddPolicy(ctx, PolicyReq{SubjectType: userType, Subject: user.ID, Relation: administratorRelation, ObjectType: groupType, Object: group.ID}); err != nil {
 		return Group{}, err
 	}
 
 	return group, nil
 }
 
+// Yet to do
 func (svc service) ListGroups(ctx context.Context, token string, pm PageMetadata) (GroupPage, error) {
-	if _, err := svc.Identify(ctx, token); err != nil {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return GroupPage{}, err
 	}
-	return svc.groups.RetrieveAll(ctx, pm)
+
+	req := PolicyReq{
+		SubjectType: userType,
+		Subject:     identity.ID,
+		Permission:  viewPermission,
+		ObjectType:  groupType,
+	}
+
+	lpr, err := svc.ListAllObjects(ctx, req)
+	if err != nil {
+		return GroupPage{}, err
+	}
+	if len(lpr.Policies) <= 0 {
+		return GroupPage{}, nil
+	}
+
+	return svc.groups.RetrieveByIDs(ctx, lpr.Policies, pm)
 }
 
+// Yet to do
 func (svc service) ListParents(ctx context.Context, token string, childID string, pm PageMetadata) (GroupPage, error) {
-	if _, err := svc.Identify(ctx, token); err != nil {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return GroupPage{}, err
 	}
-	return svc.groups.RetrieveAllParents(ctx, childID, pm)
+	if err := svc.agent.CheckPolicy(ctx, PolicyReq{Subject: identity.ID, SubjectType: userType, Permission: viewPermission, ObjectType: groupType, Object: childID}); err != nil {
+		return GroupPage{}, errors.Wrap(errors.ErrAuthorization, err)
+	}
+
+	groupsPage, err := svc.groups.RetrieveAllParents(ctx, childID, pm)
+	if err != nil {
+		return GroupPage{}, err
+	}
+
+	allowedGroups := []Group{}
+	for _, group := range groupsPage.Groups {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+			if err := svc.Authorize(ctx, PolicyReq{SubjectType: userType, Subject: identity.ID, Permission: viewPermission, ObjectType: groupType, Object: group.ID}); err == nil {
+				allowedGroups = append(allowedGroups, group)
+			}
+		}(&wg)
+		wg.Wait()
+	}
+	groupsPage.Groups = allowedGroups
+	return groupsPage, nil
 }
 
+// Yet to do
 func (svc service) ListChildren(ctx context.Context, token string, parentID string, pm PageMetadata) (GroupPage, error) {
-	if _, err := svc.Identify(ctx, token); err != nil {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return GroupPage{}, err
 	}
-	return svc.groups.RetrieveAllChildren(ctx, parentID, pm)
+	if err := svc.agent.CheckPolicy(ctx, PolicyReq{Subject: identity.ID, SubjectType: userType, Permission: viewPermission, ObjectType: groupType, Object: parentID}); err != nil {
+		return GroupPage{}, errors.Wrap(errors.ErrAuthorization, err)
+	}
+
+	groupsPage, err := svc.groups.RetrieveAllChildren(ctx, parentID, pm)
+	if err != nil {
+		return GroupPage{}, err
+	}
+
+	allowedGroups := []Group{}
+	for _, group := range groupsPage.Groups {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+			if err := svc.Authorize(ctx, PolicyReq{SubjectType: userType, Subject: identity.ID, Permission: viewPermission, ObjectType: groupType, Object: group.ID}); err == nil {
+				allowedGroups = append(allowedGroups, group)
+			}
+		}(&wg)
+		wg.Wait()
+	}
+	groupsPage.Groups = allowedGroups
+	return groupsPage, nil
 }
 
-func (svc service) ListMembers(ctx context.Context, token string, groupID, groupType string, pm PageMetadata) (MemberPage, error) {
-	if _, err := svc.Identify(ctx, token); err != nil {
+// Yet to do
+func (svc service) ListMembers(ctx context.Context, token string, groupID, memberKind string, pm PageMetadata) (MemberPage, error) {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return MemberPage{}, err
 	}
-	mp, err := svc.groups.Members(ctx, groupID, groupType, pm)
+	if err := svc.agent.CheckPolicy(ctx, PolicyReq{Subject: identity.ID, SubjectType: userType, Permission: viewPermission, ObjectType: groupType, Object: groupID}); err != nil {
+		return MemberPage{}, errors.Wrap(errors.ErrAuthorization, err)
+	}
+
+	mp, err := svc.groups.Members(ctx, groupID, memberKind, pm)
 	if err != nil {
 		return MemberPage{}, errors.Wrap(ErrFailedToRetrieveMembers, err)
 	}
 	return mp, nil
 }
 
+// Done
 func (svc service) RemoveGroup(ctx context.Context, token, id string) error {
-	if _, err := svc.Identify(ctx, token); err != nil {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return err
+	}
+	if err := svc.agent.CheckPolicy(ctx, PolicyReq{SubjectType: userType, Subject: identity.ID, Permission: adminPermission, ObjectType: groupType, Object: id}); err != nil {
+		return errors.Wrap(errors.ErrAuthorization, err)
 	}
 	return svc.groups.Delete(ctx, id)
 }
 
+// Done
 func (svc service) UpdateGroup(ctx context.Context, token string, group Group) (Group, error) {
-	if _, err := svc.Identify(ctx, token); err != nil {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return Group{}, err
+	}
+	if err := svc.agent.CheckPolicy(ctx, PolicyReq{SubjectType: userType, Subject: identity.ID, Permission: editPermission, ObjectType: groupType, Object: group.ID}); err != nil {
+		return Group{}, errors.Wrap(errors.ErrAuthorization, err)
 	}
 
 	group.UpdatedAt = getTimestmap()
 	return svc.groups.Update(ctx, group)
 }
 
+// Done
 func (svc service) ViewGroup(ctx context.Context, token, id string) (Group, error) {
-	if _, err := svc.Identify(ctx, token); err != nil {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return Group{}, err
+	}
+	if err := svc.agent.CheckPolicy(ctx, PolicyReq{SubjectType: userType, Subject: identity.ID, Permission: viewPermission, ObjectType: groupType, Object: id}); err != nil {
+		return Group{}, errors.Wrap(errors.ErrAuthorization, err)
 	}
 	return svc.groups.RetrieveByID(ctx, id)
 }
 
-func (svc service) Assign(ctx context.Context, token string, groupID, groupType string, memberIDs ...string) error {
-	if _, err := svc.Identify(ctx, token); err != nil {
+// Yet to do
+func (svc service) Assign(ctx context.Context, token string, groupID, memberKind string, memberIDs ...string) error {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
+		return err
+	}
+	if err := svc.agent.CheckPolicy(ctx, PolicyReq{Subject: identity.ID, SubjectType: userType, Permission: editPermission, ObjectType: groupType, Object: groupID}); err != nil {
+		return errors.Wrap(errors.ErrAuthorization, err)
+	}
+
+	if err := svc.groups.Assign(ctx, groupID, memberKind, memberIDs...); err != nil {
 		return err
 	}
 
-	if err := svc.groups.Assign(ctx, groupID, groupType, memberIDs...); err != nil {
-		return err
-	}
-
-	if groupType == thingsGroupType {
-		ss := fmt.Sprintf("%s:%s#%s", "members", groupID, memberRelation)
-		var errs error
+	prs := []PolicyReq{}
+	switch memberKind {
+	case thingsKind:
 		for _, memberID := range memberIDs {
-			for _, action := range []string{"read", "write", "delete"} {
-				if err := svc.agent.AddPolicy(ctx, PolicyReq{Object: memberID, Relation: action, Subject: ss}); err != nil {
-					errs = errors.Wrap(fmt.Errorf("cannot add thing: '%s' to thing group: '%s'", memberID, groupID), errs)
-				}
-			}
+			prs = append(prs, PolicyReq{
+				SubjectType: groupType,
+				Subject:     groupID,
+				Relation:    groupRelation,
+				ObjectType:  thingType,
+				Object:      memberID,
+			})
 		}
-		return errs
+	case channelsKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, PolicyReq{
+				SubjectType: groupType,
+				Subject:     groupID,
+				Relation:    groupRelation,
+				ObjectType:  channelType,
+				Object:      memberID,
+			})
+		}
+	case usersKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, PolicyReq{
+				SubjectType: userType,
+				Subject:     memberID,
+				Relation:    viewerRelation,
+				ObjectType:  groupType,
+				Object:      groupID,
+			})
+		}
+	default:
+		for _, memberID := range memberIDs {
+			prs = append(prs, PolicyReq{
+				SubjectType: userType,
+				Subject:     memberID,
+				Relation:    viewerRelation,
+				ObjectType:  groupType,
+				Object:      groupID,
+			})
+		}
 	}
 
-	var errs error
-	for _, memberID := range memberIDs {
-		if err := svc.agent.AddPolicy(ctx, PolicyReq{Object: groupID, Relation: memberRelation, Subject: memberID}); err != nil {
-			errs = errors.Wrap(fmt.Errorf("cannot add user: '%s' to user group: '%s'", memberID, groupID), errs)
-		}
+	if err := svc.agent.AddPolicies(ctx, prs); err != nil {
+		return fmt.Errorf("failed to add policies : %w", err)
 	}
-	return errs
+	return nil
 }
 
+// Yet to do
 func (svc service) Unassign(ctx context.Context, token string, groupID string, memberIDs ...string) error {
-	if _, err := svc.Identify(ctx, token); err != nil {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return err
 	}
-
-	ss := fmt.Sprintf("%s:%s#%s", "members", groupID, memberRelation)
-	var errs error
-	for _, memberID := range memberIDs {
-		// If the member is a user, <groupID>#member@memberID must be deleted.
-		if err := svc.agent.DeletePolicy(ctx, PolicyReq{Object: groupID, Relation: memberRelation, Subject: memberID}); err != nil {
-			errs = errors.Wrap(fmt.Errorf("cannot delete a membership of member '%s' from group '%s'", memberID, groupID), errs)
-		}
-
-		// If the member is a Thing, memberID#read|write|delete@(members:groupID#member) must be deleted.
-		for _, action := range []string{"read", "write", "delete"} {
-			if err := svc.agent.DeletePolicy(ctx, PolicyReq{Object: memberID, Relation: action, Subject: ss}); err != nil {
-				errs = errors.Wrap(fmt.Errorf("cannot delete '%s' policy from member '%s'", action, memberID), errs)
-			}
-		}
+	if err := svc.agent.CheckPolicy(ctx, PolicyReq{Subject: identity.ID, SubjectType: userType, Permission: editPermission, ObjectType: groupType, Object: groupID}); err != nil {
+		return errors.Wrap(errors.ErrAuthorization, err)
 	}
 
-	err := svc.groups.Unassign(ctx, groupID, memberIDs...)
-	return errors.Wrap(err, errs)
+	prs := []PolicyReq{}
+	for _, memberID := range memberIDs {
+		//  member is user - same logic is used in previous code, so followed same, not to break api
+		prs = append(prs, PolicyReq{
+			SubjectType: userType,
+			Subject:     memberID,
+			Relation:    viewerRelation,
+			ObjectType:  groupType,
+			Object:      groupID,
+		})
+		//  member is thing - same logic is used in previous code, so followed same, not to break api
+		prs = append(prs, PolicyReq{
+			SubjectType: groupType,
+			Subject:     groupID,
+			Relation:    groupRelation,
+			ObjectType:  thingType,
+			Object:      memberID,
+		})
+		//  member is channel - same logic is used in previous code, so followed same, not to break api
+		prs = append(prs, PolicyReq{
+			SubjectType: groupType,
+			Subject:     groupID,
+			Relation:    groupRelation,
+			ObjectType:  channelType,
+			Object:      memberID,
+		})
+	}
+
+	if err := svc.agent.DeletePolicies(ctx, prs); err != nil {
+		return fmt.Errorf("failed to delete policies : %w", err)
+	}
+	if err := svc.groups.Unassign(ctx, groupID, memberIDs...); err != nil {
+		return err
+	}
+	return nil
 }
 
+// Yet to do
 func (svc service) ListMemberships(ctx context.Context, token string, memberID string, pm PageMetadata) (GroupPage, error) {
-	if _, err := svc.Identify(ctx, token); err != nil {
+	identity, err := svc.Identify(ctx, token)
+	if err != nil {
 		return GroupPage{}, err
 	}
-	return svc.groups.Memberships(ctx, memberID, pm)
+	req := PolicyReq{
+		SubjectType: userType,
+		Subject:     identity.ID,
+		Permission:  viewPermission,
+		ObjectType:  groupType,
+	}
+
+	lpr, err := svc.ListAllObjects(ctx, req)
+	if err != nil {
+		return GroupPage{}, err
+	}
+
+	return svc.groups.MembershipsByGroupIDs(ctx, lpr.Policies, memberID, pm)
 }
 
 func getTimestmap() time.Time {

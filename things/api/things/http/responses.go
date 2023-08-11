@@ -84,6 +84,20 @@ func (res shareThingRes) Empty() bool {
 	return false
 }
 
+type shareChannelRes struct{}
+
+func (res shareChannelRes) Code() int {
+	return http.StatusOK
+}
+
+func (res shareChannelRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res shareChannelRes) Empty() bool {
+	return false
+}
+
 type thingsRes struct {
 	Things  []thingRes `json:"things"`
 	created bool
@@ -104,6 +118,7 @@ func (res thingsRes) Headers() map[string]string {
 func (res thingsRes) Empty() bool {
 	return false
 }
+
 
 type viewThingRes struct {
 	ID       string                 `json:"id"`

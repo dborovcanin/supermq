@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"regexp"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -40,6 +41,19 @@ import (
 )
 
 const (
+	administratorRelation = "administrator"
+	directMemberRelation  = "direct_member"
+	createRelation        = "create"
+
+	createUserPermission = "create_user"
+	adminPermission      = "admin"
+
+	userType         = "user"
+	organizationType = "organization"
+
+	mainfluxObject = "mainflux"
+	anyBodySubject = "_any_body"
+
 	defLogLevel      = "error"
 	defDBHost        = "localhost"
 	defDBPort        = "5432"
@@ -333,10 +347,23 @@ func newService(db *sqlx.DB, tracer opentracing.Tracer, auth mainflux.AuthServic
 		// everybody can create a new user. Here, check the existence of that
 		// policy. If the policy does not exist, create it; otherwise, there is
 		// no need to do anything further.
-		_, err := auth.Authorize(context.Background(), &mainflux.AuthorizeReq{Obj: "user", Act: "create", Sub: "*"})
+		_, err := auth.Authorize(context.Background(), &mainflux.AuthorizeReq{
+			SubjectType: userType,
+			Subject:     anyBodySubject,
+			Permission:  createUserPermission,
+			ObjectType:  organizationType,
+			Object:      mainfluxObject,
+		})
+		fmt.Println("failed to add self register", err)
 		if err != nil {
 			// Add a policy that allows anybody to create a user
-			apr, err := auth.AddPolicy(context.Background(), &mainflux.AddPolicyReq{Obj: "user", Act: "create", Sub: "*"})
+			apr, err := auth.AddPolicy(context.Background(), &mainflux.AddPolicyReq{
+				SubjectType: userType,
+				Subject:     anyBodySubject,
+				Relation:    createRelation,
+				ObjectType:  organizationType,
+				Object:      mainfluxObject,
+			})
 			if err != nil {
 				logger.Error("failed to add the policy related to MF_USERS_ALLOW_SELF_REGISTER: " + err.Error())
 				os.Exit(1)
@@ -350,7 +377,13 @@ func newService(db *sqlx.DB, tracer opentracing.Tracer, auth mainflux.AuthServic
 		// If MF_USERS_ALLOW_SELF_REGISTER environment variable is "false",
 		// everybody cannot create a new user. Therefore, delete a policy that
 		// allows everybody to create a new user.
-		dpr, err := auth.DeletePolicy(context.Background(), &mainflux.DeletePolicyReq{Obj: "user", Act: "create", Sub: "*"})
+		dpr, err := auth.DeletePolicy(context.Background(), &mainflux.DeletePolicyReq{
+			SubjectType: userType,
+			Subject:     anyBodySubject,
+			Relation:    createRelation,
+			ObjectType:  organizationType,
+			Object:      mainfluxObject,
+		})
 		if err != nil {
 			logger.Error("failed to delete a policy: " + err.Error())
 			os.Exit(1)
@@ -372,42 +405,60 @@ func createAdmin(svc users.Service, userRepo users.UserRepository, c config, aut
 
 	if admin, err := userRepo.RetrieveByEmail(context.Background(), user.Email); err == nil {
 		// The admin is already created. Check existence of the admin policy.
-		_, err := auth.Authorize(context.Background(), &mainflux.AuthorizeReq{Obj: "authorities", Act: "member", Sub: admin.ID})
+		_, err := auth.Authorize(context.Background(), &mainflux.AuthorizeReq{
+			SubjectType: userType,
+			Subject:     admin.ID,
+			Permission:  adminPermission,
+			ObjectType:  organizationType,
+			Object:      mainfluxObject,
+		})
 		if err != nil {
-			apr, err := auth.AddPolicy(context.Background(), &mainflux.AddPolicyReq{Obj: "authorities", Act: "member", Sub: admin.ID})
+			_, err := auth.AddPolicy(context.Background(), &mainflux.AddPolicyReq{
+				SubjectType: userType,
+				Subject:     admin.ID,
+				Relation:    administratorRelation,
+				ObjectType:  organizationType,
+				Object:      mainfluxObject,
+			})
 			if err != nil {
+				fmt.Println("Got here 1 ")
 				return err
-			}
-			if !apr.GetAuthorized() {
-				return errors.ErrAuthorization
 			}
 		}
 		return nil
 	}
 
 	// Add a policy that allows anybody to create a user
-	apr, err := auth.AddPolicy(context.Background(), &mainflux.AddPolicyReq{Obj: "user", Act: "create", Sub: "*"})
-	if err != nil {
+	_, err := auth.AddPolicy(context.Background(), &mainflux.AddPolicyReq{
+		SubjectType: userType,
+		Subject:     anyBodySubject,
+		Relation:    createRelation,
+		ObjectType:  organizationType,
+		Object:      mainfluxObject,
+	})
+	if err != nil && !strings.Contains(err.Error(), "could not CREATE relationship `organization:mainflux#create@user:_any_body`, as it already existed") {
+		fmt.Println("Got here 3 ")
 		return err
-	}
-	if !apr.GetAuthorized() {
-		return errors.ErrAuthorization
 	}
 
 	// Create an admin
 	uid, err := svc.Register(context.Background(), "", user)
 	if err != nil {
+		fmt.Println("Got here 5 ")
 		return err
 	}
 
-	apr, err = auth.AddPolicy(context.Background(), &mainflux.AddPolicyReq{Obj: "authorities", Act: "member", Sub: uid})
+	_, err = auth.AddPolicy(context.Background(), &mainflux.AddPolicyReq{
+		SubjectType: userType,
+		Subject:     uid,
+		Relation:    administratorRelation,
+		ObjectType:  organizationType,
+		Object:      mainfluxObject,
+	})
 	if err != nil {
+		fmt.Println("Got here 5 ")
 		return err
 	}
-	if !apr.GetAuthorized() {
-		return errors.ErrAuthorization
-	}
-
 	return nil
 }
 

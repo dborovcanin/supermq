@@ -1,0 +1,6 @@
+{
+    "namespace": "User",
+    "object": "mainflux",
+    "relation": "admin",
+    "subject_id" : "User:user_1"
+}

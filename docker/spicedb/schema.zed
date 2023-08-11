@@ -1,0 +1,58 @@
+definition user {}
+
+definition thing {
+    relation owner: user
+    relation editor : user
+    relation viewer: user
+
+    relation organization:organization
+    relation channel: channel
+    relation group: group
+
+    permission delete = owner + group->admin + organization->admin
+    permission edit = delete + editor + channel->edit + group->edit
+    permission share = edit
+    permission connect = share
+    permission disconnect = share
+    permission view = viewer + channel +  share + group->view + channel->view
+
+}
+
+definition channel {
+    relation owner: user
+    relation editor: user
+    relation viewer: user
+
+    relation organization:organization
+    relation group: group
+
+    permission delete = owner + organization->admin
+    permission edit = editor + delete  + group->edit
+    permission share = edit
+    permission disconnect = share
+    permission connect = share
+    permission view = viewer + edit + group->view
+}
+
+definition group {
+    relation administrator: user
+    relation editor: user
+    relation viewer: user
+
+    relation parent_group: group  | organization
+
+    permission admin = administrator + parent_group->admin
+    permission delete = admin
+    permission edit = delete + editor + administrator + parent_group->editor
+    permission view = viewer +  edit + parent_group->view
+}
+
+definition organization {
+    relation administrator: user
+    relation direct_member: user
+    relation create: user
+
+    permission admin = administrator
+    permission create_user = create + admin
+    permission member = direct_member + administrator
+}

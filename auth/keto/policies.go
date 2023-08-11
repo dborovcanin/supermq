@@ -5,12 +5,13 @@ package keto
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/mainflux/mainflux/auth"
 	"github.com/mainflux/mainflux/pkg/errors"
-	acl "github.com/ory/keto/proto/ory/keto/acl/v1alpha1"
+	acl "github.com/ory/keto/proto/ory/keto/relation_tuples/v1alpha2"
 )
 
 const (
@@ -32,11 +33,12 @@ func NewPolicyAgent(checker acl.CheckServiceClient, writer acl.WriteServiceClien
 
 func (pa policyAgent) CheckPolicy(ctx context.Context, pr auth.PolicyReq) error {
 	res, err := pa.checker.Check(context.Background(), &acl.CheckRequest{
-		Namespace: ketoNamespace,
+		Namespace: pr.Namespace,
 		Object:    pr.Object,
 		Relation:  pr.Relation,
 		Subject:   getSubject(pr),
 	})
+	fmt.Println(err)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrAuthorization)
 	}
@@ -47,32 +49,51 @@ func (pa policyAgent) CheckPolicy(ctx context.Context, pr auth.PolicyReq) error 
 }
 
 func (pa policyAgent) AddPolicy(ctx context.Context, pr auth.PolicyReq) error {
-	var ss *acl.Subject
-	switch isSubjectSet(pr.Subject) {
-	case true:
-		namespace, object, relation := parseSubjectSet(pr.Subject)
-		ss = &acl.Subject{
-			Ref: &acl.Subject_Set{Set: &acl.SubjectSet{Namespace: namespace, Object: object, Relation: relation}},
-		}
-	default:
-		ss = &acl.Subject{Ref: &acl.Subject_Id{Id: pr.Subject}}
-	}
 
-	trt := pa.writer.TransactRelationTuples
-	_, err := trt(context.Background(), &acl.TransactRelationTuplesRequest{
-		RelationTupleDeltas: []*acl.RelationTupleDelta{
-			{
-				Action: acl.RelationTupleDelta_INSERT,
-				RelationTuple: &acl.RelationTuple{
-					Namespace: ketoNamespace,
-					Object:    pr.Object,
-					Relation:  pr.Relation,
-					Subject:   ss,
+	err := pa.CheckPolicy(ctx, pr)
+	switch err {
+	case errors.ErrAuthorization:
+		var ss *acl.Subject
+		switch isSubjectSet(pr.Subject) {
+		case true:
+			namespace, object, relation := parseSubjectSet(pr.Subject)
+			ss = &acl.Subject{
+				Ref: &acl.Subject_Set{Set: &acl.SubjectSet{Namespace: namespace, Object: object, Relation: relation}},
+			}
+		default:
+			ss = &acl.Subject{Ref: &acl.Subject_Id{Id: pr.Subject}}
+		}
+
+		trt := pa.writer.TransactRelationTuples
+		_, err := trt(context.Background(), &acl.TransactRelationTuplesRequest{
+			RelationTupleDeltas: []*acl.RelationTupleDelta{
+				{
+					Action: acl.RelationTupleDelta_ACTION_INSERT,
+					RelationTuple: &acl.RelationTuple{
+						Namespace: pr.Namespace,
+						Object:    pr.Object,
+						Relation:  pr.Relation,
+						Subject:   ss,
+					},
 				},
 			},
-		},
-	})
-	return err
+		})
+		return err
+	case nil:
+		return nil
+	default:
+		return err
+	}
+}
+
+// AddPolicies
+func (pa policyAgent) AddPolicies(ctx context.Context, pr []auth.PolicyReq) error {
+	return fmt.Errorf("Not Implemented")
+}
+
+// DeletePolicies
+func (pa policyAgent) DeletePolicies(ctx context.Context, pr []auth.PolicyReq) error {
+	return fmt.Errorf("Not Implemented")
 }
 
 func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error {
@@ -80,9 +101,9 @@ func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error
 	_, err := trt(context.Background(), &acl.TransactRelationTuplesRequest{
 		RelationTupleDeltas: []*acl.RelationTupleDelta{
 			{
-				Action: acl.RelationTupleDelta_DELETE,
+				Action: acl.RelationTupleDelta_ACTION_DELETE,
 				RelationTuple: &acl.RelationTuple{
-					Namespace: ketoNamespace,
+					Namespace: pr.Namespace,
 					Object:    pr.Object,
 					Relation:  pr.Relation,
 					Subject: &acl.Subject{Ref: &acl.Subject_Id{
@@ -95,7 +116,7 @@ func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error
 	return err
 }
 
-func (pa policyAgent) RetrievePolicies(ctx context.Context, pr auth.PolicyReq) ([]*acl.RelationTuple, error) {
+func (pa policyAgent) RetrieveObjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) ([]auth.PolicyRes, string, error) {
 	var ss *acl.Subject
 	switch isSubjectSet(pr.Subject) {
 	case true:
@@ -107,23 +128,102 @@ func (pa policyAgent) RetrievePolicies(ctx context.Context, pr auth.PolicyReq) (
 		ss = &acl.Subject{Ref: &acl.Subject_Id{Id: pr.Subject}}
 	}
 
-	res, err := pa.reader.ListRelationTuples(ctx, &acl.ListRelationTuplesRequest{
-		Query: &acl.ListRelationTuplesRequest_Query{
-			Namespace: ketoNamespace,
-			Relation:  pr.Relation,
-			Subject:   ss,
-		},
+	query := &acl.ListRelationTuplesRequest_Query{
+		Namespace: pr.Namespace,
+		Relation:  pr.Relation,
+		Subject:   ss,
+	}
+
+	res, err := pa.reader.ListRelationTuples(context.Background(), &acl.ListRelationTuplesRequest{
+		Query:     query,
+		PageToken: nextPageToken,
+		PageSize:  limit,
 	})
-	if err != nil {
-		return []*acl.RelationTuple{}, err
+	return toPolicyRes(res.GetRelationTuples()), res.GetNextPageToken(), err
+
+}
+
+func (pa policyAgent) RetrieveAllObjects(ctx context.Context, pr auth.PolicyReq) ([]auth.PolicyRes, error) {
+	var tuples []auth.PolicyRes
+	nextPageToken := ""
+	for {
+		relationTuples, npt, err := pa.RetrieveObjects(ctx, pr, nextPageToken, 1000)
+		if err != nil {
+			return tuples, err
+		}
+		tuples = append(tuples, relationTuples...)
+		if npt == "" {
+			break
+		}
+		nextPageToken = npt
+	}
+	return tuples, nil
+}
+
+func (pa policyAgent) RetrieveAllObjectsCount(ctx context.Context, pr auth.PolicyReq) (int, error) {
+	var count int
+	nextPageToken := ""
+	for {
+		relationTuples, npt, err := pa.RetrieveObjects(ctx, pr, nextPageToken, 1000)
+		if err != nil {
+			return count, err
+		}
+		count = count + len(relationTuples)
+		if npt == "" {
+			break
+		}
+		nextPageToken = npt
+	}
+	return count, nil
+}
+
+func (pa policyAgent) RetrieveSubjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) ([]auth.PolicyRes, string, error) {
+	query := &acl.ListRelationTuplesRequest_Query{
+		Namespace: pr.Namespace,
+		Relation:  pr.Relation,
+		Object:    pr.Object,
 	}
 
-	tuple := res.GetRelationTuples()
-	for res.NextPageToken != "" {
-		tuple = append(tuple, res.GetRelationTuples()...)
-	}
+	res, err := pa.reader.ListRelationTuples(context.Background(), &acl.ListRelationTuplesRequest{
+		Query:     query,
+		PageToken: nextPageToken,
+		PageSize:  limit,
+	})
+	return toPolicyRes(res.GetRelationTuples()), res.GetNextPageToken(), err
+}
 
-	return tuple, nil
+func (pa policyAgent) RetrieveAllSubjects(ctx context.Context, pr auth.PolicyReq) ([]auth.PolicyRes, error) {
+	var tuples []auth.PolicyRes
+	nextPageToken := ""
+	for {
+		relationTuples, npt, err := pa.RetrieveSubjects(ctx, pr, nextPageToken, 1000)
+		if err != nil {
+			return tuples, err
+		}
+		tuples = append(tuples, relationTuples...)
+		if npt == "" {
+			break
+		}
+		nextPageToken = npt
+	}
+	return tuples, nil
+}
+
+func (pa policyAgent) RetrieveAllSubjectsCount(ctx context.Context, pr auth.PolicyReq) (int, error) {
+	var count int
+	nextPageToken := ""
+	for {
+		relationTuples, npt, err := pa.RetrieveSubjects(ctx, pr, nextPageToken, 1000)
+		if err != nil {
+			return count, err
+		}
+		count = count + len(relationTuples)
+		if npt == "" {
+			break
+		}
+		nextPageToken = npt
+	}
+	return count, nil
 }
 
 // getSubject returns a 'subject' field for ACL(access control lists).
@@ -131,11 +231,12 @@ func (pa policyAgent) RetrievePolicies(ctx context.Context, pr auth.PolicyReq) (
 // it returns subject set; otherwise, it returns a subject.
 func getSubject(pr auth.PolicyReq) *acl.Subject {
 	if isSubjectSet(pr.Subject) {
+		namespace, object, relation := parseSubjectSet(pr.Subject)
 		return &acl.Subject{
 			Ref: &acl.Subject_Set{Set: &acl.SubjectSet{
-				Namespace: ketoNamespace,
-				Object:    pr.Object,
-				Relation:  pr.Relation,
+				Namespace: namespace,
+				Object:    object,
+				Relation:  relation,
 			}},
 		}
 	}
@@ -169,4 +270,17 @@ func parseSubjectSet(subjectSet string) (namespace, object, relation string) {
 	relation = r[1]
 
 	return
+}
+
+func toPolicyRes(rts []*acl.RelationTuple) []auth.PolicyRes {
+	policies := make([]auth.PolicyRes, len(rts))
+	for _, rt := range rts {
+		policies = append(policies, auth.PolicyRes{
+			Namespace: rt.Namespace,
+			Object:    rt.Object,
+			Relation:  rt.Relation,
+			Subject:   rt.Subject.String(),
+		})
+	}
+	return policies
 }

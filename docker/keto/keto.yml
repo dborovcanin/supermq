@@ -1,4 +1,4 @@
-version: v0.6.0-alpha.3
+version: v0.11.1-alpha.0
 
 log:
   level: debug
@@ -6,6 +6,16 @@ log:
 namespaces:
   - id: 0
     name: members
+  - id: 1
+    name: groups
+  - id: 2
+    name: users
+  - id: 3
+    name: things
+  - id: 4
+    name: channels
+  - id: 5
+    name: connections
 
 serve:
   read:

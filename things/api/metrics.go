@@ -120,6 +120,15 @@ func (ms *metricsMiddleware) UpdateChannel(ctx context.Context, token string, ch
 	return ms.svc.UpdateChannel(ctx, token, channel)
 }
 
+func (ms *metricsMiddleware) ShareChannel(ctx context.Context, token, channelID string, actions, userIDs []string) error {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "share_channel").Add(1)
+		ms.latency.With("method", "share_channel").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.ShareChannel(ctx, token, channelID, actions, userIDs)
+}
+
 func (ms *metricsMiddleware) ViewChannel(ctx context.Context, token, id string) (things.Channel, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "view_channel").Add(1)
@@ -210,11 +219,20 @@ func (ms *metricsMiddleware) Identify(ctx context.Context, key string) (string, 
 	return ms.svc.Identify(ctx, key)
 }
 
-func (ms *metricsMiddleware) ListMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (tp things.Page, err error) {
+func (ms *metricsMiddleware) ListThingMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (tp things.Page, err error) {
 	defer func(begin time.Time) {
-		ms.counter.With("method", "list_members").Add(1)
-		ms.latency.With("method", "list_members").Observe(time.Since(begin).Seconds())
+		ms.counter.With("method", "list_thing_members").Add(1)
+		ms.latency.With("method", "list_thing_members").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	return ms.svc.ListMembers(ctx, token, groupID, pm)
+	return ms.svc.ListThingMembers(ctx, token, groupID, pm)
+}
+
+func (ms *metricsMiddleware) ListChannelMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (cp things.ChannelsPage, err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "list_channel_members").Add(1)
+		ms.latency.With("method", "list_channel_members").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.ListChannelMembers(ctx, token, groupID, pm)
 }

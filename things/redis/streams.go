@@ -160,6 +160,10 @@ func (es eventStore) UpdateChannel(ctx context.Context, token string, channel th
 	return nil
 }
 
+func (es eventStore) ShareChannel(ctx context.Context, token, channelID string, actions, userIDs []string) error {
+	return es.svc.ShareChannel(ctx, token, channelID, actions, userIDs)
+}
+
 func (es eventStore) ViewChannel(ctx context.Context, token, id string) (things.Channel, error) {
 	return es.svc.ViewChannel(ctx, token, id)
 }
@@ -252,6 +256,10 @@ func (es eventStore) Identify(ctx context.Context, key string) (string, error) {
 	return es.svc.Identify(ctx, key)
 }
 
-func (es eventStore) ListMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (things.Page, error) {
-	return es.svc.ListMembers(ctx, token, groupID, pm)
+func (es eventStore) ListThingMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (things.Page, error) {
+	return es.svc.ListThingMembers(ctx, token, groupID, pm)
+}
+
+func (es eventStore) ListChannelMembers(ctx context.Context, token, groupID string, pm things.PageMetadata) (things.ChannelsPage, error) {
+	return es.svc.ListChannelMembers(ctx, token, groupID, pm)
 }

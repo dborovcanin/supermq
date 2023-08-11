@@ -265,7 +265,7 @@ func TestAuthorize(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		ar, err := client.Authorize(context.Background(), &mainflux.AuthorizeReq{Sub: tc.subject, Obj: tc.object, Act: tc.relation})
+		ar, err := client.Authorize(context.Background(), &mainflux.AuthorizeReq{Subject: tc.subject, Object: tc.object, Relation: tc.relation})
 		if ar != nil {
 			assert.Equal(t, tc.ar, *ar, fmt.Sprintf("%s: expected %v got %v", tc.desc, tc.ar, *ar))
 		}
@@ -318,7 +318,7 @@ func TestAddPolicy(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		apr, err := client.AddPolicy(context.Background(), &mainflux.AddPolicyReq{Sub: tc.subject, Obj: tc.object, Act: tc.relation})
+		apr, err := client.AddPolicy(context.Background(), &mainflux.AddPolicyReq{Subject: tc.subject, Object: tc.object, Relation: tc.relation})
 		if apr != nil {
 			assert.Equal(t, tc.ar, *apr, fmt.Sprintf("%s: expected %v got %v", tc.desc, tc.ar, *apr))
 		}
@@ -340,7 +340,7 @@ func TestDeletePolicy(t *testing.T) {
 	readRelation := "read"
 	thingID := "thing"
 
-	apr, err := client.AddPolicy(context.Background(), &mainflux.AddPolicyReq{Sub: id, Obj: thingID, Act: readRelation})
+	apr, err := client.AddPolicy(context.Background(), &mainflux.AddPolicyReq{Subject: id, Object: thingID, Permission: readRelation})
 	assert.Nil(t, err, fmt.Sprintf("Adding read policy to user expected to succeed: %s", err))
 	assert.True(t, apr.GetAuthorized(), fmt.Sprintf("Adding read policy expected to make user authorized, expected %v got %v", true, apr.GetAuthorized()))
 
@@ -373,7 +373,7 @@ func TestDeletePolicy(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		dpr, err := client.DeletePolicy(context.Background(), &mainflux.DeletePolicyReq{Sub: tc.subject, Obj: tc.object, Act: tc.relation})
+		dpr, err := client.DeletePolicy(context.Background(), &mainflux.DeletePolicyReq{Subject: tc.subject, Object: tc.object, Relation: tc.relation})
 		e, ok := status.FromError(err)
 		assert.True(t, ok, "gRPC status can't be extracted from the error")
 		assert.Equal(t, tc.code, e.Code(), fmt.Sprintf("%s: expected %s got %s", tc.desc, tc.code, e.Code()))

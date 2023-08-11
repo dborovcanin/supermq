@@ -18,7 +18,7 @@ type authServiceClient struct {
 	users map[string]string
 }
 
-func (svc authServiceClient) ListPolicies(ctx context.Context, in *mainflux.ListPoliciesReq, opts ...grpc.CallOption) (*mainflux.ListPoliciesRes, error) {
+func (svc authServiceClient) ListObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
 	panic("not implemented")
 }
 
@@ -55,5 +55,23 @@ func (svc *authServiceClient) Members(ctx context.Context, req *mainflux.Members
 }
 
 func (svc *authServiceClient) Assign(ctx context.Context, req *mainflux.Assignment, _ ...grpc.CallOption) (r *empty.Empty, err error) {
+	panic("not implemented")
+}
+
+func (svc *authServiceClient) ListAllObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
+	panic("not implemented")
+}
+
+func (svc *authServiceClient) CountObjects(ctx context.Context, req *mainflux.CountObjectsReq, _ ...grpc.CallOption) (r *mainflux.CountObjectsRes, err error) {
+	panic("not implemented")
+}
+
+func (svc *authServiceClient) ListSubjects(ctx context.Context, req *mainflux.ListSubjectsReq, _ ...grpc.CallOption) (r *mainflux.ListSubjectsRes, err error) {
+	panic("not implemented")
+}
+func (svc *authServiceClient) ListAllSubjects(ctx context.Context, req *mainflux.ListSubjectsReq, _ ...grpc.CallOption) (r *mainflux.ListSubjectsRes, err error) {
+	panic("not implemented")
+}
+func (svc *authServiceClient) CountSubjects(ctx context.Context, req *mainflux.CountSubjectsReq, _ ...grpc.CallOption) (r *mainflux.CountSubjectsRes, err error) {
 	panic("not implemented")
 }

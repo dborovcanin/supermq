@@ -24,7 +24,11 @@ type authServiceMock struct {
 	authz map[string][]SubjectSet
 }
 
-func (svc authServiceMock) ListPolicies(ctx context.Context, in *mainflux.ListPoliciesReq, opts ...grpc.CallOption) (*mainflux.ListPoliciesRes, error) {
+func (svc authServiceMock) ListObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
+	panic("not implemented")
+}
+
+func (svc authServiceMock) ListAllObjects(ctx context.Context, in *mainflux.ListObjectsReq, opts ...grpc.CallOption) (*mainflux.ListObjectsRes, error) {
 	panic("not implemented")
 }
 
@@ -51,9 +55,9 @@ func (svc authServiceMock) Issue(ctx context.Context, in *mainflux.IssueReq, opt
 }
 
 func (svc authServiceMock) Authorize(ctx context.Context, req *mainflux.AuthorizeReq, _ ...grpc.CallOption) (r *mainflux.AuthorizeRes, err error) {
-	if sub, ok := svc.authz[req.GetSub()]; ok {
+	if sub, ok := svc.authz[req.GetSubject()]; ok {
 		for _, v := range sub {
-			if v.Relation == req.GetAct() && v.Object == req.GetObj() {
+			if v.Relation == req.GetRelation() && v.Object == req.GetObject() {
 				return &mainflux.AuthorizeRes{Authorized: true}, nil
 			}
 		}
@@ -62,7 +66,7 @@ func (svc authServiceMock) Authorize(ctx context.Context, req *mainflux.Authoriz
 }
 
 func (svc authServiceMock) AddPolicy(ctx context.Context, in *mainflux.AddPolicyReq, opts ...grpc.CallOption) (*mainflux.AddPolicyRes, error) {
-	svc.authz[in.GetSub()] = append(svc.authz[in.GetSub()], SubjectSet{Object: in.GetObj(), Relation: in.GetAct()})
+	svc.authz[in.GetSubject()] = append(svc.authz[in.GetSubjectType()], SubjectSet{Object: in.GetObject(), Relation: in.GetRelation()})
 	return &mainflux.AddPolicyRes{Authorized: true}, nil
 }
 
@@ -76,5 +80,19 @@ func (svc authServiceMock) Members(ctx context.Context, req *mainflux.MembersReq
 }
 
 func (svc authServiceMock) Assign(ctx context.Context, req *mainflux.Assignment, _ ...grpc.CallOption) (r *empty.Empty, err error) {
+	panic("not implemented")
+}
+
+func (svc authServiceMock) CountObjects(ctx context.Context, req *mainflux.CountObjectsReq, _ ...grpc.CallOption) (r *mainflux.CountObjectsRes, err error) {
+	panic("not implemented")
+}
+
+func (svc authServiceMock) ListSubjects(ctx context.Context, req *mainflux.ListSubjectsReq, _ ...grpc.CallOption) (r *mainflux.ListSubjectsRes, err error) {
+	panic("not implemented")
+}
+func (svc authServiceMock) ListAllSubjects(ctx context.Context, req *mainflux.ListSubjectsReq, _ ...grpc.CallOption) (r *mainflux.ListSubjectsRes, err error) {
+	panic("not implemented")
+}
+func (svc authServiceMock) CountSubjects(ctx context.Context, req *mainflux.CountSubjectsReq, _ ...grpc.CallOption) (r *mainflux.CountSubjectsRes, err error) {
 	panic("not implemented")
 }

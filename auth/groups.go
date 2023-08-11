@@ -107,7 +107,7 @@ type GroupService interface {
 	ListParents(ctx context.Context, token, childID string, pm PageMetadata) (GroupPage, error)
 
 	// ListMembers retrieves everything that is assigned to a group identified by groupID.
-	ListMembers(ctx context.Context, token, groupID, groupType string, pm PageMetadata) (MemberPage, error)
+	ListMembers(ctx context.Context, token, groupID, memberKind string, pm PageMetadata) (MemberPage, error)
 
 	// ListMemberships retrieves all groups for member that is identified with memberID belongs to.
 	ListMemberships(ctx context.Context, token, memberID string, pm PageMetadata) (GroupPage, error)
@@ -116,7 +116,7 @@ type GroupService interface {
 	RemoveGroup(ctx context.Context, token, id string) error
 
 	// Assign adds a member with memberID into the group identified by groupID.
-	Assign(ctx context.Context, token, groupID, groupType string, memberIDs ...string) error
+	Assign(ctx context.Context, token, groupID, memberKind string, memberIDs ...string) error
 
 	// Unassign removes member with memberID from group identified by groupID.
 	Unassign(ctx context.Context, token, groupID string, memberIDs ...string) error
@@ -142,6 +142,9 @@ type GroupRepository interface {
 	// RetrieveAll retrieves all groups.
 	RetrieveAll(ctx context.Context, pm PageMetadata) (GroupPage, error)
 
+	// RetrieveByIDs retrieves groups by IDs.
+	RetrieveByIDs(ctx context.Context, groupIDs []string, pm PageMetadata) (GroupPage, error)
+
 	// RetrieveAllParents retrieves all groups that are ancestors to the group with given groupID.
 	RetrieveAllParents(ctx context.Context, groupID string, pm PageMetadata) (GroupPage, error)
 
@@ -151,11 +154,14 @@ type GroupRepository interface {
 	//  Retrieves list of groups that member belongs to
 	Memberships(ctx context.Context, memberID string, pm PageMetadata) (GroupPage, error)
 
+	//  Retrieves list of groups that member belongs to
+	MembershipsByGroupIDs(ctx context.Context, groupIDs []string, memberID string, pm PageMetadata) (GroupPage, error)
+
 	// Members retrieves everything that is assigned to a group identified by groupID.
-	Members(ctx context.Context, groupID, groupType string, pm PageMetadata) (MemberPage, error)
+	Members(ctx context.Context, groupID, memberType string, pm PageMetadata) (MemberPage, error)
 
 	// Assign adds a member to group.
-	Assign(ctx context.Context, groupID, groupType string, memberIDs ...string) error
+	Assign(ctx context.Context, groupID, memberType string, memberIDs ...string) error
 
 	// Unassign removes a member from a group
 	Unassign(ctx context.Context, groupID string, memberIDs ...string) error

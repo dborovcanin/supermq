@@ -21,14 +21,19 @@ import (
 var _ mainflux.AuthServiceServer = (*grpcServer)(nil)
 
 type grpcServer struct {
-	issue        kitgrpc.Handler
-	identify     kitgrpc.Handler
-	authorize    kitgrpc.Handler
-	addPolicy    kitgrpc.Handler
-	deletePolicy kitgrpc.Handler
-	listPolicies kitgrpc.Handler
-	assign       kitgrpc.Handler
-	members      kitgrpc.Handler
+	issue           kitgrpc.Handler
+	identify        kitgrpc.Handler
+	authorize       kitgrpc.Handler
+	addPolicy       kitgrpc.Handler
+	deletePolicy    kitgrpc.Handler
+	listObjects     kitgrpc.Handler
+	listAllObjects  kitgrpc.Handler
+	countObjects    kitgrpc.Handler
+	listSubjects    kitgrpc.Handler
+	listAllSubjects kitgrpc.Handler
+	countSubjects   kitgrpc.Handler
+	assign          kitgrpc.Handler
+	members         kitgrpc.Handler
 }
 
 // NewServer returns new AuthServiceServer instance.
@@ -59,10 +64,35 @@ func NewServer(tracer opentracing.Tracer, svc auth.Service) mainflux.AuthService
 			decodeDeletePolicyRequest,
 			encodeDeletePolicyResponse,
 		),
-		listPolicies: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "list_policies")(listPoliciesEndpoint(svc)),
-			decodeListPoliciesRequest,
-			encodeListPoliciesResponse,
+		listObjects: kitgrpc.NewServer(
+			kitot.TraceServer(tracer, "list_objects")(listObjectsEndpoint(svc)),
+			decodeListObjectsRequest,
+			encodeListObjectsResponse,
+		),
+		listAllObjects: kitgrpc.NewServer(
+			kitot.TraceServer(tracer, "list_all_objects")(listAllObjectsEndpoint(svc)),
+			decodeListObjectsRequest,
+			encodeListObjectsResponse,
+		),
+		countObjects: kitgrpc.NewServer(
+			kitot.TraceServer(tracer, "count_objects")(countObjectsEndpoint(svc)),
+			decodeCountObjectsRequest,
+			encodeCountObjectsResponse,
+		),
+		listSubjects: kitgrpc.NewServer(
+			kitot.TraceServer(tracer, "list_subjects")(listSubjectsEndpoint(svc)),
+			decodeListSubjectsRequest,
+			encodeListSubjectsResponse,
+		),
+		listAllSubjects: kitgrpc.NewServer(
+			kitot.TraceServer(tracer, "list_all_subjects")(listAllSubjectsEndpoint(svc)),
+			decodeListSubjectsRequest,
+			encodeListSubjectsResponse,
+		),
+		countSubjects: kitgrpc.NewServer(
+			kitot.TraceServer(tracer, "count_subjects")(countSubjectsEndpoint(svc)),
+			decodeCountSubjectsRequest,
+			encodeCountSubjectsResponse,
 		),
 		assign: kitgrpc.NewServer(
 			kitot.TraceServer(tracer, "assign")(assignEndpoint(svc)),
@@ -117,12 +147,52 @@ func (s *grpcServer) DeletePolicy(ctx context.Context, req *mainflux.DeletePolic
 	return res.(*mainflux.DeletePolicyRes), nil
 }
 
-func (s *grpcServer) ListPolicies(ctx context.Context, req *mainflux.ListPoliciesReq) (*mainflux.ListPoliciesRes, error) {
-	_, res, err := s.listPolicies.ServeGRPC(ctx, req)
+func (s *grpcServer) ListObjects(ctx context.Context, req *mainflux.ListObjectsReq) (*mainflux.ListObjectsRes, error) {
+	_, res, err := s.listObjects.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, encodeError(err)
 	}
-	return res.(*mainflux.ListPoliciesRes), nil
+	return res.(*mainflux.ListObjectsRes), nil
+}
+
+func (s *grpcServer) ListAllObjects(ctx context.Context, req *mainflux.ListObjectsReq) (*mainflux.ListObjectsRes, error) {
+	_, res, err := s.listAllObjects.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, encodeError(err)
+	}
+	return res.(*mainflux.ListObjectsRes), nil
+}
+
+func (s *grpcServer) CountObjects(ctx context.Context, req *mainflux.CountObjectsReq) (*mainflux.CountObjectsRes, error) {
+	_, res, err := s.countObjects.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, encodeError(err)
+	}
+	return res.(*mainflux.CountObjectsRes), nil
+}
+
+func (s *grpcServer) ListSubjects(ctx context.Context, req *mainflux.ListSubjectsReq) (*mainflux.ListSubjectsRes, error) {
+	_, res, err := s.listSubjects.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, encodeError(err)
+	}
+	return res.(*mainflux.ListSubjectsRes), nil
+}
+
+func (s *grpcServer) ListAllSubjects(ctx context.Context, req *mainflux.ListSubjectsReq) (*mainflux.ListSubjectsRes, error) {
+	_, res, err := s.listAllSubjects.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, encodeError(err)
+	}
+	return res.(*mainflux.ListSubjectsRes), nil
+}
+
+func (s *grpcServer) CountSubjects(ctx context.Context, req *mainflux.CountSubjectsReq) (*mainflux.CountSubjectsRes, error) {
+	_, res, err := s.countSubjects.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, encodeError(err)
+	}
+	return res.(*mainflux.CountSubjectsRes), nil
 }
 
 func (s *grpcServer) Assign(ctx context.Context, token *mainflux.Assignment) (*empty.Empty, error) {
@@ -163,7 +233,13 @@ func encodeIdentifyResponse(_ context.Context, grpcRes interface{}) (interface{}
 
 func decodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.AuthorizeReq)
-	return authReq{Act: req.GetAct(), Obj: req.GetObj(), Sub: req.GetSub()}, nil
+	return authReq{Namespace: req.GetNamespace(),
+		SubjectType: req.GetSubjectType(),
+		Subject:     req.GetSubject(),
+		Relation:    req.GetRelation(),
+		Permission:  req.GetPermission(),
+		ObjectType:  req.GetObjectType(),
+		Object:      req.GetObject()}, nil
 }
 
 func encodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
@@ -173,7 +249,13 @@ func encodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{
 
 func decodeAddPolicyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.AddPolicyReq)
-	return policyReq{Sub: req.GetSub(), Obj: req.GetObj(), Act: req.GetAct()}, nil
+	return policyReq{Namespace: req.GetNamespace(),
+		SubjectType: req.GetSubjectType(),
+		Subject:     req.GetSubject(),
+		Relation:    req.GetRelation(),
+		Permission:  req.GetPermission(),
+		ObjectType:  req.GetObjectType(),
+		Object:      req.GetObject()}, nil
 }
 
 func encodeAddPolicyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
@@ -188,7 +270,13 @@ func decodeAssignRequest(_ context.Context, grpcReq interface{}) (interface{}, e
 
 func decodeDeletePolicyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.DeletePolicyReq)
-	return policyReq{Sub: req.GetSub(), Obj: req.GetObj(), Act: req.GetAct()}, nil
+	return policyReq{Namespace: req.GetNamespace(),
+		SubjectType: req.GetSubjectType(),
+		Subject:     req.GetSubject(),
+		Relation:    req.GetRelation(),
+		Permission:  req.GetPermission(),
+		ObjectType:  req.GetObjectType(),
+		Object:      req.GetObject()}, nil
 }
 
 func encodeDeletePolicyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
@@ -196,14 +284,70 @@ func encodeDeletePolicyResponse(_ context.Context, grpcRes interface{}) (interfa
 	return &mainflux.DeletePolicyRes{Deleted: res.deleted}, nil
 }
 
-func decodeListPoliciesRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(*mainflux.ListPoliciesReq)
-	return listPoliciesReq{Sub: req.GetSub(), Obj: req.GetObj(), Act: req.GetAct()}, nil
+func decodeListObjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*mainflux.ListObjectsReq)
+	return listObjectsReq{Namespace: req.GetNamespace(),
+		SubjectType:   req.GetSubjectType(),
+		Subject:       req.GetSubject(),
+		Relation:      req.GetRelation(),
+		Permission:    req.GetPermission(),
+		ObjectType:    req.GetObjectType(),
+		Object:        req.GetObject(),
+		NextPageToken: req.GetNextPageToken(),
+		Limit:         req.GetLimit()}, nil
 }
 
-func encodeListPoliciesResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(listPoliciesRes)
-	return &mainflux.ListPoliciesRes{Policies: res.policies}, nil
+func encodeListObjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	res := grpcRes.(listObjectsRes)
+	return &mainflux.ListObjectsRes{Policies: res.policies}, nil
+}
+
+func decodeCountObjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*mainflux.CountObjectsReq)
+	return countObjectsReq{Namespace: req.GetNamespace(),
+		SubjectType: req.GetSubjectType(),
+		Subject:     req.GetSubject(),
+		Relation:    req.GetRelation(),
+		Permission:  req.GetPermission(),
+		ObjectType:  req.GetObjectType(),
+		Object:      req.GetObject()}, nil
+}
+
+func encodeCountObjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	res := grpcRes.(countObjectsRes)
+	return &mainflux.CountObjectsRes{Count: int64(res.count)}, nil
+}
+
+func decodeListSubjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*mainflux.ListSubjectsReq)
+	return listSubjectsReq{Namespace: req.GetNamespace(),
+		SubjectType: req.GetSubjectType(),
+		Subject:     req.GetSubject(),
+		Relation:    req.GetRelation(),
+		Permission:  req.GetPermission(),
+		ObjectType:  req.GetObjectType(),
+		Object:      req.GetObject(), NextPageToken: req.GetNextPageToken(), Limit: req.GetLimit()}, nil
+}
+
+func encodeListSubjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	res := grpcRes.(listSubjectsRes)
+	return &mainflux.ListSubjectsRes{Policies: res.policies}, nil
+}
+
+func decodeCountSubjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*mainflux.CountSubjectsReq)
+	return countSubjectsReq{Namespace: req.GetNamespace(),
+		SubjectType: req.GetSubjectType(),
+		Subject:     req.GetSubject(),
+		Relation:    req.GetRelation(),
+		Permission:  req.GetPermission(),
+		ObjectType:  req.GetObjectType(),
+		Object:      req.GetObject()}, nil
+}
+
+func encodeCountSubjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	res := grpcRes.(countObjectsRes)
+	return &mainflux.CountObjectsRes{Count: int64(res.count)}, nil
 }
 
 func decodeMembersRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -253,6 +397,6 @@ func encodeError(err error) error {
 	case errors.Contains(err, errors.ErrAuthorization):
 		return status.Error(codes.PermissionDenied, err.Error())
 	default:
-		return status.Error(codes.Internal, "internal server error")
+		return status.Error(codes.Internal, err.Error())
 	}
 }

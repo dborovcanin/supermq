@@ -62,7 +62,15 @@ func authorizeEndpoint(svc auth.Service) endpoint.Endpoint {
 			return authorizeRes{}, err
 		}
 
-		err := svc.Authorize(ctx, auth.PolicyReq{Subject: req.Sub, Object: req.Obj, Relation: req.Act})
+		err := svc.Authorize(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object,
+		})
 		if err != nil {
 			return authorizeRes{}, err
 		}
@@ -77,7 +85,14 @@ func addPolicyEndpoint(svc auth.Service) endpoint.Endpoint {
 			return addPolicyRes{}, err
 		}
 
-		err := svc.AddPolicy(ctx, auth.PolicyReq{Subject: req.Sub, Object: req.Obj, Relation: req.Act})
+		err := svc.AddPolicy(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object})
 		if err != nil {
 			return addPolicyRes{}, err
 		}
@@ -92,7 +107,15 @@ func deletePolicyEndpoint(svc auth.Service) endpoint.Endpoint {
 			return deletePolicyRes{}, err
 		}
 
-		err := svc.DeletePolicy(ctx, auth.PolicyReq{Subject: req.Sub, Object: req.Obj, Relation: req.Act})
+		err := svc.DeletePolicy(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object,
+		})
 		if err != nil {
 			return deletePolicyRes{}, err
 		}
@@ -100,15 +123,123 @@ func deletePolicyEndpoint(svc auth.Service) endpoint.Endpoint {
 	}
 }
 
-func listPoliciesEndpoint(svc auth.Service) endpoint.Endpoint {
+func listObjectsEndpoint(svc auth.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(listPoliciesReq)
+		req := request.(listObjectsReq)
 
-		page, err := svc.ListPolicies(ctx, auth.PolicyReq{Subject: req.Sub, Object: req.Obj, Relation: req.Act})
+		page, err := svc.ListObjects(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object,
+		}, req.NextPageToken, req.Limit)
 		if err != nil {
-			return deletePolicyRes{}, err
+			return listObjectsRes{}, err
 		}
-		return listPoliciesRes{policies: page.Policies}, nil
+		return listObjectsRes{policies: page.Policies, nextPageToken: page.NextPageToken}, nil
+	}
+}
+
+func listAllObjectsEndpoint(svc auth.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(listObjectsReq)
+
+		page, err := svc.ListAllObjects(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object,
+		})
+		if err != nil {
+			return listObjectsRes{}, err
+		}
+		return listObjectsRes{policies: page.Policies, nextPageToken: page.NextPageToken}, nil
+	}
+}
+
+func countObjectsEndpoint(svc auth.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(countObjectsReq)
+
+		count, err := svc.CountObjects(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object,
+		})
+		if err != nil {
+			return countObjectsRes{}, err
+		}
+		return countObjectsRes{count: count}, nil
+	}
+}
+
+func listSubjectsEndpoint(svc auth.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(listSubjectsReq)
+
+		page, err := svc.ListSubjects(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object,
+		}, req.NextPageToken, req.Limit)
+		if err != nil {
+			return listSubjectsRes{}, err
+		}
+		return listSubjectsRes{policies: page.Policies, nextPageToken: page.NextPageToken}, nil
+	}
+}
+
+func listAllSubjectsEndpoint(svc auth.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(listSubjectsReq)
+
+		page, err := svc.ListAllSubjects(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object,
+		})
+		if err != nil {
+			return listSubjectsRes{}, err
+		}
+		return listSubjectsRes{policies: page.Policies, nextPageToken: page.NextPageToken}, nil
+	}
+}
+
+func countSubjectsEndpoint(svc auth.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(countSubjectsReq)
+
+		count, err := svc.CountSubjects(ctx, auth.PolicyReq{
+			Namespace:   req.Namespace,
+			SubjectType: req.SubjectType,
+			Subject:     req.Subject,
+			Relation:    req.Relation,
+			Permission:  req.Permission,
+			ObjectType:  req.ObjectType,
+			Object:      req.Object,
+		})
+		if err != nil {
+			return countSubjectsRes{}, err
+		}
+		return countSubjectsRes{count: count}, nil
 	}
 }
 

@@ -455,9 +455,14 @@ func (m *IssueReq) GetType() uint32 {
 }
 
 type AuthorizeReq struct {
-	Sub                  string   `protobuf:"bytes,1,opt,name=sub,proto3" json:"sub,omitempty"`
-	Obj                  string   `protobuf:"bytes,2,opt,name=obj,proto3" json:"obj,omitempty"`
-	Act                  string   `protobuf:"bytes,3,opt,name=act,proto3" json:"act,omitempty"`
+	Namespace            string   `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	SubjectType          string   `protobuf:"bytes,2,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectRelation      string   `protobuf:"bytes,3,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"`
+	Subject              string   `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	Relation             string   `protobuf:"bytes,5,opt,name=relation,proto3" json:"relation,omitempty"`
+	Permission           string   `protobuf:"bytes,6,opt,name=permission,proto3" json:"permission,omitempty"`
+	Object               string   `protobuf:"bytes,7,opt,name=object,proto3" json:"object,omitempty"`
+	ObjectType           string   `protobuf:"bytes,8,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -496,23 +501,58 @@ func (m *AuthorizeReq) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AuthorizeReq proto.InternalMessageInfo
 
-func (m *AuthorizeReq) GetSub() string {
+func (m *AuthorizeReq) GetNamespace() string {
 	if m != nil {
-		return m.Sub
+		return m.Namespace
 	}
 	return ""
 }
 
-func (m *AuthorizeReq) GetObj() string {
+func (m *AuthorizeReq) GetSubjectType() string {
 	if m != nil {
-		return m.Obj
+		return m.SubjectType
 	}
 	return ""
 }
 
-func (m *AuthorizeReq) GetAct() string {
+func (m *AuthorizeReq) GetSubjectRelation() string {
 	if m != nil {
-		return m.Act
+		return m.SubjectRelation
+	}
+	return ""
+}
+
+func (m *AuthorizeReq) GetSubject() string {
+	if m != nil {
+		return m.Subject
+	}
+	return ""
+}
+
+func (m *AuthorizeReq) GetRelation() string {
+	if m != nil {
+		return m.Relation
+	}
+	return ""
+}
+
+func (m *AuthorizeReq) GetPermission() string {
+	if m != nil {
+		return m.Permission
+	}
+	return ""
+}
+
+func (m *AuthorizeReq) GetObject() string {
+	if m != nil {
+		return m.Object
+	}
+	return ""
+}
+
+func (m *AuthorizeReq) GetObjectType() string {
+	if m != nil {
+		return m.ObjectType
 	}
 	return ""
 }
@@ -565,9 +605,14 @@ func (m *AuthorizeRes) GetAuthorized() bool {
 }
 
 type AddPolicyReq struct {
-	Sub                  string   `protobuf:"bytes,1,opt,name=sub,proto3" json:"sub,omitempty"`
-	Obj                  string   `protobuf:"bytes,2,opt,name=obj,proto3" json:"obj,omitempty"`
-	Act                  string   `protobuf:"bytes,3,opt,name=act,proto3" json:"act,omitempty"`
+	Namespace            string   `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	SubjectType          string   `protobuf:"bytes,2,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectRelation      string   `protobuf:"bytes,3,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"`
+	Subject              string   `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	Relation             string   `protobuf:"bytes,5,opt,name=relation,proto3" json:"relation,omitempty"`
+	Permission           string   `protobuf:"bytes,6,opt,name=permission,proto3" json:"permission,omitempty"`
+	Object               string   `protobuf:"bytes,7,opt,name=object,proto3" json:"object,omitempty"`
+	ObjectType           string   `protobuf:"bytes,8,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -606,23 +651,58 @@ func (m *AddPolicyReq) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AddPolicyReq proto.InternalMessageInfo
 
-func (m *AddPolicyReq) GetSub() string {
+func (m *AddPolicyReq) GetNamespace() string {
 	if m != nil {
-		return m.Sub
+		return m.Namespace
 	}
 	return ""
 }
 
-func (m *AddPolicyReq) GetObj() string {
+func (m *AddPolicyReq) GetSubjectType() string {
 	if m != nil {
-		return m.Obj
+		return m.SubjectType
 	}
 	return ""
 }
 
-func (m *AddPolicyReq) GetAct() string {
+func (m *AddPolicyReq) GetSubjectRelation() string {
 	if m != nil {
-		return m.Act
+		return m.SubjectRelation
+	}
+	return ""
+}
+
+func (m *AddPolicyReq) GetSubject() string {
+	if m != nil {
+		return m.Subject
+	}
+	return ""
+}
+
+func (m *AddPolicyReq) GetRelation() string {
+	if m != nil {
+		return m.Relation
+	}
+	return ""
+}
+
+func (m *AddPolicyReq) GetPermission() string {
+	if m != nil {
+		return m.Permission
+	}
+	return ""
+}
+
+func (m *AddPolicyReq) GetObject() string {
+	if m != nil {
+		return m.Object
+	}
+	return ""
+}
+
+func (m *AddPolicyReq) GetObjectType() string {
+	if m != nil {
+		return m.ObjectType
 	}
 	return ""
 }
@@ -675,9 +755,14 @@ func (m *AddPolicyRes) GetAuthorized() bool {
 }
 
 type DeletePolicyReq struct {
-	Sub                  string   `protobuf:"bytes,1,opt,name=sub,proto3" json:"sub,omitempty"`
-	Obj                  string   `protobuf:"bytes,2,opt,name=obj,proto3" json:"obj,omitempty"`
-	Act                  string   `protobuf:"bytes,3,opt,name=act,proto3" json:"act,omitempty"`
+	Namespace            string   `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	SubjectType          string   `protobuf:"bytes,2,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectRelation      string   `protobuf:"bytes,3,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"`
+	Subject              string   `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	Relation             string   `protobuf:"bytes,5,opt,name=relation,proto3" json:"relation,omitempty"`
+	Permission           string   `protobuf:"bytes,6,opt,name=permission,proto3" json:"permission,omitempty"`
+	Object               string   `protobuf:"bytes,7,opt,name=object,proto3" json:"object,omitempty"`
+	ObjectType           string   `protobuf:"bytes,8,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -716,23 +801,58 @@ func (m *DeletePolicyReq) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_DeletePolicyReq proto.InternalMessageInfo
 
-func (m *DeletePolicyReq) GetSub() string {
+func (m *DeletePolicyReq) GetNamespace() string {
 	if m != nil {
-		return m.Sub
+		return m.Namespace
 	}
 	return ""
 }
 
-func (m *DeletePolicyReq) GetObj() string {
+func (m *DeletePolicyReq) GetSubjectType() string {
 	if m != nil {
-		return m.Obj
+		return m.SubjectType
 	}
 	return ""
 }
 
-func (m *DeletePolicyReq) GetAct() string {
+func (m *DeletePolicyReq) GetSubjectRelation() string {
 	if m != nil {
-		return m.Act
+		return m.SubjectRelation
+	}
+	return ""
+}
+
+func (m *DeletePolicyReq) GetSubject() string {
+	if m != nil {
+		return m.Subject
+	}
+	return ""
+}
+
+func (m *DeletePolicyReq) GetRelation() string {
+	if m != nil {
+		return m.Relation
+	}
+	return ""
+}
+
+func (m *DeletePolicyReq) GetPermission() string {
+	if m != nil {
+		return m.Permission
+	}
+	return ""
+}
+
+func (m *DeletePolicyReq) GetObject() string {
+	if m != nil {
+		return m.Object
+	}
+	return ""
+}
+
+func (m *DeletePolicyReq) GetObjectType() string {
+	if m != nil {
+		return m.ObjectType
 	}
 	return ""
 }
@@ -784,27 +904,34 @@ func (m *DeletePolicyRes) GetDeleted() bool {
 	return false
 }
 
-type ListPoliciesReq struct {
-	Sub                  string   `protobuf:"bytes,1,opt,name=sub,proto3" json:"sub,omitempty"`
-	Obj                  string   `protobuf:"bytes,2,opt,name=obj,proto3" json:"obj,omitempty"`
-	Act                  string   `protobuf:"bytes,3,opt,name=act,proto3" json:"act,omitempty"`
+type ListObjectsReq struct {
+	Namespace            string   `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	SubjectType          string   `protobuf:"bytes,2,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectRelation      string   `protobuf:"bytes,3,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"`
+	Subject              string   `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	Relation             string   `protobuf:"bytes,5,opt,name=relation,proto3" json:"relation,omitempty"`
+	Permission           string   `protobuf:"bytes,6,opt,name=permission,proto3" json:"permission,omitempty"`
+	Object               string   `protobuf:"bytes,7,opt,name=object,proto3" json:"object,omitempty"`
+	ObjectType           string   `protobuf:"bytes,8,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
+	NextPageToken        string   `protobuf:"bytes,9,opt,name=nextPageToken,proto3" json:"nextPageToken,omitempty"`
+	Limit                int32    `protobuf:"varint,10,opt,name=limit,proto3" json:"limit,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ListPoliciesReq) Reset()         { *m = ListPoliciesReq{} }
-func (m *ListPoliciesReq) String() string { return proto.CompactTextString(m) }
-func (*ListPoliciesReq) ProtoMessage()    {}
-func (*ListPoliciesReq) Descriptor() ([]byte, []int) {
+func (m *ListObjectsReq) Reset()         { *m = ListObjectsReq{} }
+func (m *ListObjectsReq) String() string { return proto.CompactTextString(m) }
+func (*ListObjectsReq) ProtoMessage()    {}
+func (*ListObjectsReq) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8bbd6f3875b0e874, []int{14}
 }
-func (m *ListPoliciesReq) XXX_Unmarshal(b []byte) error {
+func (m *ListObjectsReq) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ListPoliciesReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListObjectsReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ListPoliciesReq.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ListObjectsReq.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -814,58 +941,108 @@ func (m *ListPoliciesReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *ListPoliciesReq) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListPoliciesReq.Merge(m, src)
+func (m *ListObjectsReq) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListObjectsReq.Merge(m, src)
 }
-func (m *ListPoliciesReq) XXX_Size() int {
+func (m *ListObjectsReq) XXX_Size() int {
 	return m.Size()
 }
-func (m *ListPoliciesReq) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListPoliciesReq.DiscardUnknown(m)
+func (m *ListObjectsReq) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListObjectsReq.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ListPoliciesReq proto.InternalMessageInfo
+var xxx_messageInfo_ListObjectsReq proto.InternalMessageInfo
 
-func (m *ListPoliciesReq) GetSub() string {
+func (m *ListObjectsReq) GetNamespace() string {
 	if m != nil {
-		return m.Sub
+		return m.Namespace
 	}
 	return ""
 }
 
-func (m *ListPoliciesReq) GetObj() string {
+func (m *ListObjectsReq) GetSubjectType() string {
 	if m != nil {
-		return m.Obj
+		return m.SubjectType
 	}
 	return ""
 }
 
-func (m *ListPoliciesReq) GetAct() string {
+func (m *ListObjectsReq) GetSubjectRelation() string {
 	if m != nil {
-		return m.Act
+		return m.SubjectRelation
 	}
 	return ""
 }
 
-type ListPoliciesRes struct {
+func (m *ListObjectsReq) GetSubject() string {
+	if m != nil {
+		return m.Subject
+	}
+	return ""
+}
+
+func (m *ListObjectsReq) GetRelation() string {
+	if m != nil {
+		return m.Relation
+	}
+	return ""
+}
+
+func (m *ListObjectsReq) GetPermission() string {
+	if m != nil {
+		return m.Permission
+	}
+	return ""
+}
+
+func (m *ListObjectsReq) GetObject() string {
+	if m != nil {
+		return m.Object
+	}
+	return ""
+}
+
+func (m *ListObjectsReq) GetObjectType() string {
+	if m != nil {
+		return m.ObjectType
+	}
+	return ""
+}
+
+func (m *ListObjectsReq) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+func (m *ListObjectsReq) GetLimit() int32 {
+	if m != nil {
+		return m.Limit
+	}
+	return 0
+}
+
+type ListObjectsRes struct {
 	Policies             []string `protobuf:"bytes,1,rep,name=policies,proto3" json:"policies,omitempty"`
+	NextPageToken        string   `protobuf:"bytes,2,opt,name=nextPageToken,proto3" json:"nextPageToken,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *ListPoliciesRes) Reset()         { *m = ListPoliciesRes{} }
-func (m *ListPoliciesRes) String() string { return proto.CompactTextString(m) }
-func (*ListPoliciesRes) ProtoMessage()    {}
-func (*ListPoliciesRes) Descriptor() ([]byte, []int) {
+func (m *ListObjectsRes) Reset()         { *m = ListObjectsRes{} }
+func (m *ListObjectsRes) String() string { return proto.CompactTextString(m) }
+func (*ListObjectsRes) ProtoMessage()    {}
+func (*ListObjectsRes) Descriptor() ([]byte, []int) {
 	return fileDescriptor_8bbd6f3875b0e874, []int{15}
 }
-func (m *ListPoliciesRes) XXX_Unmarshal(b []byte) error {
+func (m *ListObjectsRes) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ListPoliciesRes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ListObjectsRes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ListPoliciesRes.Marshal(b, m, deterministic)
+		return xxx_messageInfo_ListObjectsRes.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -875,23 +1052,520 @@ func (m *ListPoliciesRes) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *ListPoliciesRes) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ListPoliciesRes.Merge(m, src)
+func (m *ListObjectsRes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListObjectsRes.Merge(m, src)
 }
-func (m *ListPoliciesRes) XXX_Size() int {
+func (m *ListObjectsRes) XXX_Size() int {
 	return m.Size()
 }
-func (m *ListPoliciesRes) XXX_DiscardUnknown() {
-	xxx_messageInfo_ListPoliciesRes.DiscardUnknown(m)
+func (m *ListObjectsRes) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListObjectsRes.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ListPoliciesRes proto.InternalMessageInfo
+var xxx_messageInfo_ListObjectsRes proto.InternalMessageInfo
 
-func (m *ListPoliciesRes) GetPolicies() []string {
+func (m *ListObjectsRes) GetPolicies() []string {
 	if m != nil {
 		return m.Policies
 	}
 	return nil
+}
+
+func (m *ListObjectsRes) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+type CountObjectsReq struct {
+	Namespace            string   `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	SubjectType          string   `protobuf:"bytes,2,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectRelation      string   `protobuf:"bytes,3,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"`
+	Subject              string   `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	Relation             string   `protobuf:"bytes,5,opt,name=relation,proto3" json:"relation,omitempty"`
+	Permission           string   `protobuf:"bytes,6,opt,name=permission,proto3" json:"permission,omitempty"`
+	Object               string   `protobuf:"bytes,7,opt,name=object,proto3" json:"object,omitempty"`
+	ObjectType           string   `protobuf:"bytes,8,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
+	NextPageToken        string   `protobuf:"bytes,9,opt,name=nextPageToken,proto3" json:"nextPageToken,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CountObjectsReq) Reset()         { *m = CountObjectsReq{} }
+func (m *CountObjectsReq) String() string { return proto.CompactTextString(m) }
+func (*CountObjectsReq) ProtoMessage()    {}
+func (*CountObjectsReq) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8bbd6f3875b0e874, []int{16}
+}
+func (m *CountObjectsReq) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CountObjectsReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CountObjectsReq.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CountObjectsReq) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CountObjectsReq.Merge(m, src)
+}
+func (m *CountObjectsReq) XXX_Size() int {
+	return m.Size()
+}
+func (m *CountObjectsReq) XXX_DiscardUnknown() {
+	xxx_messageInfo_CountObjectsReq.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CountObjectsReq proto.InternalMessageInfo
+
+func (m *CountObjectsReq) GetNamespace() string {
+	if m != nil {
+		return m.Namespace
+	}
+	return ""
+}
+
+func (m *CountObjectsReq) GetSubjectType() string {
+	if m != nil {
+		return m.SubjectType
+	}
+	return ""
+}
+
+func (m *CountObjectsReq) GetSubjectRelation() string {
+	if m != nil {
+		return m.SubjectRelation
+	}
+	return ""
+}
+
+func (m *CountObjectsReq) GetSubject() string {
+	if m != nil {
+		return m.Subject
+	}
+	return ""
+}
+
+func (m *CountObjectsReq) GetRelation() string {
+	if m != nil {
+		return m.Relation
+	}
+	return ""
+}
+
+func (m *CountObjectsReq) GetPermission() string {
+	if m != nil {
+		return m.Permission
+	}
+	return ""
+}
+
+func (m *CountObjectsReq) GetObject() string {
+	if m != nil {
+		return m.Object
+	}
+	return ""
+}
+
+func (m *CountObjectsReq) GetObjectType() string {
+	if m != nil {
+		return m.ObjectType
+	}
+	return ""
+}
+
+func (m *CountObjectsReq) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+type CountObjectsRes struct {
+	Count                int64    `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CountObjectsRes) Reset()         { *m = CountObjectsRes{} }
+func (m *CountObjectsRes) String() string { return proto.CompactTextString(m) }
+func (*CountObjectsRes) ProtoMessage()    {}
+func (*CountObjectsRes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8bbd6f3875b0e874, []int{17}
+}
+func (m *CountObjectsRes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CountObjectsRes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CountObjectsRes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CountObjectsRes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CountObjectsRes.Merge(m, src)
+}
+func (m *CountObjectsRes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CountObjectsRes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CountObjectsRes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CountObjectsRes proto.InternalMessageInfo
+
+func (m *CountObjectsRes) GetCount() int64 {
+	if m != nil {
+		return m.Count
+	}
+	return 0
+}
+
+type ListSubjectsReq struct {
+	Namespace            string   `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	SubjectType          string   `protobuf:"bytes,2,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectRelation      string   `protobuf:"bytes,3,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"`
+	Subject              string   `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	Relation             string   `protobuf:"bytes,5,opt,name=relation,proto3" json:"relation,omitempty"`
+	Permission           string   `protobuf:"bytes,6,opt,name=permission,proto3" json:"permission,omitempty"`
+	Object               string   `protobuf:"bytes,7,opt,name=object,proto3" json:"object,omitempty"`
+	ObjectType           string   `protobuf:"bytes,8,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
+	NextPageToken        string   `protobuf:"bytes,9,opt,name=nextPageToken,proto3" json:"nextPageToken,omitempty"`
+	Limit                int32    `protobuf:"varint,10,opt,name=limit,proto3" json:"limit,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListSubjectsReq) Reset()         { *m = ListSubjectsReq{} }
+func (m *ListSubjectsReq) String() string { return proto.CompactTextString(m) }
+func (*ListSubjectsReq) ProtoMessage()    {}
+func (*ListSubjectsReq) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8bbd6f3875b0e874, []int{18}
+}
+func (m *ListSubjectsReq) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListSubjectsReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListSubjectsReq.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ListSubjectsReq) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListSubjectsReq.Merge(m, src)
+}
+func (m *ListSubjectsReq) XXX_Size() int {
+	return m.Size()
+}
+func (m *ListSubjectsReq) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListSubjectsReq.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListSubjectsReq proto.InternalMessageInfo
+
+func (m *ListSubjectsReq) GetNamespace() string {
+	if m != nil {
+		return m.Namespace
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetSubjectType() string {
+	if m != nil {
+		return m.SubjectType
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetSubjectRelation() string {
+	if m != nil {
+		return m.SubjectRelation
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetSubject() string {
+	if m != nil {
+		return m.Subject
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetRelation() string {
+	if m != nil {
+		return m.Relation
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetPermission() string {
+	if m != nil {
+		return m.Permission
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetObject() string {
+	if m != nil {
+		return m.Object
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetObjectType() string {
+	if m != nil {
+		return m.ObjectType
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+func (m *ListSubjectsReq) GetLimit() int32 {
+	if m != nil {
+		return m.Limit
+	}
+	return 0
+}
+
+type ListSubjectsRes struct {
+	Policies             []string `protobuf:"bytes,1,rep,name=policies,proto3" json:"policies,omitempty"`
+	NextPageToken        string   `protobuf:"bytes,2,opt,name=nextPageToken,proto3" json:"nextPageToken,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListSubjectsRes) Reset()         { *m = ListSubjectsRes{} }
+func (m *ListSubjectsRes) String() string { return proto.CompactTextString(m) }
+func (*ListSubjectsRes) ProtoMessage()    {}
+func (*ListSubjectsRes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8bbd6f3875b0e874, []int{19}
+}
+func (m *ListSubjectsRes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ListSubjectsRes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_ListSubjectsRes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *ListSubjectsRes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListSubjectsRes.Merge(m, src)
+}
+func (m *ListSubjectsRes) XXX_Size() int {
+	return m.Size()
+}
+func (m *ListSubjectsRes) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListSubjectsRes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListSubjectsRes proto.InternalMessageInfo
+
+func (m *ListSubjectsRes) GetPolicies() []string {
+	if m != nil {
+		return m.Policies
+	}
+	return nil
+}
+
+func (m *ListSubjectsRes) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+type CountSubjectsReq struct {
+	Namespace            string   `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	SubjectType          string   `protobuf:"bytes,2,opt,name=subject_type,json=subjectType,proto3" json:"subject_type,omitempty"`
+	SubjectRelation      string   `protobuf:"bytes,3,opt,name=subject_relation,json=subjectRelation,proto3" json:"subject_relation,omitempty"`
+	Subject              string   `protobuf:"bytes,4,opt,name=subject,proto3" json:"subject,omitempty"`
+	Relation             string   `protobuf:"bytes,5,opt,name=relation,proto3" json:"relation,omitempty"`
+	Permission           string   `protobuf:"bytes,6,opt,name=permission,proto3" json:"permission,omitempty"`
+	Object               string   `protobuf:"bytes,7,opt,name=object,proto3" json:"object,omitempty"`
+	ObjectType           string   `protobuf:"bytes,8,opt,name=object_type,json=objectType,proto3" json:"object_type,omitempty"`
+	NextPageToken        string   `protobuf:"bytes,9,opt,name=nextPageToken,proto3" json:"nextPageToken,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CountSubjectsReq) Reset()         { *m = CountSubjectsReq{} }
+func (m *CountSubjectsReq) String() string { return proto.CompactTextString(m) }
+func (*CountSubjectsReq) ProtoMessage()    {}
+func (*CountSubjectsReq) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8bbd6f3875b0e874, []int{20}
+}
+func (m *CountSubjectsReq) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CountSubjectsReq) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CountSubjectsReq.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CountSubjectsReq) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CountSubjectsReq.Merge(m, src)
+}
+func (m *CountSubjectsReq) XXX_Size() int {
+	return m.Size()
+}
+func (m *CountSubjectsReq) XXX_DiscardUnknown() {
+	xxx_messageInfo_CountSubjectsReq.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CountSubjectsReq proto.InternalMessageInfo
+
+func (m *CountSubjectsReq) GetNamespace() string {
+	if m != nil {
+		return m.Namespace
+	}
+	return ""
+}
+
+func (m *CountSubjectsReq) GetSubjectType() string {
+	if m != nil {
+		return m.SubjectType
+	}
+	return ""
+}
+
+func (m *CountSubjectsReq) GetSubjectRelation() string {
+	if m != nil {
+		return m.SubjectRelation
+	}
+	return ""
+}
+
+func (m *CountSubjectsReq) GetSubject() string {
+	if m != nil {
+		return m.Subject
+	}
+	return ""
+}
+
+func (m *CountSubjectsReq) GetRelation() string {
+	if m != nil {
+		return m.Relation
+	}
+	return ""
+}
+
+func (m *CountSubjectsReq) GetPermission() string {
+	if m != nil {
+		return m.Permission
+	}
+	return ""
+}
+
+func (m *CountSubjectsReq) GetObject() string {
+	if m != nil {
+		return m.Object
+	}
+	return ""
+}
+
+func (m *CountSubjectsReq) GetObjectType() string {
+	if m != nil {
+		return m.ObjectType
+	}
+	return ""
+}
+
+func (m *CountSubjectsReq) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+type CountSubjectsRes struct {
+	Count                int64    `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CountSubjectsRes) Reset()         { *m = CountSubjectsRes{} }
+func (m *CountSubjectsRes) String() string { return proto.CompactTextString(m) }
+func (*CountSubjectsRes) ProtoMessage()    {}
+func (*CountSubjectsRes) Descriptor() ([]byte, []int) {
+	return fileDescriptor_8bbd6f3875b0e874, []int{21}
+}
+func (m *CountSubjectsRes) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *CountSubjectsRes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_CountSubjectsRes.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *CountSubjectsRes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CountSubjectsRes.Merge(m, src)
+}
+func (m *CountSubjectsRes) XXX_Size() int {
+	return m.Size()
+}
+func (m *CountSubjectsRes) XXX_DiscardUnknown() {
+	xxx_messageInfo_CountSubjectsRes.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CountSubjectsRes proto.InternalMessageInfo
+
+func (m *CountSubjectsRes) GetCount() int64 {
+	if m != nil {
+		return m.Count
+	}
+	return 0
 }
 
 type Assignment struct {
@@ -907,7 +1581,7 @@ func (m *Assignment) Reset()         { *m = Assignment{} }
 func (m *Assignment) String() string { return proto.CompactTextString(m) }
 func (*Assignment) ProtoMessage()    {}
 func (*Assignment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8bbd6f3875b0e874, []int{16}
+	return fileDescriptor_8bbd6f3875b0e874, []int{22}
 }
 func (m *Assignment) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -972,7 +1646,7 @@ func (m *MembersReq) Reset()         { *m = MembersReq{} }
 func (m *MembersReq) String() string { return proto.CompactTextString(m) }
 func (*MembersReq) ProtoMessage()    {}
 func (*MembersReq) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8bbd6f3875b0e874, []int{17}
+	return fileDescriptor_8bbd6f3875b0e874, []int{23}
 }
 func (m *MembersReq) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1051,7 +1725,7 @@ func (m *MembersRes) Reset()         { *m = MembersRes{} }
 func (m *MembersRes) String() string { return proto.CompactTextString(m) }
 func (*MembersRes) ProtoMessage()    {}
 func (*MembersRes) Descriptor() ([]byte, []int) {
-	return fileDescriptor_8bbd6f3875b0e874, []int{18}
+	return fileDescriptor_8bbd6f3875b0e874, []int{24}
 }
 func (m *MembersRes) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1130,8 +1804,14 @@ func init() {
 	proto.RegisterType((*AddPolicyRes)(nil), "mainflux.AddPolicyRes")
 	proto.RegisterType((*DeletePolicyReq)(nil), "mainflux.DeletePolicyReq")
 	proto.RegisterType((*DeletePolicyRes)(nil), "mainflux.DeletePolicyRes")
-	proto.RegisterType((*ListPoliciesReq)(nil), "mainflux.ListPoliciesReq")
-	proto.RegisterType((*ListPoliciesRes)(nil), "mainflux.ListPoliciesRes")
+	proto.RegisterType((*ListObjectsReq)(nil), "mainflux.ListObjectsReq")
+	proto.RegisterType((*ListObjectsRes)(nil), "mainflux.ListObjectsRes")
+	proto.RegisterType((*CountObjectsReq)(nil), "mainflux.CountObjectsReq")
+	proto.RegisterType((*CountObjectsRes)(nil), "mainflux.CountObjectsRes")
+	proto.RegisterType((*ListSubjectsReq)(nil), "mainflux.ListSubjectsReq")
+	proto.RegisterType((*ListSubjectsRes)(nil), "mainflux.ListSubjectsRes")
+	proto.RegisterType((*CountSubjectsReq)(nil), "mainflux.CountSubjectsReq")
+	proto.RegisterType((*CountSubjectsRes)(nil), "mainflux.CountSubjectsRes")
 	proto.RegisterType((*Assignment)(nil), "mainflux.Assignment")
 	proto.RegisterType((*MembersReq)(nil), "mainflux.MembersReq")
 	proto.RegisterType((*MembersRes)(nil), "mainflux.MembersRes")
@@ -1140,54 +1820,69 @@ func init() {
 func init() { proto.RegisterFile("auth.proto", fileDescriptor_8bbd6f3875b0e874) }
 
 var fileDescriptor_8bbd6f3875b0e874 = []byte{
-	// 737 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x54, 0xcd, 0x6e, 0xd3, 0x4a,
-	0x14, 0xce, 0xff, 0xcf, 0xb9, 0x4d, 0xda, 0x3b, 0xaa, 0x72, 0x7d, 0x7d, 0x75, 0x43, 0xf1, 0xaa,
-	0x12, 0xc2, 0x45, 0x05, 0x04, 0x1b, 0xa8, 0xd2, 0xba, 0x20, 0x0b, 0x10, 0xc8, 0x14, 0x89, 0xad,
-	0x93, 0x4c, 0x92, 0x01, 0xc7, 0x0e, 0x99, 0x71, 0xc1, 0x2c, 0x78, 0x03, 0xf6, 0x3c, 0x12, 0x4b,
-	0x1e, 0x01, 0x95, 0x67, 0x60, 0x8f, 0xe6, 0xc7, 0xf1, 0x34, 0xd8, 0x05, 0xd1, 0xdd, 0xf9, 0x8e,
-	0xcf, 0xf9, 0xbe, 0x33, 0x9e, 0x39, 0x1f, 0x80, 0x1f, 0xb3, 0x99, 0xbd, 0x58, 0x46, 0x2c, 0x42,
-	0xad, 0xb9, 0x4f, 0xc2, 0x49, 0x10, 0xbf, 0x33, 0xff, 0x9b, 0x46, 0xd1, 0x34, 0xc0, 0x7b, 0x22,
-	0x3f, 0x8c, 0x27, 0x7b, 0x78, 0xbe, 0x60, 0x89, 0x2c, 0xb3, 0xee, 0x43, 0x77, 0x30, 0x1a, 0x61,
-	0x4a, 0x0f, 0x93, 0x47, 0x38, 0xf1, 0xf0, 0x1b, 0xb4, 0x0d, 0x75, 0x16, 0xbd, 0xc6, 0xa1, 0x51,
-	0xde, 0x29, 0xef, 0xb6, 0x3d, 0x09, 0x50, 0x0f, 0x1a, 0xa3, 0x99, 0x1f, 0xba, 0x8e, 0x51, 0x11,
-	0x69, 0x85, 0xac, 0x03, 0xd8, 0x3c, 0x9a, 0xf9, 0x61, 0x88, 0x83, 0xa7, 0x6f, 0x43, 0xbc, 0x54,
-	0x04, 0x11, 0x8f, 0x53, 0x02, 0x01, 0x0a, 0x09, 0xae, 0x40, 0xf3, 0x64, 0x46, 0xc2, 0xa9, 0xeb,
-	0xf0, 0xc6, 0x53, 0x3f, 0x88, 0x71, 0xda, 0x28, 0x80, 0x75, 0x15, 0xda, 0x4a, 0xa1, 0xb0, 0x64,
-	0x00, 0x9d, 0xf4, 0x10, 0xae, 0xc3, 0x47, 0x30, 0xa0, 0xc9, 0x24, 0xa9, 0x2a, 0x4c, 0x61, 0xe1,
-	0x18, 0xff, 0x43, 0xfd, 0x44, 0x1c, 0x34, 0x5f, 0xe1, 0x16, 0x6c, 0xbc, 0xa0, 0x78, 0xe9, 0x8e,
-	0x71, 0xc8, 0x08, 0x4b, 0x50, 0x17, 0x2a, 0x64, 0xac, 0x4a, 0x2a, 0x64, 0xcc, 0xbb, 0xf0, 0xdc,
-	0x27, 0x81, 0x62, 0x95, 0xc0, 0x72, 0xa0, 0xe5, 0x52, 0x1a, 0x63, 0x3e, 0xd2, 0x6f, 0x75, 0x20,
-	0x04, 0x35, 0x96, 0x2c, 0xb0, 0x51, 0xdd, 0x29, 0xef, 0x76, 0x3c, 0x11, 0x5b, 0x0e, 0x6c, 0x0c,
-	0x62, 0x36, 0x8b, 0x96, 0xe4, 0xbd, 0x60, 0xda, 0x82, 0x2a, 0x8d, 0x87, 0x8a, 0x8a, 0x87, 0x3c,
-	0x13, 0x0d, 0x5f, 0x29, 0x26, 0x1e, 0xf2, 0x8c, 0x3f, 0x62, 0x82, 0xa6, 0xed, 0xf1, 0xd0, 0xb2,
-	0xcf, 0xb1, 0x50, 0xd4, 0x97, 0xaf, 0x45, 0x60, 0x39, 0x57, 0xcb, 0xd3, 0x32, 0x42, 0x75, 0x3c,
-	0x7e, 0x16, 0x05, 0x64, 0x94, 0x5c, 0x4e, 0x35, 0x63, 0xf9, 0xb5, 0xea, 0x43, 0xd8, 0x74, 0x70,
-	0x80, 0x19, 0xbe, 0xac, 0xf0, 0xb5, 0x75, 0x22, 0xca, 0x1f, 0xc5, 0x58, 0xa4, 0x52, 0xe1, 0x14,
-	0x72, 0xd5, 0xc7, 0x84, 0x32, 0x51, 0x4a, 0x30, 0xfd, 0x73, 0xd5, 0xeb, 0xeb, 0x44, 0x14, 0x99,
-	0xd0, 0x5a, 0x28, 0x68, 0x94, 0x77, 0xaa, 0xbb, 0x6d, 0x6f, 0x85, 0xad, 0x97, 0x00, 0x03, 0x4a,
-	0xc9, 0x34, 0x9c, 0xe3, 0x90, 0x15, 0x2c, 0x9e, 0x01, 0xcd, 0xe9, 0x32, 0x8a, 0x17, 0xab, 0x17,
-	0x9b, 0x42, 0xce, 0x3c, 0xc7, 0xf3, 0x21, 0x5e, 0xba, 0x8e, 0x9a, 0x61, 0x85, 0xad, 0x0f, 0x00,
-	0x4f, 0x44, 0x4c, 0x8b, 0x57, 0xba, 0x98, 0xb9, 0x07, 0x8d, 0x68, 0x32, 0xa1, 0x58, 0x9e, 0xad,
-	0xe6, 0x29, 0xc4, 0x79, 0x02, 0x32, 0x27, 0xcc, 0xa8, 0x89, 0xb4, 0x04, 0xab, 0x37, 0x5b, 0x17,
-	0x24, 0xf2, 0xcd, 0xea, 0xfa, 0x54, 0xea, 0x33, 0x3f, 0x10, 0xfa, 0x35, 0x4f, 0x02, 0x4d, 0xa5,
-	0x92, 0xaf, 0x52, 0xcd, 0x53, 0xa9, 0x65, 0x2a, 0xfc, 0x04, 0xf2, 0xc4, 0xd4, 0xa8, 0x8b, 0x5f,
-	0x9b, 0xc2, 0xfd, 0x8f, 0x15, 0xe8, 0x08, 0x5b, 0xa1, 0xcf, 0xf1, 0xf2, 0x94, 0x8c, 0x30, 0x3a,
-	0x80, 0xee, 0x91, 0x1f, 0x6a, 0x5e, 0x87, 0x0c, 0x3b, 0xb5, 0x48, 0xfb, 0xbc, 0x05, 0x9a, 0x7f,
-	0x67, 0x5f, 0x94, 0x37, 0x59, 0x25, 0x74, 0x0c, 0x5d, 0x97, 0xea, 0x5e, 0x87, 0xfe, 0xcd, 0xca,
-	0xd6, 0x3c, 0xd0, 0xec, 0xd9, 0xd2, 0x74, 0xed, 0xd4, 0x74, 0xed, 0x63, 0x6e, 0xba, 0x56, 0x09,
-	0x1d, 0x42, 0x47, 0x9b, 0xc3, 0x75, 0xd0, 0x3f, 0x3f, 0x8f, 0x21, 0x4c, 0xec, 0x02, 0x8e, 0x1b,
-	0xd0, 0x92, 0x4e, 0x34, 0x49, 0xd0, 0xa6, 0x36, 0x2b, 0xbf, 0xd6, 0xdc, 0xe1, 0xf7, 0xbf, 0x57,
-	0xe1, 0x2f, 0xbe, 0xfe, 0xe9, 0xdf, 0xb0, 0xa1, 0x2e, 0x9c, 0x09, 0xa1, 0xac, 0x3a, 0xb5, 0x2a,
-	0x73, 0x9d, 0xd2, 0x2a, 0xa1, 0xdb, 0x17, 0x29, 0xf6, 0xb2, 0x84, 0x6e, 0x92, 0x56, 0x09, 0xdd,
-	0x83, 0xf6, 0xca, 0x74, 0x90, 0x56, 0xa6, 0xfb, 0x99, 0x99, 0x9f, 0xa7, 0xaa, 0x3d, 0x75, 0x8f,
-	0x73, 0xed, 0x9a, 0x31, 0x99, 0xf9, 0x79, 0xde, 0xfe, 0x00, 0x36, 0x74, 0x0f, 0xd0, 0xef, 0x6b,
-	0xcd, 0x64, 0xcc, 0xc2, 0x4f, 0x8a, 0x47, 0xdf, 0x6a, 0x9d, 0x67, 0xcd, 0x36, 0xcc, 0xc2, 0x4f,
-	0x9c, 0xe7, 0x2e, 0x34, 0xe4, 0xba, 0xa3, 0x6d, 0x6d, 0xe6, 0x95, 0x01, 0x5c, 0x70, 0xe1, 0x77,
-	0xa0, 0xa9, 0xd6, 0x49, 0x6f, 0xcd, 0x36, 0xdc, 0xcc, 0xcb, 0x52, 0xab, 0x74, 0xb8, 0xf5, 0xf9,
-	0xac, 0x5f, 0xfe, 0x72, 0xd6, 0x2f, 0x7f, 0x3d, 0xeb, 0x97, 0x3f, 0x7d, 0xeb, 0x97, 0x86, 0x0d,
-	0x41, 0x7e, 0xf3, 0x47, 0x00, 0x00, 0x00, 0xff, 0xff, 0x7e, 0x8f, 0x30, 0xea, 0x2c, 0x08, 0x00,
-	0x00,
+	// 991 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x57, 0xcd, 0x8e, 0x1b, 0x45,
+	0x10, 0xb6, 0x67, 0xfd, 0x5b, 0xeb, 0x9f, 0xa5, 0x15, 0x2d, 0xc3, 0x00, 0xce, 0xa6, 0x85, 0xc4,
+	0x22, 0x24, 0x07, 0x05, 0x10, 0x5c, 0x20, 0xf2, 0xae, 0x83, 0x34, 0x02, 0x94, 0x68, 0x76, 0x91,
+	0xb8, 0xa1, 0xb1, 0xdd, 0xb6, 0x07, 0xe6, 0x8f, 0xe9, 0x9e, 0x10, 0x73, 0xe0, 0x8e, 0x04, 0x77,
+	0x9e, 0x03, 0x1e, 0x82, 0x1c, 0x79, 0x84, 0x68, 0x79, 0x11, 0xd4, 0x7f, 0x76, 0x7b, 0xd6, 0xb3,
+	0x04, 0x25, 0x37, 0x7c, 0xf3, 0x57, 0xdd, 0xf5, 0x55, 0xf5, 0x57, 0xed, 0x9e, 0x2a, 0x00, 0x3f,
+	0x67, 0xcb, 0x61, 0x9a, 0x25, 0x2c, 0x41, 0xad, 0xc8, 0x0f, 0xe2, 0x79, 0x98, 0x3f, 0x71, 0x5e,
+	0x5f, 0x24, 0xc9, 0x22, 0x24, 0x77, 0x85, 0x7d, 0x92, 0xcf, 0xef, 0x92, 0x28, 0x65, 0x2b, 0xb9,
+	0x0d, 0x7f, 0x0a, 0xbd, 0xd1, 0x74, 0x4a, 0x28, 0x3d, 0x5b, 0x7d, 0x4e, 0x56, 0x1e, 0xf9, 0x1e,
+	0xdd, 0x82, 0x3a, 0x4b, 0xbe, 0x23, 0xb1, 0x5d, 0x3d, 0xa9, 0x9e, 0xb6, 0x3d, 0x09, 0xd0, 0x31,
+	0x34, 0xa6, 0x4b, 0x3f, 0x76, 0xc7, 0xb6, 0x25, 0xcc, 0x0a, 0xe1, 0xfb, 0xd0, 0x3f, 0x5f, 0xfa,
+	0x71, 0x4c, 0xc2, 0x87, 0x3f, 0xc4, 0x24, 0x53, 0x04, 0x09, 0xff, 0xad, 0x09, 0x04, 0x28, 0x25,
+	0xb8, 0x0d, 0xcd, 0xcb, 0x65, 0x10, 0x2f, 0xdc, 0x31, 0x77, 0x7c, 0xec, 0x87, 0x39, 0xd1, 0x8e,
+	0x02, 0xe0, 0x3b, 0xd0, 0x56, 0x11, 0x4a, 0xb7, 0x8c, 0xa0, 0xab, 0x0f, 0xe1, 0x8e, 0x79, 0x0a,
+	0x36, 0x34, 0x99, 0x24, 0x55, 0x1b, 0x35, 0x2c, 0x4d, 0xe3, 0x4d, 0xa8, 0x5f, 0x8a, 0x83, 0xee,
+	0x8e, 0xf0, 0x01, 0x74, 0xbe, 0xa2, 0x24, 0x73, 0x67, 0x24, 0x66, 0x01, 0x5b, 0xa1, 0x1e, 0x58,
+	0xc1, 0x4c, 0x6d, 0xb1, 0x82, 0x19, 0xf7, 0x22, 0x91, 0x1f, 0x84, 0x8a, 0x55, 0x02, 0x3c, 0x86,
+	0x96, 0x4b, 0x69, 0x4e, 0x78, 0x4a, 0xcf, 0xe5, 0x81, 0x10, 0xd4, 0xd8, 0x2a, 0x25, 0xf6, 0xc1,
+	0x49, 0xf5, 0xb4, 0xeb, 0x89, 0xdf, 0xf8, 0x67, 0x0b, 0x3a, 0xa3, 0x9c, 0x2d, 0x93, 0x2c, 0xf8,
+	0x51, 0x50, 0xbd, 0x01, 0xed, 0xd8, 0x8f, 0x08, 0x4d, 0xfd, 0xa9, 0x4e, 0x73, 0x63, 0x40, 0x77,
+	0xa0, 0x43, 0xf3, 0xc9, 0xb7, 0x64, 0xca, 0xbe, 0x11, 0x54, 0x92, 0xff, 0x50, 0xd9, 0x2e, 0x57,
+	0x29, 0x41, 0xef, 0xc0, 0x91, 0xde, 0x92, 0x91, 0xd0, 0x67, 0x41, 0x12, 0x8b, 0x88, 0x6d, 0xaf,
+	0xaf, 0xec, 0x9e, 0x32, 0x73, 0x25, 0x95, 0xc9, 0xae, 0x49, 0x25, 0x15, 0x44, 0x0e, 0xb4, 0xd6,
+	0xce, 0x75, 0xb1, 0xb4, 0xc6, 0x68, 0x00, 0x90, 0x92, 0x2c, 0x0a, 0x28, 0xe5, 0xab, 0x0d, 0xb1,
+	0x6a, 0x58, 0x78, 0x15, 0x12, 0x49, 0xda, 0x94, 0x55, 0x90, 0x08, 0xdd, 0x86, 0xc3, 0xc4, 0x48,
+	0xbd, 0x25, 0x1d, 0x93, 0x75, 0xe6, 0x78, 0xb8, 0x25, 0x05, 0xe5, 0x81, 0x7c, 0x8d, 0xa5, 0xba,
+	0x2d, 0xcf, 0xb0, 0x48, 0xed, 0x66, 0xb3, 0x47, 0x49, 0x18, 0x4c, 0x57, 0x7b, 0xed, 0x0c, 0x29,
+	0xfe, 0x5d, 0xbb, 0x5f, 0x2c, 0xe8, 0x8f, 0x49, 0x48, 0x18, 0xd9, 0xcb, 0x97, 0x12, 0xfc, 0x6e,
+	0x51, 0x0d, 0xca, 0x33, 0x9c, 0x09, 0x93, 0x96, 0x4f, 0x43, 0xfc, 0xa7, 0x05, 0xbd, 0x2f, 0x02,
+	0xca, 0x1e, 0x0a, 0x7f, 0xfa, 0xff, 0x96, 0x0e, 0xbd, 0x05, 0xdd, 0x98, 0x3c, 0x61, 0x8f, 0xfc,
+	0x05, 0x11, 0x8f, 0xac, 0xdd, 0x16, 0x5b, 0xb6, 0x8d, 0xfc, 0x45, 0x0c, 0x83, 0x28, 0x60, 0x36,
+	0x9c, 0x54, 0x4f, 0xeb, 0x9e, 0x04, 0xd8, 0x2b, 0x08, 0x49, 0xf9, 0x11, 0x52, 0x5e, 0x82, 0x80,
+	0x50, 0xbb, 0x7a, 0x72, 0xc0, 0x8f, 0xa0, 0xf1, 0xf5, 0x48, 0xd6, 0x8e, 0x48, 0xf8, 0x77, 0x0b,
+	0xfa, 0xe7, 0x49, 0x1e, 0xef, 0xcb, 0xf3, 0xfc, 0xe5, 0xc1, 0x6f, 0x17, 0x35, 0xa3, 0xbc, 0x62,
+	0x53, 0x6e, 0x12, 0x7a, 0x1d, 0x78, 0x12, 0xe0, 0xa7, 0x16, 0xf4, 0x79, 0xc9, 0x2e, 0xf2, 0xbd,
+	0xba, 0x2f, 0x78, 0xf9, 0x2f, 0x8a, 0x4a, 0xbe, 0x8c, 0xdb, 0xff, 0x87, 0x05, 0x47, 0xa2, 0x92,
+	0xfb, 0x02, 0xfd, 0x87, 0xeb, 0x7f, 0x7a, 0x4d, 0xb4, 0xb2, 0xfb, 0xff, 0x35, 0xc0, 0x88, 0xd2,
+	0x60, 0x11, 0x47, 0x24, 0x66, 0x25, 0xed, 0xb4, 0x0d, 0xcd, 0x45, 0x96, 0xe4, 0xe9, 0xba, 0x0f,
+	0xd5, 0x90, 0x4b, 0x10, 0x91, 0x68, 0x42, 0x32, 0x77, 0xac, 0xf4, 0x5b, 0x63, 0xfc, 0x13, 0xc0,
+	0x97, 0xe2, 0x37, 0x2d, 0x6f, 0xd4, 0xcb, 0x99, 0xb9, 0x40, 0xf3, 0x39, 0x25, 0x4c, 0xf0, 0xd6,
+	0x3c, 0x85, 0x36, 0x57, 0xaf, 0x26, 0xcc, 0x12, 0xac, 0x3b, 0x51, 0x59, 0x06, 0xd9, 0x89, 0x9a,
+	0xf1, 0xa9, 0x8c, 0xcf, 0xfc, 0x50, 0xc4, 0xaf, 0x79, 0x12, 0x18, 0x51, 0xac, 0xdd, 0x51, 0x0e,
+	0x76, 0x45, 0xa9, 0x6d, 0xa2, 0xf0, 0x13, 0xc8, 0x13, 0x53, 0xbb, 0x2e, 0x2e, 0xb8, 0x86, 0xf7,
+	0x7e, 0xb5, 0xa0, 0x2b, 0x86, 0x05, 0x7a, 0x41, 0xb2, 0xc7, 0xc1, 0x94, 0xa0, 0xfb, 0xd0, 0x3b,
+	0xf7, 0x63, 0x63, 0x82, 0x41, 0xf6, 0x50, 0x0f, 0x3e, 0xc3, 0xed, 0xc1, 0xc6, 0x79, 0x65, 0xb3,
+	0xa2, 0x26, 0x0e, 0x5c, 0x41, 0x0f, 0xa0, 0xe7, 0x52, 0x73, 0x82, 0x41, 0xaf, 0x6d, 0xb6, 0x15,
+	0x26, 0x1b, 0xe7, 0x78, 0x28, 0x47, 0xa9, 0xa1, 0x1e, 0xa5, 0x86, 0x0f, 0xf8, 0x28, 0x85, 0x2b,
+	0xe8, 0x0c, 0xba, 0x46, 0x1e, 0xee, 0x18, 0xbd, 0x7a, 0x3d, 0x0d, 0x31, 0x9a, 0xdc, 0xc0, 0xf1,
+	0x1e, 0xb4, 0xe4, 0x7c, 0x31, 0x5f, 0xa1, 0xbe, 0x91, 0x2b, 0x2f, 0xeb, 0xce, 0xe4, 0xef, 0x3d,
+	0x6b, 0xc0, 0x21, 0x6f, 0x87, 0xb5, 0x1a, 0x43, 0xa8, 0x8b, 0x79, 0x03, 0xa1, 0xcd, 0x6e, 0x3d,
+	0x80, 0x38, 0x45, 0x4a, 0x5c, 0x41, 0x1f, 0xde, 0x14, 0xf1, 0x78, 0x63, 0x30, 0x47, 0x1f, 0x5c,
+	0x41, 0x9f, 0x40, 0x7b, 0xdd, 0x84, 0x23, 0x63, 0x9b, 0x39, 0xa4, 0x38, 0xbb, 0xed, 0x54, 0xb9,
+	0xeb, 0x3e, 0x74, 0xcb, 0xdd, 0xe8, 0xd3, 0x9d, 0xdd, 0x76, 0xee, 0xfe, 0x19, 0x74, 0xcc, 0x3e,
+	0xcc, 0xac, 0x57, 0xa1, 0x5b, 0x75, 0x4a, 0x97, 0x38, 0xcf, 0x39, 0x1c, 0x1a, 0x8d, 0x85, 0x79,
+	0x6f, 0xb6, 0x1b, 0x37, 0xa7, 0x6c, 0x45, 0x26, 0x23, 0xba, 0x93, 0x51, 0x18, 0xbe, 0x28, 0x4f,
+	0xc7, 0xfc, 0xb8, 0x6e, 0x5d, 0xc2, 0xed, 0x46, 0xc5, 0x29, 0x5d, 0x52, 0x3c, 0xe6, 0x07, 0xc3,
+	0xe4, 0x29, 0x7c, 0x92, 0x9d, 0xd2, 0x25, 0xce, 0xe3, 0xca, 0x0f, 0xcf, 0x28, 0x0c, 0x5f, 0x02,
+	0x55, 0x77, 0xeb, 0xe1, 0x44, 0x4e, 0xe1, 0x00, 0x26, 0x53, 0xf9, 0x1a, 0xa7, 0xfa, 0x18, 0x1a,
+	0xf2, 0x65, 0x45, 0xb7, 0x8c, 0xeb, 0xb1, 0x7e, 0x6b, 0x6f, 0xf8, 0x6f, 0x7d, 0x04, 0x4d, 0xf5,
+	0x72, 0x99, 0xae, 0x9b, 0xc7, 0xd4, 0xd9, 0x65, 0xa5, 0xb8, 0x72, 0x76, 0xf4, 0xf4, 0x6a, 0x50,
+	0xfd, 0xeb, 0x6a, 0x50, 0x7d, 0x76, 0x35, 0xa8, 0xfe, 0xf6, 0xf7, 0xa0, 0x32, 0x69, 0x08, 0xf2,
+	0xf7, 0xff, 0x09, 0x00, 0x00, 0xff, 0xff, 0xf8, 0x52, 0x93, 0x73, 0x6d, 0x11, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1387,7 +2082,12 @@ type AuthServiceClient interface {
 	Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error)
 	AddPolicy(ctx context.Context, in *AddPolicyReq, opts ...grpc.CallOption) (*AddPolicyRes, error)
 	DeletePolicy(ctx context.Context, in *DeletePolicyReq, opts ...grpc.CallOption) (*DeletePolicyRes, error)
-	ListPolicies(ctx context.Context, in *ListPoliciesReq, opts ...grpc.CallOption) (*ListPoliciesRes, error)
+	ListObjects(ctx context.Context, in *ListObjectsReq, opts ...grpc.CallOption) (*ListObjectsRes, error)
+	ListAllObjects(ctx context.Context, in *ListObjectsReq, opts ...grpc.CallOption) (*ListObjectsRes, error)
+	CountObjects(ctx context.Context, in *CountObjectsReq, opts ...grpc.CallOption) (*CountObjectsRes, error)
+	ListSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error)
+	ListAllSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error)
+	CountSubjects(ctx context.Context, in *CountSubjectsReq, opts ...grpc.CallOption) (*CountSubjectsRes, error)
 	Assign(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*empty.Empty, error)
 	Members(ctx context.Context, in *MembersReq, opts ...grpc.CallOption) (*MembersRes, error)
 }
@@ -1445,9 +2145,54 @@ func (c *authServiceClient) DeletePolicy(ctx context.Context, in *DeletePolicyRe
 	return out, nil
 }
 
-func (c *authServiceClient) ListPolicies(ctx context.Context, in *ListPoliciesReq, opts ...grpc.CallOption) (*ListPoliciesRes, error) {
-	out := new(ListPoliciesRes)
-	err := c.cc.Invoke(ctx, "/mainflux.AuthService/ListPolicies", in, out, opts...)
+func (c *authServiceClient) ListObjects(ctx context.Context, in *ListObjectsReq, opts ...grpc.CallOption) (*ListObjectsRes, error) {
+	out := new(ListObjectsRes)
+	err := c.cc.Invoke(ctx, "/mainflux.AuthService/ListObjects", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ListAllObjects(ctx context.Context, in *ListObjectsReq, opts ...grpc.CallOption) (*ListObjectsRes, error) {
+	out := new(ListObjectsRes)
+	err := c.cc.Invoke(ctx, "/mainflux.AuthService/ListAllObjects", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) CountObjects(ctx context.Context, in *CountObjectsReq, opts ...grpc.CallOption) (*CountObjectsRes, error) {
+	out := new(CountObjectsRes)
+	err := c.cc.Invoke(ctx, "/mainflux.AuthService/CountObjects", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ListSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error) {
+	out := new(ListSubjectsRes)
+	err := c.cc.Invoke(ctx, "/mainflux.AuthService/ListSubjects", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ListAllSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error) {
+	out := new(ListSubjectsRes)
+	err := c.cc.Invoke(ctx, "/mainflux.AuthService/ListAllSubjects", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) CountSubjects(ctx context.Context, in *CountSubjectsReq, opts ...grpc.CallOption) (*CountSubjectsRes, error) {
+	out := new(CountSubjectsRes)
+	err := c.cc.Invoke(ctx, "/mainflux.AuthService/CountSubjects", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1479,7 +2224,12 @@ type AuthServiceServer interface {
 	Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error)
 	AddPolicy(context.Context, *AddPolicyReq) (*AddPolicyRes, error)
 	DeletePolicy(context.Context, *DeletePolicyReq) (*DeletePolicyRes, error)
-	ListPolicies(context.Context, *ListPoliciesReq) (*ListPoliciesRes, error)
+	ListObjects(context.Context, *ListObjectsReq) (*ListObjectsRes, error)
+	ListAllObjects(context.Context, *ListObjectsReq) (*ListObjectsRes, error)
+	CountObjects(context.Context, *CountObjectsReq) (*CountObjectsRes, error)
+	ListSubjects(context.Context, *ListSubjectsReq) (*ListSubjectsRes, error)
+	ListAllSubjects(context.Context, *ListSubjectsReq) (*ListSubjectsRes, error)
+	CountSubjects(context.Context, *CountSubjectsReq) (*CountSubjectsRes, error)
 	Assign(context.Context, *Assignment) (*empty.Empty, error)
 	Members(context.Context, *MembersReq) (*MembersRes, error)
 }
@@ -1503,8 +2253,23 @@ func (*UnimplementedAuthServiceServer) AddPolicy(ctx context.Context, req *AddPo
 func (*UnimplementedAuthServiceServer) DeletePolicy(ctx context.Context, req *DeletePolicyReq) (*DeletePolicyRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePolicy not implemented")
 }
-func (*UnimplementedAuthServiceServer) ListPolicies(ctx context.Context, req *ListPoliciesReq) (*ListPoliciesRes, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListPolicies not implemented")
+func (*UnimplementedAuthServiceServer) ListObjects(ctx context.Context, req *ListObjectsReq) (*ListObjectsRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListObjects not implemented")
+}
+func (*UnimplementedAuthServiceServer) ListAllObjects(ctx context.Context, req *ListObjectsReq) (*ListObjectsRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAllObjects not implemented")
+}
+func (*UnimplementedAuthServiceServer) CountObjects(ctx context.Context, req *CountObjectsReq) (*CountObjectsRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CountObjects not implemented")
+}
+func (*UnimplementedAuthServiceServer) ListSubjects(ctx context.Context, req *ListSubjectsReq) (*ListSubjectsRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSubjects not implemented")
+}
+func (*UnimplementedAuthServiceServer) ListAllSubjects(ctx context.Context, req *ListSubjectsReq) (*ListSubjectsRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAllSubjects not implemented")
+}
+func (*UnimplementedAuthServiceServer) CountSubjects(ctx context.Context, req *CountSubjectsReq) (*CountSubjectsRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CountSubjects not implemented")
 }
 func (*UnimplementedAuthServiceServer) Assign(ctx context.Context, req *Assignment) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Assign not implemented")
@@ -1607,20 +2372,110 @@ func _AuthService_DeletePolicy_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_ListPolicies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListPoliciesReq)
+func _AuthService_ListObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListObjectsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).ListPolicies(ctx, in)
+		return srv.(AuthServiceServer).ListObjects(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/mainflux.AuthService/ListPolicies",
+		FullMethod: "/mainflux.AuthService/ListObjects",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ListPolicies(ctx, req.(*ListPoliciesReq))
+		return srv.(AuthServiceServer).ListObjects(ctx, req.(*ListObjectsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ListAllObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListObjectsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ListAllObjects(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mainflux.AuthService/ListAllObjects",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ListAllObjects(ctx, req.(*ListObjectsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_CountObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CountObjectsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).CountObjects(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mainflux.AuthService/CountObjects",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).CountObjects(ctx, req.(*CountObjectsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ListSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSubjectsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ListSubjects(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mainflux.AuthService/ListSubjects",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ListSubjects(ctx, req.(*ListSubjectsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ListAllSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSubjectsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ListAllSubjects(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mainflux.AuthService/ListAllSubjects",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ListAllSubjects(ctx, req.(*ListSubjectsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_CountSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CountSubjectsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).CountSubjects(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mainflux.AuthService/CountSubjects",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).CountSubjects(ctx, req.(*CountSubjectsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1686,8 +2541,28 @@ var _AuthService_serviceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_DeletePolicy_Handler,
 		},
 		{
-			MethodName: "ListPolicies",
-			Handler:    _AuthService_ListPolicies_Handler,
+			MethodName: "ListObjects",
+			Handler:    _AuthService_ListObjects_Handler,
+		},
+		{
+			MethodName: "ListAllObjects",
+			Handler:    _AuthService_ListAllObjects_Handler,
+		},
+		{
+			MethodName: "CountObjects",
+			Handler:    _AuthService_CountObjects_Handler,
+		},
+		{
+			MethodName: "ListSubjects",
+			Handler:    _AuthService_ListSubjects_Handler,
+		},
+		{
+			MethodName: "ListAllSubjects",
+			Handler:    _AuthService_ListAllSubjects_Handler,
+		},
+		{
+			MethodName: "CountSubjects",
+			Handler:    _AuthService_CountSubjects_Handler,
 		},
 		{
 			MethodName: "Assign",
@@ -2038,24 +2913,59 @@ func (m *AuthorizeReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.Act) > 0 {
-		i -= len(m.Act)
-		copy(dAtA[i:], m.Act)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Act)))
+	if len(m.ObjectType) > 0 {
+		i -= len(m.ObjectType)
+		copy(dAtA[i:], m.ObjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.ObjectType)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Object) > 0 {
+		i -= len(m.Object)
+		copy(dAtA[i:], m.Object)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Object)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.Permission) > 0 {
+		i -= len(m.Permission)
+		copy(dAtA[i:], m.Permission)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Permission)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Relation) > 0 {
+		i -= len(m.Relation)
+		copy(dAtA[i:], m.Relation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Relation)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Subject) > 0 {
+		i -= len(m.Subject)
+		copy(dAtA[i:], m.Subject)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Subject)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SubjectRelation) > 0 {
+		i -= len(m.SubjectRelation)
+		copy(dAtA[i:], m.SubjectRelation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectRelation)))
 		i--
 		dAtA[i] = 0x1a
 	}
-	if len(m.Obj) > 0 {
-		i -= len(m.Obj)
-		copy(dAtA[i:], m.Obj)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Obj)))
+	if len(m.SubjectType) > 0 {
+		i -= len(m.SubjectType)
+		copy(dAtA[i:], m.SubjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectType)))
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Sub) > 0 {
-		i -= len(m.Sub)
-		copy(dAtA[i:], m.Sub)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Sub)))
+	if len(m.Namespace) > 0 {
+		i -= len(m.Namespace)
+		copy(dAtA[i:], m.Namespace)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Namespace)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2123,24 +3033,59 @@ func (m *AddPolicyReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.Act) > 0 {
-		i -= len(m.Act)
-		copy(dAtA[i:], m.Act)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Act)))
+	if len(m.ObjectType) > 0 {
+		i -= len(m.ObjectType)
+		copy(dAtA[i:], m.ObjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.ObjectType)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Object) > 0 {
+		i -= len(m.Object)
+		copy(dAtA[i:], m.Object)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Object)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.Permission) > 0 {
+		i -= len(m.Permission)
+		copy(dAtA[i:], m.Permission)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Permission)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Relation) > 0 {
+		i -= len(m.Relation)
+		copy(dAtA[i:], m.Relation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Relation)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Subject) > 0 {
+		i -= len(m.Subject)
+		copy(dAtA[i:], m.Subject)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Subject)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SubjectRelation) > 0 {
+		i -= len(m.SubjectRelation)
+		copy(dAtA[i:], m.SubjectRelation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectRelation)))
 		i--
 		dAtA[i] = 0x1a
 	}
-	if len(m.Obj) > 0 {
-		i -= len(m.Obj)
-		copy(dAtA[i:], m.Obj)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Obj)))
+	if len(m.SubjectType) > 0 {
+		i -= len(m.SubjectType)
+		copy(dAtA[i:], m.SubjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectType)))
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Sub) > 0 {
-		i -= len(m.Sub)
-		copy(dAtA[i:], m.Sub)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Sub)))
+	if len(m.Namespace) > 0 {
+		i -= len(m.Namespace)
+		copy(dAtA[i:], m.Namespace)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Namespace)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2208,24 +3153,59 @@ func (m *DeletePolicyReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.Act) > 0 {
-		i -= len(m.Act)
-		copy(dAtA[i:], m.Act)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Act)))
+	if len(m.ObjectType) > 0 {
+		i -= len(m.ObjectType)
+		copy(dAtA[i:], m.ObjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.ObjectType)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Object) > 0 {
+		i -= len(m.Object)
+		copy(dAtA[i:], m.Object)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Object)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.Permission) > 0 {
+		i -= len(m.Permission)
+		copy(dAtA[i:], m.Permission)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Permission)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Relation) > 0 {
+		i -= len(m.Relation)
+		copy(dAtA[i:], m.Relation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Relation)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Subject) > 0 {
+		i -= len(m.Subject)
+		copy(dAtA[i:], m.Subject)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Subject)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SubjectRelation) > 0 {
+		i -= len(m.SubjectRelation)
+		copy(dAtA[i:], m.SubjectRelation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectRelation)))
 		i--
 		dAtA[i] = 0x1a
 	}
-	if len(m.Obj) > 0 {
-		i -= len(m.Obj)
-		copy(dAtA[i:], m.Obj)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Obj)))
+	if len(m.SubjectType) > 0 {
+		i -= len(m.SubjectType)
+		copy(dAtA[i:], m.SubjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectType)))
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Sub) > 0 {
-		i -= len(m.Sub)
-		copy(dAtA[i:], m.Sub)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Sub)))
+	if len(m.Namespace) > 0 {
+		i -= len(m.Namespace)
+		copy(dAtA[i:], m.Namespace)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Namespace)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2269,7 +3249,7 @@ func (m *DeletePolicyRes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *ListPoliciesReq) Marshal() (dAtA []byte, err error) {
+func (m *ListObjectsReq) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2279,12 +3259,12 @@ func (m *ListPoliciesReq) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ListPoliciesReq) MarshalTo(dAtA []byte) (int, error) {
+func (m *ListObjectsReq) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ListPoliciesReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ListObjectsReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2293,31 +3273,78 @@ func (m *ListPoliciesReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.Act) > 0 {
-		i -= len(m.Act)
-		copy(dAtA[i:], m.Act)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Act)))
+	if m.Limit != 0 {
+		i = encodeVarintAuth(dAtA, i, uint64(m.Limit))
+		i--
+		dAtA[i] = 0x50
+	}
+	if len(m.NextPageToken) > 0 {
+		i -= len(m.NextPageToken)
+		copy(dAtA[i:], m.NextPageToken)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.NextPageToken)))
+		i--
+		dAtA[i] = 0x4a
+	}
+	if len(m.ObjectType) > 0 {
+		i -= len(m.ObjectType)
+		copy(dAtA[i:], m.ObjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.ObjectType)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Object) > 0 {
+		i -= len(m.Object)
+		copy(dAtA[i:], m.Object)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Object)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.Permission) > 0 {
+		i -= len(m.Permission)
+		copy(dAtA[i:], m.Permission)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Permission)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Relation) > 0 {
+		i -= len(m.Relation)
+		copy(dAtA[i:], m.Relation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Relation)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Subject) > 0 {
+		i -= len(m.Subject)
+		copy(dAtA[i:], m.Subject)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Subject)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SubjectRelation) > 0 {
+		i -= len(m.SubjectRelation)
+		copy(dAtA[i:], m.SubjectRelation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectRelation)))
 		i--
 		dAtA[i] = 0x1a
 	}
-	if len(m.Obj) > 0 {
-		i -= len(m.Obj)
-		copy(dAtA[i:], m.Obj)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Obj)))
+	if len(m.SubjectType) > 0 {
+		i -= len(m.SubjectType)
+		copy(dAtA[i:], m.SubjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectType)))
 		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Sub) > 0 {
-		i -= len(m.Sub)
-		copy(dAtA[i:], m.Sub)
-		i = encodeVarintAuth(dAtA, i, uint64(len(m.Sub)))
+	if len(m.Namespace) > 0 {
+		i -= len(m.Namespace)
+		copy(dAtA[i:], m.Namespace)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Namespace)))
 		i--
 		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
 
-func (m *ListPoliciesRes) Marshal() (dAtA []byte, err error) {
+func (m *ListObjectsRes) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2327,12 +3354,12 @@ func (m *ListPoliciesRes) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ListPoliciesRes) MarshalTo(dAtA []byte) (int, error) {
+func (m *ListObjectsRes) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *ListPoliciesRes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ListObjectsRes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2340,6 +3367,13 @@ func (m *ListPoliciesRes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.XXX_unrecognized != nil {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.NextPageToken) > 0 {
+		i -= len(m.NextPageToken)
+		copy(dAtA[i:], m.NextPageToken)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.NextPageToken)))
+		i--
+		dAtA[i] = 0x12
 	}
 	if len(m.Policies) > 0 {
 		for iNdEx := len(m.Policies) - 1; iNdEx >= 0; iNdEx-- {
@@ -2349,6 +3383,388 @@ func (m *ListPoliciesRes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			i--
 			dAtA[i] = 0xa
 		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CountObjectsReq) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CountObjectsReq) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CountObjectsReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.NextPageToken) > 0 {
+		i -= len(m.NextPageToken)
+		copy(dAtA[i:], m.NextPageToken)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.NextPageToken)))
+		i--
+		dAtA[i] = 0x4a
+	}
+	if len(m.ObjectType) > 0 {
+		i -= len(m.ObjectType)
+		copy(dAtA[i:], m.ObjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.ObjectType)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Object) > 0 {
+		i -= len(m.Object)
+		copy(dAtA[i:], m.Object)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Object)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.Permission) > 0 {
+		i -= len(m.Permission)
+		copy(dAtA[i:], m.Permission)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Permission)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Relation) > 0 {
+		i -= len(m.Relation)
+		copy(dAtA[i:], m.Relation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Relation)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Subject) > 0 {
+		i -= len(m.Subject)
+		copy(dAtA[i:], m.Subject)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Subject)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SubjectRelation) > 0 {
+		i -= len(m.SubjectRelation)
+		copy(dAtA[i:], m.SubjectRelation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectRelation)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.SubjectType) > 0 {
+		i -= len(m.SubjectType)
+		copy(dAtA[i:], m.SubjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectType)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Namespace) > 0 {
+		i -= len(m.Namespace)
+		copy(dAtA[i:], m.Namespace)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Namespace)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CountObjectsRes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CountObjectsRes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CountObjectsRes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Count != 0 {
+		i = encodeVarintAuth(dAtA, i, uint64(m.Count))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ListSubjectsReq) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListSubjectsReq) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ListSubjectsReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Limit != 0 {
+		i = encodeVarintAuth(dAtA, i, uint64(m.Limit))
+		i--
+		dAtA[i] = 0x50
+	}
+	if len(m.NextPageToken) > 0 {
+		i -= len(m.NextPageToken)
+		copy(dAtA[i:], m.NextPageToken)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.NextPageToken)))
+		i--
+		dAtA[i] = 0x4a
+	}
+	if len(m.ObjectType) > 0 {
+		i -= len(m.ObjectType)
+		copy(dAtA[i:], m.ObjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.ObjectType)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Object) > 0 {
+		i -= len(m.Object)
+		copy(dAtA[i:], m.Object)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Object)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.Permission) > 0 {
+		i -= len(m.Permission)
+		copy(dAtA[i:], m.Permission)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Permission)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Relation) > 0 {
+		i -= len(m.Relation)
+		copy(dAtA[i:], m.Relation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Relation)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Subject) > 0 {
+		i -= len(m.Subject)
+		copy(dAtA[i:], m.Subject)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Subject)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SubjectRelation) > 0 {
+		i -= len(m.SubjectRelation)
+		copy(dAtA[i:], m.SubjectRelation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectRelation)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.SubjectType) > 0 {
+		i -= len(m.SubjectType)
+		copy(dAtA[i:], m.SubjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectType)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Namespace) > 0 {
+		i -= len(m.Namespace)
+		copy(dAtA[i:], m.Namespace)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Namespace)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ListSubjectsRes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ListSubjectsRes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ListSubjectsRes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.NextPageToken) > 0 {
+		i -= len(m.NextPageToken)
+		copy(dAtA[i:], m.NextPageToken)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.NextPageToken)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Policies) > 0 {
+		for iNdEx := len(m.Policies) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.Policies[iNdEx])
+			copy(dAtA[i:], m.Policies[iNdEx])
+			i = encodeVarintAuth(dAtA, i, uint64(len(m.Policies[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CountSubjectsReq) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CountSubjectsReq) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CountSubjectsReq) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.NextPageToken) > 0 {
+		i -= len(m.NextPageToken)
+		copy(dAtA[i:], m.NextPageToken)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.NextPageToken)))
+		i--
+		dAtA[i] = 0x4a
+	}
+	if len(m.ObjectType) > 0 {
+		i -= len(m.ObjectType)
+		copy(dAtA[i:], m.ObjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.ObjectType)))
+		i--
+		dAtA[i] = 0x42
+	}
+	if len(m.Object) > 0 {
+		i -= len(m.Object)
+		copy(dAtA[i:], m.Object)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Object)))
+		i--
+		dAtA[i] = 0x3a
+	}
+	if len(m.Permission) > 0 {
+		i -= len(m.Permission)
+		copy(dAtA[i:], m.Permission)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Permission)))
+		i--
+		dAtA[i] = 0x32
+	}
+	if len(m.Relation) > 0 {
+		i -= len(m.Relation)
+		copy(dAtA[i:], m.Relation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Relation)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.Subject) > 0 {
+		i -= len(m.Subject)
+		copy(dAtA[i:], m.Subject)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Subject)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if len(m.SubjectRelation) > 0 {
+		i -= len(m.SubjectRelation)
+		copy(dAtA[i:], m.SubjectRelation)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectRelation)))
+		i--
+		dAtA[i] = 0x1a
+	}
+	if len(m.SubjectType) > 0 {
+		i -= len(m.SubjectType)
+		copy(dAtA[i:], m.SubjectType)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.SubjectType)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Namespace) > 0 {
+		i -= len(m.Namespace)
+		copy(dAtA[i:], m.Namespace)
+		i = encodeVarintAuth(dAtA, i, uint64(len(m.Namespace)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *CountSubjectsRes) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *CountSubjectsRes) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *CountSubjectsRes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if m.Count != 0 {
+		i = encodeVarintAuth(dAtA, i, uint64(m.Count))
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -2685,15 +4101,35 @@ func (m *AuthorizeReq) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Sub)
+	l = len(m.Namespace)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
-	l = len(m.Obj)
+	l = len(m.SubjectType)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
-	l = len(m.Act)
+	l = len(m.SubjectRelation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Subject)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Relation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Permission)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Object)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.ObjectType)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
@@ -2724,15 +4160,35 @@ func (m *AddPolicyReq) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Sub)
+	l = len(m.Namespace)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
-	l = len(m.Obj)
+	l = len(m.SubjectType)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
-	l = len(m.Act)
+	l = len(m.SubjectRelation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Subject)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Relation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Permission)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Object)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.ObjectType)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
@@ -2763,15 +4219,35 @@ func (m *DeletePolicyReq) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Sub)
+	l = len(m.Namespace)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
-	l = len(m.Obj)
+	l = len(m.SubjectType)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
-	l = len(m.Act)
+	l = len(m.SubjectRelation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Subject)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Relation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Permission)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Object)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.ObjectType)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
@@ -2796,23 +4272,50 @@ func (m *DeletePolicyRes) Size() (n int) {
 	return n
 }
 
-func (m *ListPoliciesReq) Size() (n int) {
+func (m *ListObjectsReq) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	l = len(m.Sub)
+	l = len(m.Namespace)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
-	l = len(m.Obj)
+	l = len(m.SubjectType)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
 	}
-	l = len(m.Act)
+	l = len(m.SubjectRelation)
 	if l > 0 {
 		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Subject)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Relation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Permission)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Object)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.ObjectType)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.NextPageToken)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	if m.Limit != 0 {
+		n += 1 + sovAuth(uint64(m.Limit))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -2820,7 +4323,7 @@ func (m *ListPoliciesReq) Size() (n int) {
 	return n
 }
 
-func (m *ListPoliciesRes) Size() (n int) {
+func (m *ListObjectsRes) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2831,6 +4334,209 @@ func (m *ListPoliciesRes) Size() (n int) {
 			l = len(s)
 			n += 1 + l + sovAuth(uint64(l))
 		}
+	}
+	l = len(m.NextPageToken)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CountObjectsReq) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Namespace)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.SubjectType)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.SubjectRelation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Subject)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Relation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Permission)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Object)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.ObjectType)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.NextPageToken)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CountObjectsRes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Count != 0 {
+		n += 1 + sovAuth(uint64(m.Count))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ListSubjectsReq) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Namespace)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.SubjectType)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.SubjectRelation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Subject)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Relation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Permission)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Object)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.ObjectType)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.NextPageToken)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	if m.Limit != 0 {
+		n += 1 + sovAuth(uint64(m.Limit))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *ListSubjectsRes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Policies) > 0 {
+		for _, s := range m.Policies {
+			l = len(s)
+			n += 1 + l + sovAuth(uint64(l))
+		}
+	}
+	l = len(m.NextPageToken)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CountSubjectsReq) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Namespace)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.SubjectType)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.SubjectRelation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Subject)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Relation)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Permission)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.Object)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.ObjectType)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	l = len(m.NextPageToken)
+	if l > 0 {
+		n += 1 + l + sovAuth(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *CountSubjectsRes) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Count != 0 {
+		n += 1 + sovAuth(uint64(m.Count))
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -3028,10 +4734,7 @@ func (m *AccessByKeyReq) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -3146,10 +4849,7 @@ func (m *ChannelOwnerReq) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -3232,10 +4932,7 @@ func (m *ThingID) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -3318,10 +5015,7 @@ func (m *ChannelID) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -3436,10 +5130,7 @@ func (m *AccessByIDReq) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -3522,10 +5213,7 @@ func (m *Token) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -3640,10 +5328,7 @@ func (m *UserIdentity) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -3777,10 +5462,7 @@ func (m *IssueReq) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -3827,7 +5509,7 @@ func (m *AuthorizeReq) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sub", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -3855,11 +5537,11 @@ func (m *AuthorizeReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Sub = string(dAtA[iNdEx:postIndex])
+			m.Namespace = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Obj", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectType", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -3887,11 +5569,11 @@ func (m *AuthorizeReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Obj = string(dAtA[iNdEx:postIndex])
+			m.SubjectType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Act", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectRelation", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -3919,7 +5601,167 @@ func (m *AuthorizeReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Act = string(dAtA[iNdEx:postIndex])
+			m.SubjectRelation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Subject", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Subject = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Relation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Relation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Permission = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Object", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Object = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ObjectType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3927,10 +5769,7 @@ func (m *AuthorizeReq) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -4001,10 +5840,7 @@ func (m *AuthorizeRes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -4051,7 +5887,7 @@ func (m *AddPolicyReq) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sub", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4079,11 +5915,11 @@ func (m *AddPolicyReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Sub = string(dAtA[iNdEx:postIndex])
+			m.Namespace = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Obj", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectType", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4111,11 +5947,11 @@ func (m *AddPolicyReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Obj = string(dAtA[iNdEx:postIndex])
+			m.SubjectType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Act", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectRelation", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4143,7 +5979,167 @@ func (m *AddPolicyReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Act = string(dAtA[iNdEx:postIndex])
+			m.SubjectRelation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Subject", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Subject = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Relation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Relation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Permission = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Object", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Object = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ObjectType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -4151,10 +6147,7 @@ func (m *AddPolicyReq) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -4225,10 +6218,7 @@ func (m *AddPolicyRes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -4275,7 +6265,7 @@ func (m *DeletePolicyReq) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sub", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4303,11 +6293,11 @@ func (m *DeletePolicyReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Sub = string(dAtA[iNdEx:postIndex])
+			m.Namespace = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Obj", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectType", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4335,11 +6325,11 @@ func (m *DeletePolicyReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Obj = string(dAtA[iNdEx:postIndex])
+			m.SubjectType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Act", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectRelation", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4367,7 +6357,167 @@ func (m *DeletePolicyReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Act = string(dAtA[iNdEx:postIndex])
+			m.SubjectRelation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Subject", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Subject = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Relation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Relation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Permission = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Object", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Object = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ObjectType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -4375,10 +6525,7 @@ func (m *DeletePolicyReq) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -4449,10 +6596,7 @@ func (m *DeletePolicyRes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -4468,7 +6612,7 @@ func (m *DeletePolicyRes) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ListPoliciesReq) Unmarshal(dAtA []byte) error {
+func (m *ListObjectsReq) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4491,15 +6635,15 @@ func (m *ListPoliciesReq) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ListPoliciesReq: wiretype end group for non-group")
+			return fmt.Errorf("proto: ListObjectsReq: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListPoliciesReq: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ListObjectsReq: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Sub", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4527,11 +6671,11 @@ func (m *ListPoliciesReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Sub = string(dAtA[iNdEx:postIndex])
+			m.Namespace = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Obj", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectType", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4559,11 +6703,11 @@ func (m *ListPoliciesReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Obj = string(dAtA[iNdEx:postIndex])
+			m.SubjectType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Act", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectRelation", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -4591,18 +6735,226 @@ func (m *ListPoliciesReq) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Act = string(dAtA[iNdEx:postIndex])
+			m.SubjectRelation = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Subject", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Subject = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Relation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Relation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Permission = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Object", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Object = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ObjectType = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NextPageToken", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NextPageToken = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Limit", wireType)
+			}
+			m.Limit = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Limit |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAuth(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -4618,7 +6970,7 @@ func (m *ListPoliciesReq) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ListPoliciesRes) Unmarshal(dAtA []byte) error {
+func (m *ListObjectsRes) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4641,10 +6993,10 @@ func (m *ListPoliciesRes) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ListPoliciesRes: wiretype end group for non-group")
+			return fmt.Errorf("proto: ListObjectsRes: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ListPoliciesRes: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ListObjectsRes: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4679,16 +7031,1336 @@ func (m *ListPoliciesRes) Unmarshal(dAtA []byte) error {
 			}
 			m.Policies = append(m.Policies, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NextPageToken", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NextPageToken = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipAuth(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
-			if (iNdEx + skippy) < 0 {
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CountObjectsReq) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAuth
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CountObjectsReq: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CountObjectsReq: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Namespace = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SubjectType = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectRelation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SubjectRelation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Subject", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Subject = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Relation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Relation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Permission = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Object", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Object = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ObjectType = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NextPageToken", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NextPageToken = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAuth(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CountObjectsRes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAuth
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CountObjectsRes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CountObjectsRes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Count", wireType)
+			}
+			m.Count = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Count |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAuth(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ListSubjectsReq) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAuth
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListSubjectsReq: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListSubjectsReq: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Namespace = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SubjectType = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectRelation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SubjectRelation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Subject", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Subject = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Relation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Relation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Permission = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Object", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Object = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ObjectType = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NextPageToken", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NextPageToken = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Limit", wireType)
+			}
+			m.Limit = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Limit |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAuth(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ListSubjectsRes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAuth
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ListSubjectsRes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ListSubjectsRes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Policies", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Policies = append(m.Policies, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NextPageToken", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NextPageToken = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAuth(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CountSubjectsReq) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAuth
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CountSubjectsReq: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CountSubjectsReq: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Namespace", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Namespace = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SubjectType = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SubjectRelation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.SubjectRelation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Subject", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Subject = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Relation", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Relation = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permission", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Permission = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Object", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Object = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectType", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ObjectType = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 9:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NextPageToken", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthAuth
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.NextPageToken = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAuth(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthAuth
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *CountSubjectsRes) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowAuth
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: CountSubjectsRes: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: CountSubjectsRes: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Count", wireType)
+			}
+			m.Count = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowAuth
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Count |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipAuth(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -4835,10 +8507,7 @@ func (m *Assignment) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -5023,10 +8692,7 @@ func (m *MembersReq) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {
@@ -5198,10 +8864,7 @@ func (m *MembersRes) Unmarshal(dAtA []byte) error {
 			if err != nil {
 				return err
 			}
-			if skippy < 0 {
-				return ErrInvalidLengthAuth
-			}
-			if (iNdEx + skippy) < 0 {
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
 				return ErrInvalidLengthAuth
 			}
 			if (iNdEx + skippy) > l {

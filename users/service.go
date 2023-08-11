@@ -13,9 +13,19 @@ import (
 )
 
 const (
-	memberRelationKey = "member"
-	authoritiesObjKey = "authorities"
-	usersObjKey       = "users"
+	administratorRelationKey = "administrator"
+	directMemberRelation     = "direct_member"
+	createRelation           = "create"
+
+	adminPermission      = "admin"
+	memberPermission     = "member"
+	createUserPermission = "create_user"
+
+	userType         = "user"
+	organizationType = "organization"
+
+	mainfluxObject = "mainflux"
+	anyBodySubject = "_any_body"
 )
 
 var (
@@ -137,7 +147,7 @@ func (svc usersService) Register(ctx context.Context, token string, user User) (
 	}
 	user.ID = uid
 
-	if err := svc.claimOwnership(ctx, user.ID, usersObjKey, memberRelationKey); err != nil {
+	if err := svc.claimOwnership(ctx, userType, user.ID, directMemberRelation, "", organizationType, mainfluxObject); err != nil {
 		return "", err
 	}
 
@@ -154,7 +164,7 @@ func (svc usersService) Register(ctx context.Context, token string, user User) (
 }
 
 func (svc usersService) checkAuthz(ctx context.Context, token string) error {
-	if err := svc.authorize(ctx, "*", "user", "create"); err == nil {
+	if err := svc.authorize(ctx, userType, anyBodySubject, createUserPermission, organizationType, mainfluxObject); err == nil {
 		return nil
 	}
 	if token == "" {
@@ -166,7 +176,7 @@ func (svc usersService) checkAuthz(ctx context.Context, token string) error {
 		return err
 	}
 
-	return svc.authorize(ctx, ir.id, authoritiesObjKey, memberRelationKey)
+	return svc.authorize(ctx, userType, ir.id, createUserPermission, organizationType, mainfluxObject)
 }
 
 func (svc usersService) Login(ctx context.Context, user User) (string, error) {
@@ -223,7 +233,7 @@ func (svc usersService) ListUsers(ctx context.Context, token string, offset, lim
 		return UserPage{}, err
 	}
 
-	if err := svc.authorize(ctx, id.id, "authorities", "member"); err != nil {
+	if err := svc.authorize(ctx, userType, id.id, memberPermission, organizationType, mainfluxObject); err != nil {
 		return UserPage{}, errors.Wrap(errors.ErrAuthentication, err)
 	}
 	return svc.users.RetrieveAll(ctx, offset, limit, nil, email, m)
@@ -354,11 +364,13 @@ func (svc usersService) identify(ctx context.Context, token string) (userIdentit
 	return userIdentity{identity.Id, identity.Email}, nil
 }
 
-func (svc usersService) authorize(ctx context.Context, subject, object, relation string) error {
+func (svc usersService) authorize(ctx context.Context, subjectType, subject, permission, objectType, object string) error {
 	req := &mainflux.AuthorizeReq{
-		Sub: subject,
-		Obj: object,
-		Act: relation,
+		SubjectType: subjectType,
+		Subject:     subject,
+		Permission:  permission,
+		Object:      object,
+		ObjectType:  objectType,
 	}
 	res, err := svc.auth.Authorize(ctx, req)
 	if err != nil {
@@ -370,11 +382,14 @@ func (svc usersService) authorize(ctx context.Context, subject, object, relation
 	return nil
 }
 
-func (svc usersService) claimOwnership(ctx context.Context, subject, object, relation string) error {
+func (svc usersService) claimOwnership(ctx context.Context, subjectType, subject, relation, permission, objectType, object string) error {
 	req := &mainflux.AddPolicyReq{
-		Sub: subject,
-		Obj: object,
-		Act: relation,
+		SubjectType: subjectType,
+		Subject:     subject,
+		Relation:    relation,
+		Permission:  permission,
+		Object:      object,
+		ObjectType:  objectType,
 	}
 	res, err := svc.auth.AddPolicy(ctx, req)
 	if err != nil {

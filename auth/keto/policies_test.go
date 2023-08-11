@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/mainflux/mainflux/auth"
-	acl "github.com/ory/keto/proto/ory/keto/acl/v1alpha1"
+	acl "github.com/ory/keto/proto/ory/keto/relation_tuples/v1alpha2"
 	"github.com/stretchr/testify/assert"
 )
 

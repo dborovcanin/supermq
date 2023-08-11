@@ -289,7 +289,7 @@ func connectToAuth(cfg config, logger logger.Logger) *grpc.ClientConn {
 		opts = append(opts, grpc.WithInsecure())
 		logger.Info("gRPC communication is not encrypted")
 	}
-
+	opts = append(opts, grpc.WithReadBufferSize(5120000000), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(5120000000), grpc.MaxCallSendMsgSize(5120000000)), grpc.WithWriteBufferSize(5120000000))
 	conn, err := grpc.Dial(cfg.authURL, opts...)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Failed to connect to auth service: %s", err))
@@ -303,7 +303,7 @@ func newService(auth mainflux.AuthServiceClient, dbTracer opentracing.Tracer, ca
 	database := postgres.NewDatabase(db)
 
 	thingsRepo := postgres.NewThingRepository(database)
-	thingsRepo = tracing.ThingRepositoryMiddleware(dbTracer, thingsRepo)
+	// thingsRepo = tracing.ThingRepositoryMiddleware(dbTracer, thingsRepo)
 
 	channelsRepo := postgres.NewChannelRepository(database)
 	channelsRepo = tracing.ChannelRepositoryMiddleware(dbTracer, channelsRepo)

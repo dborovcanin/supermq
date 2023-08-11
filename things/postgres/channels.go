@@ -119,6 +119,79 @@ func (cr channelRepository) RetrieveByID(ctx context.Context, owner, id string) 
 	return toChannel(dbch), nil
 }
 
+func (cr channelRepository) RetrieveByIDs(ctx context.Context, channelIDs []string, pm things.PageMetadata) (things.ChannelsPage, error) {
+	if len(channelIDs) == 0 {
+		return things.ChannelsPage{}, nil
+	}
+	nq, name := getNameQuery(pm.Name)
+	oq := getOrderQuery(pm.Order)
+	dq := getDirQuery(pm.Dir)
+	idq := fmt.Sprintf("id IN ('%s') ", strings.Join(channelIDs, "','"))
+	meta, mq, err := getMetadataQuery(pm.Metadata)
+	if err != nil {
+		return things.ChannelsPage{}, errors.Wrap(errors.ErrViewEntity, err)
+	}
+
+	var whereClause string
+	query := []string{idq}
+	if mq != "" {
+		query = append(query, mq)
+	}
+	if nq != "" {
+		query = append(query, nq)
+	}
+
+	if len(query) > 0 {
+		whereClause = fmt.Sprintf(" WHERE %s", strings.Join(query, " AND "))
+	}
+
+	q := fmt.Sprintf(`SELECT id, name, metadata FROM channels
+		%s ORDER BY %s %s LIMIT :limit OFFSET :offset;`, whereClause, oq, dq)
+
+	params := map[string]interface{}{
+		"limit":    pm.Limit,
+		"offset":   pm.Offset,
+		"name":     name,
+		"metadata": meta,
+	}
+	rows, err := cr.db.NamedQueryContext(ctx, q, params)
+	if err != nil {
+		return things.ChannelsPage{}, errors.Wrap(errors.ErrViewEntity, err)
+	}
+	defer rows.Close()
+
+	items := []things.Channel{}
+	for rows.Next() {
+		dbch := dbChannel{}
+		if err := rows.StructScan(&dbch); err != nil {
+			return things.ChannelsPage{}, errors.Wrap(errors.ErrViewEntity, err)
+		}
+		ch := toChannel(dbch)
+
+		items = append(items, ch)
+	}
+
+	cq := fmt.Sprintf(`SELECT COUNT(*) FROM channels %s;`, whereClause)
+
+	total, err := total(ctx, cr.db, cq, params)
+	if err != nil {
+		return things.ChannelsPage{}, errors.Wrap(errors.ErrViewEntity, err)
+	}
+
+	page := things.ChannelsPage{
+		Channels: items,
+		PageMetadata: things.PageMetadata{
+			Total:  total,
+			Offset: pm.Offset,
+			Limit:  pm.Limit,
+			Order:  pm.Order,
+			Dir:    pm.Dir,
+		},
+	}
+
+	return page, nil
+}
+
 func (cr channelRepository) RetrieveAll(ctx context.Context, owner string, pm things.PageMetadata) (things.ChannelsPage, error) {
 	nq, name := getNameQuery(pm.Name)
 	oq := getOrderQuery(pm.Order)

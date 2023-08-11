@@ -45,6 +45,9 @@ var (
 	// ErrMalformedPolicy indicates that policies are malformed.
 	ErrMalformedPolicy = errors.New("falmormed policy")
 
+	// ErrMissingPolicyNamespace indicates that policies are namespace.
+	ErrMissingPolicyNamespace = errors.New("falmormed policy namespace")
+
 	// ErrMissingPolicySub indicates that policies are subject.
 	ErrMissingPolicySub = errors.New("falmormed policy subject")
 

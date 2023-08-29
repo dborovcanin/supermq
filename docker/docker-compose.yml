@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 version: "3.7"
+name: "mainflux"
 
 networks:
   mainflux-base-net:
@@ -14,8 +15,102 @@ volumes:
   mainflux-es-redis-volume:
   mainflux-mqtt-broker-volume:
   mainflux-broker-volume:
+  mainflux-spicedb-db-volume:
+  mainflux-auth-db-volume:
 
 services:
+  spicedb:
+    image: "authzed/spicedb"
+    container_name: mainflux-spicedb
+    command: "serve"
+    restart: "always"
+    networks:
+      - mainflux-base-net
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+      - "50051:50051"
+    environment:
+      SPICEDB_GRPC_PRESHARED_KEY: ${MF_SPICEDB_GRPC_PRESHARED_KEY}
+      SPICEDB_DATASTORE_ENGINE: ${MF_SPICEDB_DATASTORE_ENGINE}
+      SPICEDB_DATASTORE_CONN_URI: "${MF_SPICEDB_DATASTORE_ENGINE}://${MF_SPICEDB_DB_USER}:${MF_SPICEDB_DB_PASS}@spicedb-db:${MF_SPICEDB_DB_PORT}/${MF_SPICEDB_DB_NAME}?sslmode=disable"
+    depends_on:
+      - spicedb-migrate
+
+  spicedb-migrate:
+    image: "authzed/spicedb"
+    container_name: mainflux-spicedb-migrate
+    command: "migrate head"
+    restart: "on-failure"
+    networks:
+      - mainflux-base-net
+    environment:
+      SPICEDB_DATASTORE_ENGINE: ${MF_SPICEDB_DATASTORE_ENGINE}
+      SPICEDB_DATASTORE_CONN_URI: "${MF_SPICEDB_DATASTORE_ENGINE}://${MF_SPICEDB_DB_USER}:${MF_SPICEDB_DB_PASS}@spicedb-db:${MF_SPICEDB_DB_PORT}/${MF_SPICEDB_DB_NAME}?sslmode=disable"
+    depends_on:
+      - spicedb-db
+
+  spicedb-db:
+    image: "postgres:15.3-alpine"
+    container_name: mainflux-spicedb-db
+    networks:
+      - mainflux-base-net
+    ports:
+      - "6010:5432"
+    environment:
+      POSTGRES_USER: ${MF_SPICEDB_DB_USER}
+      POSTGRES_PASSWORD: ${MF_SPICEDB_DB_PASS}
+      POSTGRES_DB: ${MF_SPICEDB_DB_NAME}
+    volumes:
+      - mainflux-spicedb-db-volume:/var/lib/postgresql/data
+
+  auth-db:
+    image: postgres:13.3-alpine
+    container_name: mainflux-auth-db
+    restart: on-failure
+    ports:
+      - 6004:5432
+    environment:
+      POSTGRES_USER: ${MF_AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${MF_AUTH_DB_PASS}
+      POSTGRES_DB: ${MF_AUTH_DB}
+    networks:
+      - mainflux-base-net
+    volumes:
+      - mainflux-auth-db-volume:/var/lib/postgresql/data
+
+  auth:
+    image: mainflux/auth:${MF_RELEASE_TAG}
+    container_name: mainflux-auth
+    depends_on:
+      - auth-db
+      - spicedb
+    expose:
+      - ${MF_AUTH_GRPC_PORT}
+    restart: on-failure
+    environment:
+      MF_SPICEDB_SCHEMA_FILE: ${MF_SPICEDB_SCHEMA_FILE}
+      MF_SPICEDB_HOST: ${MF_SPICEDB_HOST}
+      MF_SPICEDB_PORT: ${MF_SPICEDB_PORT}
+      MF_AUTH_LOG_LEVEL: ${MF_AUTH_LOG_LEVEL}
+      MF_AUTH_DB_HOST: auth-db
+      MF_AUTH_DB_PORT: ${MF_AUTH_DB_PORT}
+      MF_AUTH_DB_USER: ${MF_AUTH_DB_USER}
+      MF_AUTH_DB_PASS: ${MF_AUTH_DB_PASS}
+      MF_AUTH_DB: ${MF_AUTH_DB}
+      MF_AUTH_HTTP_PORT: ${MF_AUTH_HTTP_PORT}
+      MF_AUTH_GRPC_PORT: ${MF_AUTH_GRPC_PORT}
+      MF_AUTH_SECRET: ${MF_AUTH_SECRET}
+      MF_AUTH_LOGIN_TOKEN_DURATION: ${MF_AUTH_LOGIN_TOKEN_DURATION}
+      MF_JAEGER_URL: ${MF_JAEGER_URL}
+    ports:
+      - ${MF_AUTH_HTTP_PORT}:${MF_AUTH_HTTP_PORT}
+      - ${MF_AUTH_GRPC_PORT}:${MF_AUTH_GRPC_PORT}
+    networks:
+      - mainflux-base-net
+    volumes:
+      - ./spicedb/schema.zed:/schema.zed
+
   nginx:
     image: nginx:1.23.3-alpine
     container_name: mainflux-nginx

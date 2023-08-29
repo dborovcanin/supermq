@@ -10,9 +10,9 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/errors"
 	mfsdk "github.com/mainflux/mainflux/pkg/sdk/go"
-	"github.com/mainflux/mainflux/users/policies"
 )
 
 var (
@@ -103,14 +103,14 @@ type ConfigReader interface {
 }
 
 type bootstrapService struct {
-	auth    policies.AuthServiceClient
+	auth    mainflux.AuthServiceClient
 	configs ConfigRepository
 	sdk     mfsdk.SDK
 	encKey  []byte
 }
 
 // New returns new Bootstrap service.
-func New(auth policies.AuthServiceClient, configs ConfigRepository, sdk mfsdk.SDK, encKey []byte) Service {
+func New(auth mainflux.AuthServiceClient, configs ConfigRepository, sdk mfsdk.SDK, encKey []byte) Service {
 	return &bootstrapService{
 		configs: configs,
 		sdk:     sdk,
@@ -365,7 +365,7 @@ func (bs bootstrapService) identify(ctx context.Context, token string) (string, 
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	res, err := bs.auth.Identify(ctx, &policies.IdentifyReq{Token: token})
+	res, err := bs.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
 		return "", errors.ErrAuthentication
 	}

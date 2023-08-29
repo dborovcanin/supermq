@@ -8,22 +8,22 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/errors"
 	tpolicies "github.com/mainflux/mainflux/things/policies"
-	upolicies "github.com/mainflux/mainflux/users/policies"
 )
 
 var _ tpolicies.Service = (*mainfluxPolicies)(nil)
 
 type mainfluxPolicies struct {
 	mu          sync.Mutex
-	auth        upolicies.AuthServiceClient
+	auth        mainflux.AuthServiceClient
 	connections map[string]tpolicies.Policy
 }
 
 // NewPoliciesService returns Mainflux Things Policies service mock.
 // Only methods used by SDK are mocked.
-func NewPoliciesService(auth upolicies.AuthServiceClient) tpolicies.Service {
+func NewPoliciesService(auth mainflux.AuthServiceClient) tpolicies.Service {
 	return &mainfluxPolicies{
 		auth:        auth,
 		connections: make(map[string]tpolicies.Policy),
@@ -34,7 +34,7 @@ func (svc *mainfluxPolicies) AddPolicy(ctx context.Context, token string, extern
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	if _, err := svc.auth.Identify(ctx, &upolicies.IdentifyReq{Token: token}); err != nil {
+	if _, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token}); err != nil {
 		return tpolicies.Policy{}, errors.ErrAuthentication
 	}
 	svc.connections[fmt.Sprintf("%s:%s", p.Subject, p.Object)] = p
@@ -46,7 +46,7 @@ func (svc *mainfluxPolicies) DeletePolicy(ctx context.Context, token string, p t
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	if _, err := svc.auth.Identify(ctx, &upolicies.IdentifyReq{Token: token}); err != nil {
+	if _, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token}); err != nil {
 		return errors.ErrAuthentication
 	}
 

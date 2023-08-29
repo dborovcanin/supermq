@@ -26,7 +26,7 @@ const (
 
 func newService() notifiers.Service {
 	repo := mocks.NewRepo(make(map[string]notifiers.Subscription))
-	auth := mocks.NewAuth(map[string]string{exampleUser1: exampleUser1, exampleUser2: exampleUser2, invalidUser: invalidUser})
+	auth := mocks.NewAuth(map[string]string{exampleUser1: exampleUser1, exampleUser2: exampleUser2, invalidUser: invalidUser}, make(map[string][]mocks.SubjectSet))
 	notifier := mocks.NewNotifier()
 	idp := uuid.NewMock()
 	from := "exampleFrom"

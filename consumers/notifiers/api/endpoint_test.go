@@ -65,7 +65,7 @@ func (tr testRequest) make() (*http.Response, error) {
 }
 
 func newService(tokens map[string]string) notifiers.Service {
-	auth := mocks.NewAuth(tokens)
+	auth := mocks.NewAuth(tokens, make(map[string][]mocks.SubjectSet))
 	repo := mocks.NewRepo(make(map[string]notifiers.Subscription))
 	idp := uuid.NewMock()
 	notif := mocks.NewNotifier()

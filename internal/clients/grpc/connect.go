@@ -12,6 +12,7 @@ import (
 
 	"github.com/mainflux/mainflux/pkg/errors"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"google.golang.org/grpc"
 	gogrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -94,7 +95,12 @@ func Connect(cfg Config) (*gogrpc.ClientConn, security, error) {
 		tc = credentials.NewTLS(tlsConfig)
 	}
 
-	opts = append(opts, gogrpc.WithTransportCredentials(tc))
+	opts = append(
+		opts, gogrpc.WithTransportCredentials(tc),
+		grpc.WithReadBufferSize(5120000000),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(5120000000), grpc.MaxCallSendMsgSize(5120000000)),
+		grpc.WithWriteBufferSize(5120000000),
+	)
 
 	conn, err := gogrpc.Dial(cfg.URL, opts...)
 	if err != nil {

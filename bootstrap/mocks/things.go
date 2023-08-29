@@ -8,24 +8,24 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/mainflux/mainflux"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/things/clients"
-	upolicies "github.com/mainflux/mainflux/users/policies"
+	"github.com/mainflux/mainflux/things"
 )
 
-var _ clients.Service = (*mainfluxThings)(nil)
+var _ things.Service = (*mainfluxThings)(nil)
 
 type mainfluxThings struct {
 	mu      sync.Mutex
 	counter uint64
 	things  map[string]mfclients.Client
-	auth    upolicies.AuthServiceClient
+	auth    mainflux.AuthServiceClient
 }
 
 // NewThingsService returns Mainflux Things service mock.
 // Only methods used by SDK are mocked.
-func NewThingsService(things map[string]mfclients.Client, auth upolicies.AuthServiceClient) clients.Service {
+func NewThingsService(things map[string]mfclients.Client, auth mainflux.AuthServiceClient) things.Service {
 	return &mainfluxThings{
 		things: things,
 		auth:   auth,
@@ -36,7 +36,7 @@ func (svc *mainfluxThings) CreateThings(ctx context.Context, token string, ths .
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.auth.Identify(ctx, &upolicies.IdentifyReq{Token: token})
+	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
 		return []mfclients.Client{}, errors.ErrAuthentication
 	}
@@ -55,7 +55,7 @@ func (svc *mainfluxThings) ViewClient(ctx context.Context, token, id string) (mf
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.auth.Identify(ctx, &upolicies.IdentifyReq{Token: token})
+	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
 		return mfclients.Client{}, errors.ErrAuthentication
 	}
@@ -71,7 +71,7 @@ func (svc *mainfluxThings) EnableClient(ctx context.Context, token, id string) (
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.auth.Identify(ctx, &upolicies.IdentifyReq{Token: token})
+	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
 		return mfclients.Client{}, errors.ErrAuthentication
 	}
@@ -90,7 +90,7 @@ func (svc *mainfluxThings) DisableClient(ctx context.Context, token, id string) 
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 
-	userID, err := svc.auth.Identify(ctx, &upolicies.IdentifyReq{Token: token})
+	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
 		return mfclients.Client{}, errors.ErrAuthentication
 	}

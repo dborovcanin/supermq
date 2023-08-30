@@ -178,25 +178,25 @@ func convertThingPolicy(sp sdk.Policy) tpolicies.Policy {
 	}
 }
 
-func convertMembershipsPage(m sdk.MembershipsPage) mfgroups.MembershipsPage {
-	return mfgroups.MembershipsPage{
-		Page: mfgroups.Page{
+func convertMembershipsPage(m sdk.MembershipsPage) mfgroups.Memberships {
+	return mfgroups.Memberships{
+		PageMeta: mfgroups.PageMeta{
 			Limit:  m.Limit,
 			Total:  m.Total,
 			Offset: m.Offset,
 		},
-		Memberships: convertMemberships(m.Memberships),
+		Groups: convertMemberships(m.Memberships),
 	}
 }
 
-func convertChannelsMembershipPage(m sdk.ChannelsPage) mfgroups.MembershipsPage {
-	return mfgroups.MembershipsPage{
-		Page: mfgroups.Page{
+func convertChannelsMembershipPage(m sdk.ChannelsPage) mfgroups.Memberships {
+	return mfgroups.Memberships{
+		PageMeta: mfgroups.PageMeta{
 			Limit:  m.Limit,
 			Total:  m.Total,
 			Offset: m.Offset,
 		},
-		Memberships: convertChannels(m.Channels),
+		Groups: convertChannels(m.Channels),
 	}
 }
 

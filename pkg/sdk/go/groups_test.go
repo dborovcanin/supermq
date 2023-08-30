@@ -261,7 +261,7 @@ func TestListGroups(t *testing.T) {
 
 	for _, tc := range cases {
 		repoCall := pRepo.On("CheckAdmin", mock.Anything, mock.Anything).Return(nil)
-		repoCall1 := gRepo.On("RetrieveAll", mock.Anything, mock.Anything).Return(mfgroups.GroupsPage{Groups: convertGroups(tc.response)}, tc.err)
+		repoCall1 := gRepo.On("RetrieveAll", mock.Anything, mock.Anything).Return(mfgroups.Page{Groups: convertGroups(tc.response)}, tc.err)
 		pm := sdk.PageMetadata{}
 		page, err := mfsdk.Groups(pm, generateValidToken(t, csvc, cRepo))
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))
@@ -391,7 +391,7 @@ func TestListParentGroups(t *testing.T) {
 
 	for _, tc := range cases {
 		repoCall := pRepo.On("CheckAdmin", mock.Anything, mock.Anything).Return(nil)
-		repoCall1 := gRepo.On("RetrieveAll", mock.Anything, mock.Anything).Return(mfgroups.GroupsPage{Groups: convertGroups(tc.response)}, tc.err)
+		repoCall1 := gRepo.On("RetrieveAll", mock.Anything, mock.Anything).Return(mfgroups.Page{Groups: convertGroups(tc.response)}, tc.err)
 		pm := sdk.PageMetadata{}
 		page, err := mfsdk.Parents(parentID, pm, generateValidToken(t, csvc, cRepo))
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))
@@ -522,7 +522,7 @@ func TestListChildrenGroups(t *testing.T) {
 
 	for _, tc := range cases {
 		repoCall := pRepo.On("CheckAdmin", mock.Anything, mock.Anything).Return(nil)
-		repoCall1 := gRepo.On("RetrieveAll", mock.Anything, mock.Anything).Return(mfgroups.GroupsPage{Groups: convertGroups(tc.response)}, tc.err)
+		repoCall1 := gRepo.On("RetrieveAll", mock.Anything, mock.Anything).Return(mfgroups.Page{Groups: convertGroups(tc.response)}, tc.err)
 		pm := sdk.PageMetadata{}
 		page, err := mfsdk.Children(childID, pm, generateValidToken(t, csvc, cRepo))
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))

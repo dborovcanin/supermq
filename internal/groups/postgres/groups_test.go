@@ -252,11 +252,11 @@ func TestGroupRetrieveAll(t *testing.T) {
 
 	cases := map[string]struct {
 		Size     uint64
-		Metadata mfgroups.Page
+		Metadata mfgroups.GroupsPage
 	}{
 		"retrieve all groups": {
-			Metadata: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			Metadata: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  nGroups,
 					Limit:  nGroups,
 					Status: mfclients.AllStatus,
@@ -266,8 +266,8 @@ func TestGroupRetrieveAll(t *testing.T) {
 			Size: nGroups,
 		},
 		"retrieve all groups with offset": {
-			Metadata: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			Metadata: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  nGroups,
 					Offset: 50,
 					Limit:  nGroups,
@@ -278,8 +278,8 @@ func TestGroupRetrieveAll(t *testing.T) {
 			Size: nGroups - 50,
 		},
 		"retrieve all groups with limit": {
-			Metadata: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			Metadata: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  nGroups,
 					Offset: 0,
 					Limit:  50,
@@ -290,8 +290,8 @@ func TestGroupRetrieveAll(t *testing.T) {
 			Size: 50,
 		},
 		"retrieve all groups with offset and limit": {
-			Metadata: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			Metadata: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  nGroups,
 					Offset: 50,
 					Limit:  50,
@@ -302,8 +302,8 @@ func TestGroupRetrieveAll(t *testing.T) {
 			Size: 50,
 		},
 		"retrieve all groups with offset greater than limit": {
-			Metadata: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			Metadata: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  nGroups,
 					Offset: 250,
 					Limit:  nGroups,
@@ -314,8 +314,8 @@ func TestGroupRetrieveAll(t *testing.T) {
 			Size: 0,
 		},
 		"retrieve all groups with owner id": {
-			Metadata: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			Metadata: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:   nGroups,
 					Limit:   nGroups,
 					Subject: ownerID,
@@ -524,10 +524,10 @@ func TestClientsMemberships(t *testing.T) {
 	}
 
 	for desc, tc := range cases {
-		mp, err := grepo.Memberships(context.Background(), tc.ID, mfgroups.Page{PageMeta: mfgroups.PageMeta{Total: 10, Offset: 0, Limit: 10, Status: mfclients.AllStatus, Subject: clientB.ID, Action: "g_list"}})
+		mp, err := grepo.Memberships(context.Background(), tc.ID, mfgroups.GroupsPage{Page: mfgroups.Page{Total: 10, Offset: 0, Limit: 10, Status: mfclients.AllStatus, Subject: clientB.ID, Action: "g_list"}})
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
 		if tc.ID == clientA.ID {
-			assert.ElementsMatch(t, mp.Groups, []mfgroups.Group{group}, fmt.Sprintf("%s: expected %v got %v\n", desc, []mfgroups.Group{group}, mp.Groups))
+			assert.ElementsMatch(t, mp.Memberships, []mfgroups.Group{group}, fmt.Sprintf("%s: expected %v got %v\n", desc, []mfgroups.Group{group}, mp.Memberships))
 		}
 	}
 }

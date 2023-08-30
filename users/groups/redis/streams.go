@@ -89,7 +89,7 @@ func (es eventStore) ViewGroup(ctx context.Context, token, id string) (mfgroups.
 	return group, nil
 }
 
-func (es eventStore) ListGroups(ctx context.Context, token string, pm mfgroups.GroupsPage) (mfgroups.GroupsPage, error) {
+func (es eventStore) ListGroups(ctx context.Context, token string, pm mfgroups.Page) (mfgroups.Page, error) {
 	gp, err := es.svc.ListGroups(ctx, token, pm)
 	if err != nil {
 		return gp, err
@@ -105,7 +105,7 @@ func (es eventStore) ListGroups(ctx context.Context, token string, pm mfgroups.G
 	return gp, nil
 }
 
-func (es eventStore) ListMemberships(ctx context.Context, token, clientID string, pm mfgroups.GroupsPage) (mfgroups.MembershipsPage, error) {
+func (es eventStore) ListMemberships(ctx context.Context, token, clientID string, pm mfgroups.Page) (mfgroups.Memberships, error) {
 	mp, err := es.svc.ListMemberships(ctx, token, clientID, pm)
 	if err != nil {
 		return mp, err

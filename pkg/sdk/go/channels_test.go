@@ -357,7 +357,7 @@ func TestListChannels(t *testing.T) {
 
 	for _, tc := range cases {
 		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall1 := gRepo.On("RetrieveAll", mock.Anything, mock.Anything).Return(mfgroups.GroupsPage{Groups: convertChannels(tc.response)}, tc.err)
+		repoCall1 := gRepo.On("RetrieveAll", mock.Anything, mock.Anything).Return(mfgroups.Page{Groups: convertChannels(tc.response)}, tc.err)
 		pm := sdk.PageMetadata{}
 		page, err := mfsdk.Channels(pm, adminToken)
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected error %s, got %s", tc.desc, tc.err, err))

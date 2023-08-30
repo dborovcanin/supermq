@@ -6,19 +6,22 @@ package groups_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/mainflux/mainflux/internal/testsutil"
-	"github.com/mainflux/mainflux/pkg/clients"
+	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	"github.com/mainflux/mainflux/things/clients/mocks"
-	"github.com/mainflux/mainflux/things/groups"
-	gmocks "github.com/mainflux/mainflux/things/groups/mocks"
-	"github.com/mainflux/mainflux/things/policies"
-	pmocks "github.com/mainflux/mainflux/things/policies/mocks"
+	"github.com/mainflux/mainflux/users/clients"
+	cmocks "github.com/mainflux/mainflux/users/clients/mocks"
+	"github.com/mainflux/mainflux/users/groups"
+	"github.com/mainflux/mainflux/users/groups/mocks"
+	"github.com/mainflux/mainflux/users/hasher"
+	"github.com/mainflux/mainflux/users/jwt"
+	pmocks "github.com/mainflux/mainflux/users/policies/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -26,39 +29,32 @@ import (
 
 var (
 	idProvider     = uuid.New()
-	validGMetadata = clients.Metadata{"role": "client"}
+	phasher        = hasher.New()
+	secret         = "strongsecret"
+	validGMetadata = mfclients.Metadata{"role": "client"}
 	inValidToken   = "invalidToken"
 	description    = "shortdescription"
 	gName          = "groupname"
-	ID             = testsutil.GenerateUUID(&testing.T{}, idProvider)
 	group          = mfgroups.Group{
-		ID:          ID,
 		Name:        gName,
 		Description: description,
 		Metadata:    validGMetadata,
-		Status:      clients.EnabledStatus,
+		Status:      mfclients.EnabledStatus,
 	}
-	withinDuration = 5 * time.Second
-	adminEmail     = "admin@example.com"
-	token          = "token"
+	withinDuration  = 5 * time.Second
+	passRegex       = regexp.MustCompile("^.{8,}$")
+	accessDuration  = time.Minute * 1
+	refreshDuration = time.Minute * 10
 )
 
-func newService(tokens map[string]string) (groups.Service, *gmocks.Repository, *pmocks.Repository) {
-	adminPolicy := mocks.MockSubjectSet{Object: ID, Relation: []string{"g_add", "g_update", "g_list", "g_delete"}}
-	auth := mocks.NewAuthService(tokens, map[string][]mocks.MockSubjectSet{adminEmail: {adminPolicy}})
-	idProvider := uuid.NewMock()
-
-	gRepo := new(gmocks.Repository)
-	pRepo := new(pmocks.Repository)
-	policiesCache := pmocks.NewCache()
-
-	psvc := policies.NewService(auth, pRepo, policiesCache, idProvider)
-
-	return groups.NewService(auth, psvc, gRepo, idProvider), gRepo, pRepo
-}
-
 func TestCreateGroup(t *testing.T) {
-	svc, gRepo, _ := newService(map[string]string{token: adminEmail})
+	cRepo := new(cmocks.Repository)
+	gRepo := new(mocks.Repository)
+	pRepo := new(pmocks.Repository)
+	tokenizer := jwt.NewRepository([]byte(secret), accessDuration, refreshDuration)
+	e := cmocks.NewEmailer()
+	csvc := clients.NewService(cRepo, pRepo, tokenizer, e, phasher, idProvider, passRegex)
+	svc := groups.NewService(gRepo, pRepo, tokenizer, idProvider)
 
 	cases := []struct {
 		desc  string
@@ -80,7 +76,7 @@ func TestCreateGroup(t *testing.T) {
 			group: mfgroups.Group{
 				Name:   gName,
 				Parent: testsutil.GenerateUUID(t, idProvider),
-				Status: clients.EnabledStatus,
+				Status: mfclients.EnabledStatus,
 			},
 			err: nil,
 		},
@@ -108,26 +104,36 @@ func TestCreateGroup(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		repoCall1 := gRepo.On("Save", context.Background(), mock.Anything).Return(tc.group, tc.err)
+		repoCall := gRepo.On("Save", context.Background(), mock.Anything).Return(tc.group, tc.err)
 		createdAt := time.Now()
-		expected, err := svc.CreateGroups(context.Background(), token, tc.group)
+		expected, err := svc.CreateGroup(context.Background(), testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher), tc.group)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 		if err == nil {
-			assert.NotEmpty(t, expected[0].ID, fmt.Sprintf("%s: expected %s not to be empty\n", tc.desc, expected[0].ID))
-			assert.WithinDuration(t, expected[0].CreatedAt, createdAt, withinDuration, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, expected[0].CreatedAt, createdAt))
-			tc.group.ID = expected[0].ID
-			tc.group.CreatedAt = expected[0].CreatedAt
-			tc.group.UpdatedAt = expected[0].UpdatedAt
-			tc.group.UpdatedBy = expected[0].UpdatedBy
-			tc.group.Owner = expected[0].Owner
-			assert.Equal(t, tc.group, expected[0], fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.group, expected[0]))
+			assert.NotEmpty(t, expected.ID, fmt.Sprintf("%s: expected %s not to be empty\n", tc.desc, expected.ID))
+			assert.WithinDuration(t, expected.CreatedAt, createdAt, withinDuration, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, expected.CreatedAt, createdAt))
+			tc.group.ID = expected.ID
+			tc.group.CreatedAt = expected.CreatedAt
+			tc.group.UpdatedAt = expected.UpdatedAt
+			tc.group.UpdatedBy = expected.UpdatedBy
+			tc.group.Owner = expected.Owner
+			assert.Equal(t, tc.group, expected, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.group, expected))
+			ok := repoCall.Parent.AssertCalled(t, "Save", context.Background(), mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("Save was not called on %s", tc.desc))
 		}
-		repoCall1.Unset()
+		repoCall.Unset()
 	}
 }
 
 func TestUpdateGroup(t *testing.T) {
-	svc, gRepo, pRepo := newService(map[string]string{token: adminEmail})
+	cRepo := new(cmocks.Repository)
+	gRepo := new(mocks.Repository)
+	pRepo := new(pmocks.Repository)
+	tokenizer := jwt.NewRepository([]byte(secret), accessDuration, refreshDuration)
+	e := cmocks.NewEmailer()
+	csvc := clients.NewService(cRepo, pRepo, tokenizer, e, phasher, idProvider, passRegex)
+	svc := groups.NewService(gRepo, pRepo, tokenizer, idProvider)
+
+	group.ID = testsutil.GenerateUUID(t, idProvider)
 
 	cases := []struct {
 		desc     string
@@ -146,7 +152,7 @@ func TestUpdateGroup(t *testing.T) {
 				ID:   group.ID,
 				Name: "NewName",
 			},
-			token: token,
+			token: testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			err:   nil,
 		},
 		{
@@ -159,24 +165,24 @@ func TestUpdateGroup(t *testing.T) {
 				ID:          group.ID,
 				Description: "NewDescription",
 			},
-			token: token,
+			token: testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			err:   nil,
 		},
 		{
 			desc: "update group metadata",
 			group: mfgroups.Group{
 				ID: group.ID,
-				Metadata: clients.Metadata{
+				Metadata: mfclients.Metadata{
 					"field": "value2",
 				},
 			},
 			response: mfgroups.Group{
 				ID: group.ID,
-				Metadata: clients.Metadata{
+				Metadata: mfclients.Metadata{
 					"field": "value2",
 				},
 			},
-			token: token,
+			token: testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			err:   nil,
 		},
 		{
@@ -186,7 +192,7 @@ func TestUpdateGroup(t *testing.T) {
 				Name: "NewName",
 			},
 			response: mfgroups.Group{},
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			err:      errors.ErrNotFound,
 		},
 		{
@@ -196,19 +202,19 @@ func TestUpdateGroup(t *testing.T) {
 				Description: "NewDescription",
 			},
 			response: mfgroups.Group{},
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			err:      errors.ErrNotFound,
 		},
 		{
 			desc: "update group metadata with invalid group id",
 			group: mfgroups.Group{
 				ID: mocks.WrongID,
-				Metadata: clients.Metadata{
+				Metadata: mfclients.Metadata{
 					"field": "value2",
 				},
 			},
 			response: mfgroups.Group{},
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			err:      errors.ErrNotFound,
 		},
 		{
@@ -235,7 +241,7 @@ func TestUpdateGroup(t *testing.T) {
 			desc: "update group metadata with invalid token",
 			group: mfgroups.Group{
 				ID: group.ID,
-				Metadata: clients.Metadata{
+				Metadata: mfclients.Metadata{
 					"field": "value2",
 				},
 			},
@@ -246,20 +252,32 @@ func TestUpdateGroup(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall1 := gRepo.On("RetrieveByID", context.Background(), mock.Anything).Return(mfgroups.Group{}, tc.err)
-		repoCall2 := gRepo.On("Update", context.Background(), mock.Anything).Return(tc.response, tc.err)
+		repoCall := pRepo.On("CheckAdmin", context.Background(), mock.Anything).Return(nil)
+		repoCall1 := gRepo.On("Update", context.Background(), mock.Anything).Return(tc.response, tc.err)
 		expectedGroup, err := svc.UpdateGroup(context.Background(), tc.token, tc.group)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 		assert.Equal(t, tc.response, expectedGroup, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, expectedGroup))
+		if tc.err == nil {
+			ok := repoCall.Parent.AssertCalled(t, "CheckAdmin", context.Background(), mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("CheckAdmin was not called on %s", tc.desc))
+			ok = repoCall1.Parent.AssertCalled(t, "Update", context.Background(), mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("Update was not called on %s", tc.desc))
+		}
 		repoCall.Unset()
 		repoCall1.Unset()
-		repoCall2.Unset()
 	}
 }
 
 func TestViewGroup(t *testing.T) {
-	svc, gRepo, pRepo := newService(map[string]string{token: adminEmail})
+	cRepo := new(cmocks.Repository)
+	gRepo := new(mocks.Repository)
+	pRepo := new(pmocks.Repository)
+	tokenizer := jwt.NewRepository([]byte(secret), accessDuration, refreshDuration)
+	e := cmocks.NewEmailer()
+	csvc := clients.NewService(cRepo, pRepo, tokenizer, e, phasher, idProvider, passRegex)
+	svc := groups.NewService(gRepo, pRepo, tokenizer, idProvider)
+
+	group.ID = testsutil.GenerateUUID(t, idProvider)
 
 	cases := []struct {
 		desc     string
@@ -270,7 +288,7 @@ func TestViewGroup(t *testing.T) {
 	}{
 		{
 			desc:     "view group",
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			groupID:  group.ID,
 			response: group,
 			err:      nil,
@@ -280,11 +298,11 @@ func TestViewGroup(t *testing.T) {
 			token:    "wrongtoken",
 			groupID:  group.ID,
 			response: mfgroups.Group{},
-			err:      errors.ErrAuthorization,
+			err:      errors.ErrAuthentication,
 		},
 		{
 			desc:     "view group for wrong id",
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			groupID:  mocks.WrongID,
 			response: mfgroups.Group{},
 			err:      errors.ErrNotFound,
@@ -292,18 +310,30 @@ func TestViewGroup(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall1 := gRepo.On("RetrieveByID", context.Background(), mock.Anything).Return(tc.response, tc.err)
+		repoCall := pRepo.On("CheckAdmin", context.Background(), mock.Anything).Return(nil)
+		repoCall1 := gRepo.On("RetrieveByID", context.Background(), tc.groupID).Return(tc.response, tc.err)
 		expected, err := svc.ViewGroup(context.Background(), tc.token, tc.groupID)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 		assert.Equal(t, expected, tc.response, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, expected, tc.response))
+		if tc.err == nil {
+			ok := repoCall.Parent.AssertCalled(t, "CheckAdmin", context.Background(), mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("CheckAdmin was not called on %s", tc.desc))
+			ok = repoCall1.Parent.AssertCalled(t, "RetrieveByID", context.Background(), tc.groupID)
+			assert.True(t, ok, fmt.Sprintf("RetrieveByID was not called on %s", tc.desc))
+		}
 		repoCall.Unset()
 		repoCall1.Unset()
 	}
 }
 
 func TestListGroups(t *testing.T) {
-	svc, gRepo, pRepo := newService(map[string]string{token: adminEmail})
+	cRepo := new(cmocks.Repository)
+	gRepo := new(mocks.Repository)
+	pRepo := new(pmocks.Repository)
+	tokenizer := jwt.NewRepository([]byte(secret), accessDuration, refreshDuration)
+	e := cmocks.NewEmailer()
+	csvc := clients.NewService(cRepo, pRepo, tokenizer, e, phasher, idProvider, passRegex)
+	svc := groups.NewService(gRepo, pRepo, tokenizer, idProvider)
 
 	nGroups := uint64(200)
 	parentID := ""
@@ -313,7 +343,7 @@ func TestListGroups(t *testing.T) {
 			ID:          testsutil.GenerateUUID(t, idProvider),
 			Name:        fmt.Sprintf("Group_%d", i),
 			Description: description,
-			Metadata: clients.Metadata{
+			Metadata: mfclients.Metadata{
 				"field": "value",
 			},
 			Parent: parentID,
@@ -326,24 +356,24 @@ func TestListGroups(t *testing.T) {
 		desc     string
 		token    string
 		size     uint64
-		response mfgroups.Page
-		page     mfgroups.Page
+		response mfgroups.GroupsPage
+		page     mfgroups.GroupsPage
 		err      error
 	}{
 		{
 			desc:  "list all groups",
-			token: token,
+			token: testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			size:  nGroups,
 			err:   nil,
-			page: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			page: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Offset: 0,
 					Total:  nGroups,
 					Limit:  nGroups,
 				},
 			},
-			response: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Offset: 0,
 					Total:  nGroups,
 					Limit:  nGroups,
@@ -353,18 +383,18 @@ func TestListGroups(t *testing.T) {
 		},
 		{
 			desc:  "list groups with an offset",
-			token: token,
+			token: testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			size:  150,
 			err:   nil,
-			page: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			page: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Offset: 50,
 					Total:  nGroups,
 					Limit:  nGroups,
 				},
 			},
-			response: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Offset: 0,
 					Total:  150,
 					Limit:  nGroups,
@@ -375,23 +405,33 @@ func TestListGroups(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		repoCall := pRepo.On("CheckAdmin", context.Background(), mock.Anything).Return(nil)
 		repoCall1 := gRepo.On("RetrieveAll", context.Background(), mock.Anything).Return(tc.response, tc.err)
 		page, err := svc.ListGroups(context.Background(), tc.token, tc.page)
 		assert.Equal(t, tc.response, page, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, page))
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		if tc.err == nil {
+			ok := repoCall1.Parent.AssertCalled(t, "RetrieveAll", context.Background(), mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("RetrieveAll was not called on %s", tc.desc))
+		}
 		repoCall.Unset()
 		repoCall1.Unset()
 	}
 }
 
 func TestEnableGroup(t *testing.T) {
-	svc, gRepo, pRepo := newService(map[string]string{token: adminEmail})
+	cRepo := new(cmocks.Repository)
+	gRepo := new(mocks.Repository)
+	pRepo := new(pmocks.Repository)
+	tokenizer := jwt.NewRepository([]byte(secret), accessDuration, refreshDuration)
+	e := cmocks.NewEmailer()
+	csvc := clients.NewService(cRepo, pRepo, tokenizer, e, phasher, idProvider, passRegex)
+	svc := groups.NewService(gRepo, pRepo, tokenizer, idProvider)
 
-	enabledGroup1 := mfgroups.Group{ID: ID, Name: "group1", Status: clients.EnabledStatus}
-	disabledGroup := mfgroups.Group{ID: ID, Name: "group2", Status: clients.DisabledStatus}
+	enabledGroup1 := mfgroups.Group{ID: testsutil.GenerateUUID(t, idProvider), Name: "group1", Status: mfclients.EnabledStatus}
+	disabledGroup := mfgroups.Group{ID: testsutil.GenerateUUID(t, idProvider), Name: "group2", Status: mfclients.DisabledStatus}
 	disabledGroup1 := disabledGroup
-	disabledGroup1.Status = clients.EnabledStatus
+	disabledGroup1.Status = mfclients.EnabledStatus
 
 	casesEnabled := []struct {
 		desc     string
@@ -404,7 +444,7 @@ func TestEnableGroup(t *testing.T) {
 		{
 			desc:     "enable disabled group",
 			id:       disabledGroup.ID,
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			group:    disabledGroup,
 			response: disabledGroup1,
 			err:      nil,
@@ -412,15 +452,15 @@ func TestEnableGroup(t *testing.T) {
 		{
 			desc:     "enable enabled group",
 			id:       enabledGroup1.ID,
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			group:    enabledGroup1,
 			response: enabledGroup1,
-			err:      clients.ErrStatusAlreadyAssigned,
+			err:      mfclients.ErrStatusAlreadyAssigned,
 		},
 		{
 			desc:     "enable non-existing group",
 			id:       mocks.WrongID,
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			group:    mfgroups.Group{},
 			response: mfgroups.Group{},
 			err:      errors.ErrNotFound,
@@ -428,11 +468,17 @@ func TestEnableGroup(t *testing.T) {
 	}
 
 	for _, tc := range casesEnabled {
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall1 := gRepo.On("RetrieveByID", context.Background(), mock.Anything).Return(tc.group, tc.err)
+		repoCall := pRepo.On("CheckAdmin", context.Background(), mock.Anything).Return(nil)
+		repoCall1 := gRepo.On("RetrieveByID", context.Background(), tc.id).Return(tc.group, tc.err)
 		repoCall2 := gRepo.On("ChangeStatus", context.Background(), mock.Anything).Return(tc.response, tc.err)
 		_, err := svc.EnableGroup(context.Background(), tc.token, tc.id)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		if tc.err == nil {
+			ok := repoCall1.Parent.AssertCalled(t, "RetrieveByID", context.Background(), tc.id)
+			assert.True(t, ok, fmt.Sprintf("RetrieveByID was not called on %s", tc.desc))
+			ok = repoCall2.Parent.AssertCalled(t, "ChangeStatus", context.Background(), mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("ChangeStatus was not called on %s", tc.desc))
+		}
 		repoCall.Unset()
 		repoCall1.Unset()
 		repoCall2.Unset()
@@ -440,16 +486,16 @@ func TestEnableGroup(t *testing.T) {
 
 	casesDisabled := []struct {
 		desc     string
-		status   clients.Status
+		status   mfclients.Status
 		size     uint64
-		response mfgroups.Page
+		response mfgroups.GroupsPage
 	}{
 		{
 			desc:   "list activated groups",
-			status: clients.EnabledStatus,
+			status: mfclients.EnabledStatus,
 			size:   2,
-			response: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  2,
 					Offset: 0,
 					Limit:  100,
@@ -459,10 +505,10 @@ func TestEnableGroup(t *testing.T) {
 		},
 		{
 			desc:   "list deactivated groups",
-			status: clients.DisabledStatus,
+			status: mfclients.DisabledStatus,
 			size:   1,
-			response: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  1,
 					Offset: 0,
 					Limit:  100,
@@ -472,10 +518,10 @@ func TestEnableGroup(t *testing.T) {
 		},
 		{
 			desc:   "list activated and deactivated groups",
-			status: clients.AllStatus,
+			status: mfclients.AllStatus,
 			size:   3,
-			response: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  3,
 					Offset: 0,
 					Limit:  100,
@@ -486,16 +532,16 @@ func TestEnableGroup(t *testing.T) {
 	}
 
 	for _, tc := range casesDisabled {
-		pm := mfgroups.Page{
-			PageMeta: mfgroups.PageMeta{
+		pm := mfgroups.GroupsPage{
+			Page: mfgroups.Page{
 				Offset: 0,
 				Limit:  100,
 				Status: tc.status,
 			},
 		}
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		repoCall := pRepo.On("CheckAdmin", context.Background(), mock.Anything).Return(nil)
 		repoCall1 := gRepo.On("RetrieveAll", context.Background(), mock.Anything).Return(tc.response, nil)
-		page, err := svc.ListGroups(context.Background(), token, pm)
+		page, err := svc.ListGroups(context.Background(), testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher), pm)
 		require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 		size := uint64(len(page.Groups))
 		assert.Equal(t, tc.size, size, fmt.Sprintf("%s: expected size %d got %d\n", tc.desc, tc.size, size))
@@ -505,12 +551,18 @@ func TestEnableGroup(t *testing.T) {
 }
 
 func TestDisableGroup(t *testing.T) {
-	svc, gRepo, pRepo := newService(map[string]string{token: adminEmail})
+	cRepo := new(cmocks.Repository)
+	gRepo := new(mocks.Repository)
+	pRepo := new(pmocks.Repository)
+	tokenizer := jwt.NewRepository([]byte(secret), accessDuration, refreshDuration)
+	e := cmocks.NewEmailer()
+	csvc := clients.NewService(cRepo, pRepo, tokenizer, e, phasher, idProvider, passRegex)
+	svc := groups.NewService(gRepo, pRepo, tokenizer, idProvider)
 
-	enabledGroup1 := mfgroups.Group{ID: ID, Name: "group1", Status: clients.EnabledStatus}
-	disabledGroup := mfgroups.Group{ID: ID, Name: "group2", Status: clients.DisabledStatus}
+	enabledGroup1 := mfgroups.Group{ID: testsutil.GenerateUUID(t, idProvider), Name: "group1", Status: mfclients.EnabledStatus}
+	disabledGroup := mfgroups.Group{ID: testsutil.GenerateUUID(t, idProvider), Name: "group2", Status: mfclients.DisabledStatus}
 	disabledGroup1 := enabledGroup1
-	disabledGroup1.Status = clients.DisabledStatus
+	disabledGroup1.Status = mfclients.DisabledStatus
 
 	casesDisabled := []struct {
 		desc     string
@@ -523,7 +575,7 @@ func TestDisableGroup(t *testing.T) {
 		{
 			desc:     "disable enabled group",
 			id:       enabledGroup1.ID,
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			group:    enabledGroup1,
 			response: disabledGroup1,
 			err:      nil,
@@ -531,27 +583,33 @@ func TestDisableGroup(t *testing.T) {
 		{
 			desc:     "disable disabled group",
 			id:       disabledGroup.ID,
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			group:    disabledGroup,
 			response: mfgroups.Group{},
-			err:      clients.ErrStatusAlreadyAssigned,
+			err:      mfclients.ErrStatusAlreadyAssigned,
 		},
 		{
 			desc:     "disable non-existing group",
 			id:       mocks.WrongID,
 			group:    mfgroups.Group{},
-			token:    token,
+			token:    testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher),
 			response: mfgroups.Group{},
 			err:      errors.ErrNotFound,
 		},
 	}
 
 	for _, tc := range casesDisabled {
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
-		repoCall1 := gRepo.On("RetrieveByID", context.Background(), mock.Anything).Return(tc.group, tc.err)
+		repoCall := pRepo.On("CheckAdmin", context.Background(), mock.Anything).Return(nil)
+		repoCall1 := gRepo.On("RetrieveByID", context.Background(), tc.id).Return(tc.group, tc.err)
 		repoCall2 := gRepo.On("ChangeStatus", context.Background(), mock.Anything).Return(tc.response, tc.err)
 		_, err := svc.DisableGroup(context.Background(), tc.token, tc.id)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		if tc.err == nil {
+			ok := repoCall1.Parent.AssertCalled(t, "RetrieveByID", context.Background(), tc.id)
+			assert.True(t, ok, fmt.Sprintf("RetrieveByID was not called on %s", tc.desc))
+			ok = repoCall2.Parent.AssertCalled(t, "ChangeStatus", context.Background(), mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("ChangeStatus was not called on %s", tc.desc))
+		}
 		repoCall.Unset()
 		repoCall1.Unset()
 		repoCall2.Unset()
@@ -559,16 +617,16 @@ func TestDisableGroup(t *testing.T) {
 
 	casesEnabled := []struct {
 		desc     string
-		status   clients.Status
+		status   mfclients.Status
 		size     uint64
-		response mfgroups.Page
+		response mfgroups.GroupsPage
 	}{
 		{
 			desc:   "list activated groups",
-			status: clients.EnabledStatus,
+			status: mfclients.EnabledStatus,
 			size:   1,
-			response: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  1,
 					Offset: 0,
 					Limit:  100,
@@ -578,10 +636,10 @@ func TestDisableGroup(t *testing.T) {
 		},
 		{
 			desc:   "list deactivated groups",
-			status: clients.DisabledStatus,
+			status: mfclients.DisabledStatus,
 			size:   2,
-			response: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  2,
 					Offset: 0,
 					Limit:  100,
@@ -591,10 +649,10 @@ func TestDisableGroup(t *testing.T) {
 		},
 		{
 			desc:   "list activated and deactivated groups",
-			status: clients.AllStatus,
+			status: mfclients.AllStatus,
 			size:   3,
-			response: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Total:  3,
 					Offset: 0,
 					Limit:  100,
@@ -605,16 +663,16 @@ func TestDisableGroup(t *testing.T) {
 	}
 
 	for _, tc := range casesEnabled {
-		pm := mfgroups.Page{
-			PageMeta: mfgroups.PageMeta{
+		pm := mfgroups.GroupsPage{
+			Page: mfgroups.Page{
 				Offset: 0,
 				Limit:  100,
 				Status: tc.status,
 			},
 		}
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		repoCall := pRepo.On("CheckAdmin", context.Background(), mock.Anything).Return(nil)
 		repoCall1 := gRepo.On("RetrieveAll", context.Background(), mock.Anything).Return(tc.response, nil)
-		page, err := svc.ListGroups(context.Background(), token, pm)
+		page, err := svc.ListGroups(context.Background(), testsutil.GenerateValidToken(t, testsutil.GenerateUUID(t, idProvider), csvc, cRepo, phasher), pm)
 		require.Nil(t, err, fmt.Sprintf("unexpected error: %s", err))
 		size := uint64(len(page.Groups))
 		assert.Equal(t, tc.size, size, fmt.Sprintf("%s: expected size %d got %d\n", tc.desc, tc.size, size))
@@ -624,7 +682,13 @@ func TestDisableGroup(t *testing.T) {
 }
 
 func TestListMemberships(t *testing.T) {
-	svc, gRepo, pRepo := newService(map[string]string{token: adminEmail})
+	cRepo := new(cmocks.Repository)
+	gRepo := new(mocks.Repository)
+	pRepo := new(pmocks.Repository)
+	tokenizer := jwt.NewRepository([]byte(secret), accessDuration, refreshDuration)
+	e := cmocks.NewEmailer()
+	csvc := clients.NewService(cRepo, pRepo, tokenizer, e, phasher, idProvider, passRegex)
+	svc := groups.NewService(gRepo, pRepo, tokenizer, idProvider)
 
 	nGroups := uint64(100)
 	aGroups := []mfgroups.Group{}
@@ -632,78 +696,77 @@ func TestListMemberships(t *testing.T) {
 	for i := uint64(1); i < nGroups; i++ {
 		group := mfgroups.Group{
 			Name:     fmt.Sprintf("membership_%d@example.com", i),
-			Metadata: clients.Metadata{"role": "group"},
+			Metadata: mfclients.Metadata{"role": "group"},
 		}
 		if i%3 == 0 {
 			group.Owner = owner
 		}
 		aGroups = append(aGroups, group)
 	}
+	validID := testsutil.GenerateUUID(t, idProvider)
+	validToken := testsutil.GenerateValidToken(t, validID, csvc, cRepo, phasher)
 
 	cases := []struct {
 		desc     string
 		token    string
 		clientID string
-		page     mfgroups.Page
-		response mfgroups.Memberships
+		page     mfgroups.GroupsPage
+		response mfgroups.MembershipsPage
 		err      error
 	}{
 		{
 			desc:     "list clients with authorized token",
-			token:    token,
+			token:    validToken,
 			clientID: testsutil.GenerateUUID(t, idProvider),
-			page: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			page: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Action:  "g_list",
-					Subject: adminEmail,
-					OwnerID: adminEmail,
+					Subject: validID,
 				},
 			},
-			response: mfgroups.Memberships{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.MembershipsPage{
+				Page: mfgroups.Page{
 					Total:  nGroups,
 					Offset: 0,
 					Limit:  0,
 				},
-				Groups: aGroups,
+				Memberships: aGroups,
 			},
 			err: nil,
 		},
 		{
 			desc:     "list clients with offset and limit",
-			token:    token,
+			token:    validToken,
 			clientID: testsutil.GenerateUUID(t, idProvider),
-			page: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			page: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Offset:  6,
 					Total:   nGroups,
 					Limit:   nGroups,
-					Status:  clients.AllStatus,
-					Subject: adminEmail,
-					OwnerID: adminEmail,
+					Status:  mfclients.AllStatus,
+					Subject: validID,
 					Action:  "g_list",
 				},
 			},
-			response: mfgroups.Memberships{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.MembershipsPage{
+				Page: mfgroups.Page{
 					Total: nGroups - 6,
 				},
-				Groups: aGroups[6:nGroups],
+				Memberships: aGroups[6:nGroups],
 			},
 		},
 		{
 			desc:     "list clients with an invalid token",
 			token:    inValidToken,
 			clientID: testsutil.GenerateUUID(t, idProvider),
-			page: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			page: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Action:  "g_list",
-					Subject: adminEmail,
-					OwnerID: adminEmail,
+					Subject: validID,
 				},
 			},
-			response: mfgroups.Memberships{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.MembershipsPage{
+				Page: mfgroups.Page{
 					Total:  0,
 					Offset: 0,
 					Limit:  0,
@@ -713,17 +776,16 @@ func TestListMemberships(t *testing.T) {
 		},
 		{
 			desc:     "list clients with an invalid id",
-			token:    token,
+			token:    validToken,
 			clientID: mocks.WrongID,
-			page: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			page: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Action:  "g_list",
-					Subject: adminEmail,
-					OwnerID: adminEmail,
+					Subject: validID,
 				},
 			},
-			response: mfgroups.Memberships{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.MembershipsPage{
+				Page: mfgroups.Page{
 					Total:  0,
 					Offset: 0,
 					Limit:  0,
@@ -733,33 +795,39 @@ func TestListMemberships(t *testing.T) {
 		},
 		{
 			desc:     "list clients with an owner",
-			token:    token,
+			token:    validToken,
 			clientID: testsutil.GenerateUUID(t, idProvider),
-			page: mfgroups.Page{
-				PageMeta: mfgroups.PageMeta{
+			page: mfgroups.GroupsPage{
+				Page: mfgroups.Page{
 					Offset:  0,
 					Total:   nGroups,
 					Limit:   nGroups,
-					Status:  clients.AllStatus,
+					Status:  mfclients.AllStatus,
 					Subject: owner,
 					Action:  "g_list",
 				},
 			},
-			response: mfgroups.Memberships{
-				PageMeta: mfgroups.PageMeta{
+			response: mfgroups.MembershipsPage{
+				Page: mfgroups.Page{
 					Total: 4,
 				},
-				Groups: []mfgroups.Group{aGroups[0], aGroups[3], aGroups[6], aGroups[9]},
+				Memberships: []mfgroups.Group{aGroups[0], aGroups[3], aGroups[6], aGroups[9]},
 			},
 		},
 	}
 
 	for _, tc := range cases {
-		repoCall := pRepo.On("EvaluateGroupAccess", mock.Anything, mock.Anything).Return(policies.Policy{}, nil)
+		repoCall := pRepo.On("CheckAdmin", context.Background(), mock.Anything).Return(nil)
 		repoCall1 := gRepo.On("Memberships", context.Background(), tc.clientID, tc.page).Return(tc.response, tc.err)
 		page, err := svc.ListMemberships(context.Background(), tc.token, tc.clientID, tc.page)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 		assert.Equal(t, tc.response, page, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.response, page))
+		if tc.err == nil {
+			ok := repoCall.Parent.AssertCalled(t, "CheckAdmin", context.Background(), mock.Anything)
+			assert.True(t, ok, fmt.Sprintf("CheckAdmin was not called on %s", tc.desc))
+			ok = repoCall1.Parent.AssertCalled(t, "Memberships", context.Background(), tc.clientID, tc.page)
+			assert.True(t, ok, fmt.Sprintf("Memberships was not called on %s", tc.desc))
+		}
 		repoCall.Unset()
 		repoCall1.Unset()
 	}

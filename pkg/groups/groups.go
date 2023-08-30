@@ -37,17 +37,17 @@ type Group struct {
 	Status      clients.Status   `json:"status"`
 }
 
-// MembershipsPage contains page related metadata as well as list of memberships that
+// Memberships contains page related metadata as well as list of memberships that
 // belong to this page.
-type MembershipsPage struct {
-	Page
-	Memberships []Group
+type Memberships struct {
+	PageMeta
+	Groups []Group
 }
 
-// GroupsPage contains page related metadata as well as list
+// Page contains page related metadata as well as list
 // of Groups that belong to the page.
-type GroupsPage struct {
-	Page
+type Page struct {
+	PageMeta
 	Path      string
 	Level     uint64
 	ID        string
@@ -67,11 +67,34 @@ type Repository interface {
 	RetrieveByID(ctx context.Context, id string) (Group, error)
 
 	// RetrieveAll retrieves all groups.
-	RetrieveAll(ctx context.Context, gm GroupsPage) (GroupsPage, error)
+	RetrieveAll(ctx context.Context, gm Page) (Page, error)
 
 	// Memberships retrieves everything that is assigned to a group identified by clientID.
-	Memberships(ctx context.Context, clientID string, gm GroupsPage) (MembershipsPage, error)
+	Memberships(ctx context.Context, clientID string, gm Page) (Memberships, error)
 
 	// ChangeStatus changes groups status to active or inactive
 	ChangeStatus(ctx context.Context, group Group) (Group, error)
+}
+
+type Service interface {
+	// CreateGroup creates new  group.
+	CreateGroup(ctx context.Context, token string, g Group) (Group, error)
+
+	// UpdateGroup updates the group identified by the provided ID.
+	UpdateGroup(ctx context.Context, token string, g Group) (Group, error)
+
+	// ViewGroup retrieves data about the group identified by ID.
+	ViewGroup(ctx context.Context, token, id string) (Group, error)
+
+	// ListGroups retrieves
+	ListGroups(ctx context.Context, token string, gm Page) (Page, error)
+
+	// ListMemberships retrieves everything that is assigned to a group identified by clientID.
+	ListMemberships(ctx context.Context, token, clientID string, gm Page) (Memberships, error)
+
+	// EnableGroup logically enables the group identified with the provided ID.
+	EnableGroup(ctx context.Context, token, id string) (Group, error)
+
+	// DisableGroup logically disables the group identified with the provided ID.
+	DisableGroup(ctx context.Context, token, id string) (Group, error)
 }

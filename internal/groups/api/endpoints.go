@@ -10,41 +10,26 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/pkg/errors"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-	"github.com/mainflux/mainflux/things/groups"
+	"github.com/mainflux/mainflux/users/groups"
 )
 
-func createGroupEndpoint(svc groups.Service) endpoint.Endpoint {
+func CreateGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(createGroupReq)
 		if err := req.validate(); err != nil {
 			return createGroupRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
 
-		group, err := svc.CreateGroups(ctx, req.token, req.Group)
+		group, err := svc.CreateGroup(ctx, req.token, req.Group)
 		if err != nil {
 			return createGroupRes{}, err
 		}
 
-		return createGroupRes{created: true, Group: group[0]}, nil
+		return createGroupRes{created: true, Group: group}, nil
 	}
 }
 
-func createGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(createGroupsReq)
-		if err := req.validate(); err != nil {
-			return groupPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
-		}
-
-		gs, err := svc.CreateGroups(ctx, req.token, req.Groups...)
-		if err != nil {
-			return groupPageRes{}, err
-		}
-		return buildGroupsResponse(mfgroups.Page{Groups: gs}), nil
-	}
-}
-
-func viewGroupEndpoint(svc groups.Service) endpoint.Endpoint {
+func ViewGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(groupReq)
 		if err := req.validate(); err != nil {
@@ -60,7 +45,7 @@ func viewGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
-func updateGroupEndpoint(svc groups.Service) endpoint.Endpoint {
+func UpdateGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateGroupReq)
 		if err := req.validate(); err != nil {
@@ -83,7 +68,7 @@ func updateGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
-func enableGroupEndpoint(svc groups.Service) endpoint.Endpoint {
+func EnableGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(changeGroupStatusReq)
 		if err := req.validate(); err != nil {
@@ -97,7 +82,7 @@ func enableGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
-func disableGroupEndpoint(svc groups.Service) endpoint.Endpoint {
+func DisableGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(changeGroupStatusReq)
 		if err := req.validate(); err != nil {
@@ -111,7 +96,7 @@ func disableGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
-func listGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
+func ListGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listGroupsReq)
 		if err := req.validate(); err != nil {
@@ -130,7 +115,7 @@ func listGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
-func listMembershipsEndpoint(svc groups.Service) endpoint.Endpoint {
+func ListMembershipsEndpoint(svc groups.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listMembershipReq)
 		if err := req.validate(); err != nil {
@@ -181,6 +166,7 @@ func buildGroupsResponseTree(page mfgroups.Page) groupPageRes {
 			Limit:  page.Limit,
 			Offset: page.Offset,
 			Total:  page.Total,
+			Level:  page.Level,
 		},
 		Groups: []viewGroupRes{},
 	}
@@ -212,6 +198,7 @@ func buildGroupsResponse(gp mfgroups.Page) groupPageRes {
 	res := groupPageRes{
 		pageRes: pageRes{
 			Total: gp.Total,
+			Level: gp.Level,
 		},
 		Groups: []viewGroupRes{},
 	}

@@ -98,7 +98,6 @@ type authReq struct {
 }
 
 func (req authReq) validate() error {
-
 	if req.Subject == "" {
 		return apiutil.ErrMissingPolicySub
 	}
@@ -108,7 +107,7 @@ func (req authReq) validate() error {
 	}
 
 	if req.Permission == "" {
-		return apiutil.ErrMissingPolicyAct
+		return apiutil.ErrMalformedPolicyAct
 	}
 
 	return nil
@@ -134,7 +133,7 @@ func (req policyReq) validate() error {
 	}
 
 	if req.Relation == "" {
-		return apiutil.ErrMissingPolicyAct
+		return apiutil.ErrMalformedPolicyAct
 	}
 
 	return nil

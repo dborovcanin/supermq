@@ -16,9 +16,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	svcName = "mainflux.AuthService"
-)
+const svcName = "mainflux.AuthService"
 
 var _ mainflux.AuthServiceClient = (*grpcClient)(nil)
 

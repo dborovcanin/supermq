@@ -26,7 +26,7 @@ func MakeHandler(svc auth.Service, mux *bone.Mux, tracer opentracing.Tracer, log
 	}
 
 	mux.Post("/policies", kithttp.NewServer(
-		kitot.TraceServer(tracer, "create_policy_bulk")(createPolicyEndpoint(svc)),
+		kitot.TraceServer(tracer, "create_policies")(createPolicyEndpoint(svc)),
 		decodePoliciesRequest,
 		encodeResponse,
 		opts...,

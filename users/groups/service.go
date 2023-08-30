@@ -13,7 +13,6 @@ import (
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/users/jwt"
-	"github.com/mainflux/mainflux/users/policies"
 )
 
 // Possible token types are access and refresh tokens.
@@ -32,16 +31,14 @@ const (
 
 type service struct {
 	groups     groups.Repository
-	policies   policies.Repository
 	tokens     jwt.Repository
 	idProvider mainflux.IDProvider
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(g groups.Repository, p policies.Repository, t jwt.Repository, idp mainflux.IDProvider) Service {
+func NewService(g groups.Repository, t jwt.Repository, idp mainflux.IDProvider) Service {
 	return service{
 		groups:     g,
-		policies:   p,
 		tokens:     t,
 		idProvider: idp,
 	}
@@ -174,17 +171,17 @@ func (svc service) changeGroupStatus(ctx context.Context, token string, group gr
 }
 
 func (svc service) authorizeByID(ctx context.Context, subject, object, action string) error {
-	policy := policies.Policy{Subject: subject, Object: object, Actions: []string{action}}
-	if err := policy.Validate(); err != nil {
-		return err
-	}
-	if err := svc.policies.CheckAdmin(ctx, policy.Subject); err == nil {
-		return nil
-	}
-	aReq := policies.AccessRequest{Subject: subject, Object: object, Action: action}
-	if _, err := svc.policies.EvaluateGroupAccess(ctx, aReq); err != nil {
-		return err
-	}
+	// policy := policies.Policy{Subject: subject, Object: object, Actions: []string{action}}
+	// if err := policy.Validate(); err != nil {
+	// 	return err
+	// }
+	// if err := svc.policies.CheckAdmin(ctx, policy.Subject); err == nil {
+	// 	return nil
+	// }
+	// aReq := policies.AccessRequest{Subject: subject, Object: object, Action: action}
+	// if _, err := svc.policies.EvaluateGroupAccess(ctx, aReq); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 

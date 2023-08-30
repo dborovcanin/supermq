@@ -25,7 +25,6 @@ import (
 	"github.com/mainflux/mainflux/internal/env"
 	"github.com/mainflux/mainflux/internal/postgres"
 	"github.com/mainflux/mainflux/internal/server"
-	grpcserver "github.com/mainflux/mainflux/internal/server/grpc"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
@@ -43,18 +42,9 @@ import (
 	gtracing "github.com/mainflux/mainflux/users/groups/tracing"
 	"github.com/mainflux/mainflux/users/hasher"
 	"github.com/mainflux/mainflux/users/jwt"
-	"github.com/mainflux/mainflux/users/policies"
-	papi "github.com/mainflux/mainflux/users/policies/api"
-	grpcapi "github.com/mainflux/mainflux/users/policies/api/grpc"
-	httpapi "github.com/mainflux/mainflux/users/policies/api/http"
-	ppostgres "github.com/mainflux/mainflux/users/policies/postgres"
-	pcache "github.com/mainflux/mainflux/users/policies/redis"
-	ptracing "github.com/mainflux/mainflux/users/policies/tracing"
 	clientspg "github.com/mainflux/mainflux/users/postgres"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -152,7 +142,7 @@ func main() {
 	}
 	defer esClient.Close()
 
-	csvc, gsvc, psvc := newService(ctx, db, dbConfig, esClient, tracer, cfg, ec, logger)
+	csvc, gsvc := newService(ctx, db, dbConfig, esClient, tracer, cfg, ec, logger)
 
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
@@ -163,19 +153,6 @@ func main() {
 	mux := bone.New()
 	hsc := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, mux, logger, cfg.InstanceID), logger)
 	hsg := httpserver.New(ctx, cancel, svcName, httpServerConfig, gapi.MakeHandler(gsvc, mux, logger), logger)
-	hsp := httpserver.New(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(psvc, mux, logger), logger)
-
-	grpcServerConfig := server.Config{Port: defSvcGRPCPort}
-	if err := env.Parse(&grpcServerConfig, env.Options{Prefix: envPrefixGrpc}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err.Error()))
-		exitCode = 1
-		return
-	}
-	registerAuthServiceServer := func(srv *grpc.Server) {
-		reflection.Register(srv)
-		policies.RegisterAuthServiceServer(srv, grpcapi.NewServer(csvc, psvc))
-	}
-	gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, registerAuthServiceServer, logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, mainflux.Version, logger, cancel)
@@ -183,14 +160,14 @@ func main() {
 	}
 
 	g.Go(func() error {
-		return hsp.Start()
+		return hsc.Start()
 	})
 	g.Go(func() error {
-		return gs.Start()
+		return hsg.Start()
 	})
 
 	g.Go(func() error {
-		return server.StopSignalHandler(ctx, cancel, logger, svcName, hsc, hsg, hsp, gs)
+		return server.StopSignalHandler(ctx, cancel, logger, svcName, hsc, hsg)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -198,11 +175,10 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (clients.Service, groups.Service, policies.Service) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (clients.Service, groups.Service) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	cRepo := uclients.NewRepository(database)
 	gRepo := gpostgres.New(database)
-	pRepo := ppostgres.NewRepository(database)
 
 	idp := uuid.New()
 	hsr := hasher.New()
@@ -221,13 +197,11 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esCl
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
-	csvc := clients.NewService(cRepo, pRepo, tokenizer, emailer, hsr, idp, c.PassRegex)
-	gsvc := groups.NewService(gRepo, pRepo, tokenizer, idp)
-	psvc := policies.NewService(pRepo, tokenizer, idp)
+	csvc := clients.NewService(cRepo, tokenizer, emailer, hsr, idp, c.PassRegex)
+	gsvc := groups.NewService(gRepo, tokenizer, idp)
 
 	csvc = ucache.NewEventStoreMiddleware(ctx, csvc, esClient)
 	gsvc = gcache.NewEventStoreMiddleware(ctx, gsvc, esClient)
-	psvc = pcache.NewEventStoreMiddleware(ctx, psvc, esClient)
 
 	csvc = ctracing.New(csvc, tracer)
 	csvc = capi.LoggingMiddleware(csvc, logger)
@@ -239,15 +213,10 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esCl
 	counter, latency = internal.MakeMetrics("groups", "api")
 	gsvc = gapi.MetricsMiddleware(gsvc, counter, latency)
 
-	psvc = ptracing.New(psvc, tracer)
-	psvc = papi.LoggingMiddleware(psvc, logger)
-	counter, latency = internal.MakeMetrics("policies", "api")
-	psvc = papi.MetricsMiddleware(psvc, counter, latency)
-
 	if err := createAdmin(ctx, c, cRepo, hsr, csvc); err != nil {
 		logger.Error(fmt.Sprintf("failed to create admin client: %s", err))
 	}
-	return csvc, gsvc, psvc
+	return csvc, gsvc
 }
 
 func createAdmin(ctx context.Context, c config, crepo uclients.Repository, hsr clients.Hasher, svc clients.Service) error {

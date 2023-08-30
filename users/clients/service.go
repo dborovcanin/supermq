@@ -14,7 +14,6 @@ import (
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/users/clients/postgres"
 	"github.com/mainflux/mainflux/users/jwt"
-	"github.com/mainflux/mainflux/users/policies"
 )
 
 const (
@@ -52,7 +51,6 @@ type Service interface {
 
 type service struct {
 	clients    postgres.Repository
-	policies   policies.Repository
 	idProvider mainflux.IDProvider
 	hasher     Hasher
 	tokens     jwt.Repository
@@ -61,10 +59,9 @@ type service struct {
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(c postgres.Repository, p policies.Repository, t jwt.Repository, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
+func NewService(c postgres.Repository, t jwt.Repository, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
 	return service{
 		clients:    c,
-		policies:   p,
 		hasher:     h,
 		tokens:     t,
 		email:      e,
@@ -449,17 +446,17 @@ func (svc service) authorize(ctx context.Context, subject, object, action string
 	if subject == object {
 		return nil
 	}
-	policy := policies.Policy{Subject: subject, Object: object, Actions: []string{action}}
-	if err := policy.Validate(); err != nil {
-		return err
-	}
-	if err := svc.policies.CheckAdmin(ctx, policy.Subject); err == nil {
-		return nil
-	}
-	aReq := policies.AccessRequest{Subject: subject, Object: object, Action: action, Entity: entityType}
-	if _, err := svc.policies.EvaluateUserAccess(ctx, aReq); err != nil {
-		return err
-	}
+	// policy := policies.Policy{Subject: subject, Object: object, Actions: []string{action}}
+	// if err := policy.Validate(); err != nil {
+	// 	return err
+	// }
+	// if err := svc.policies.CheckAdmin(ctx, policy.Subject); err == nil {
+	// 	return nil
+	// }
+	// aReq := policies.AccessRequest{Subject: subject, Object: object, Action: action, Entity: entityType}
+	// if _, err := svc.policies.EvaluateUserAccess(ctx, aReq); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 

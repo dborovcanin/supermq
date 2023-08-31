@@ -9,8 +9,8 @@ import (
 	"time"
 
 	mflog "github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/groups"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-	"github.com/mainflux/mainflux/users/groups"
 )
 
 var _ groups.Service = (*loggingMiddleware)(nil)

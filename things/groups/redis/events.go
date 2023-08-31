@@ -179,7 +179,7 @@ func (vce viewGroupEvent) Encode() (map[string]interface{}, error) {
 }
 
 type listGroupEvent struct {
-	mfgroups.Page
+	mfgroups.GroupsPage
 }
 
 func (lce listGroupEvent) Encode() (map[string]interface{}, error) {
@@ -221,7 +221,7 @@ func (lce listGroupEvent) Encode() (map[string]interface{}, error) {
 }
 
 type listGroupMembershipEvent struct {
-	mfgroups.Page
+	mfgroups.GroupsPage
 	channelID string
 }
 

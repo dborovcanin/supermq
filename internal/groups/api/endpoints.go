@@ -9,8 +9,8 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/groups"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-	"github.com/mainflux/mainflux/users/groups"
 )
 
 func CreateGroupEndpoint(svc groups.Service) endpoint.Endpoint {

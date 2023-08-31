@@ -81,7 +81,7 @@ func (req updateGroupReq) validate() error {
 }
 
 type listGroupsReq struct {
-	mfgroups.Page
+	mfgroups.GroupsPage
 	token string
 	// - `true`  - result is JSON tree representing groups hierarchy,
 	// - `false` - result is JSON array of groups.
@@ -97,7 +97,7 @@ func (req listGroupsReq) validate() error {
 }
 
 type listMembershipReq struct {
-	mfgroups.Page
+	mfgroups.GroupsPage
 	token    string
 	clientID string
 }

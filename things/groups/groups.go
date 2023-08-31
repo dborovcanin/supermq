@@ -22,10 +22,10 @@ type Service interface {
 	ViewGroup(ctx context.Context, token, id string) (groups.Group, error)
 
 	// ListGroups retrieves groups.
-	ListGroups(ctx context.Context, token string, gm groups.Page) (groups.Page, error)
+	ListGroups(ctx context.Context, token string, gm groups.GroupsPage) (groups.GroupsPage, error)
 
 	// ListMemberships retrieves everything that is assigned to a group identified by clientID.
-	ListMemberships(ctx context.Context, token, clientID string, gm groups.Page) (groups.Memberships, error)
+	ListMemberships(ctx context.Context, token, clientID string, gm groups.GroupsPage) (groups.MembershipsPage, error)
 
 	// EnableGroup logically enables the group identified with the provided ID.
 	EnableGroup(ctx context.Context, token, id string) (groups.Group, error)

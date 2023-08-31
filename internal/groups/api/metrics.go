@@ -8,8 +8,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/metrics"
-	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-	"github.com/mainflux/mainflux/users/groups"
+	"github.com/mainflux/mainflux/pkg/groups"
 )
 
 var _ groups.Service = (*metricsMiddleware)(nil)
@@ -30,7 +29,7 @@ func MetricsMiddleware(svc groups.Service, counter metrics.Counter, latency metr
 }
 
 // CreateGroup instruments CreateGroup method with metrics.
-func (ms *metricsMiddleware) CreateGroup(ctx context.Context, token string, g mfgroups.Group) (mfgroups.Group, error) {
+func (ms *metricsMiddleware) CreateGroup(ctx context.Context, token string, g groups.Group) (groups.Group, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "create_group").Add(1)
 		ms.latency.With("method", "create_group").Observe(time.Since(begin).Seconds())
@@ -39,7 +38,7 @@ func (ms *metricsMiddleware) CreateGroup(ctx context.Context, token string, g mf
 }
 
 // UpdateGroup instruments UpdateGroup method with metrics.
-func (ms *metricsMiddleware) UpdateGroup(ctx context.Context, token string, group mfgroups.Group) (rGroup mfgroups.Group, err error) {
+func (ms *metricsMiddleware) UpdateGroup(ctx context.Context, token string, group groups.Group) (rGroup groups.Group, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "update_group").Add(1)
 		ms.latency.With("method", "update_group").Observe(time.Since(begin).Seconds())
@@ -48,7 +47,7 @@ func (ms *metricsMiddleware) UpdateGroup(ctx context.Context, token string, grou
 }
 
 // ViewGroup instruments ViewGroup method with metrics.
-func (ms *metricsMiddleware) ViewGroup(ctx context.Context, token, id string) (g mfgroups.Group, err error) {
+func (ms *metricsMiddleware) ViewGroup(ctx context.Context, token, id string) (g groups.Group, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "view_group").Add(1)
 		ms.latency.With("method", "view_group").Observe(time.Since(begin).Seconds())
@@ -57,7 +56,7 @@ func (ms *metricsMiddleware) ViewGroup(ctx context.Context, token, id string) (g
 }
 
 // ListGroups instruments ListGroups method with metrics.
-func (ms *metricsMiddleware) ListGroups(ctx context.Context, token string, gp mfgroups.Page) (cg mfgroups.Page, err error) {
+func (ms *metricsMiddleware) ListGroups(ctx context.Context, token string, gp groups.Page) (cg groups.Page, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_groups").Add(1)
 		ms.latency.With("method", "list_groups").Observe(time.Since(begin).Seconds())
@@ -66,7 +65,7 @@ func (ms *metricsMiddleware) ListGroups(ctx context.Context, token string, gp mf
 }
 
 // EnableGroup instruments EnableGroup method with metrics.
-func (ms *metricsMiddleware) EnableGroup(ctx context.Context, token string, id string) (g mfgroups.Group, err error) {
+func (ms *metricsMiddleware) EnableGroup(ctx context.Context, token string, id string) (g groups.Group, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "enable_group").Add(1)
 		ms.latency.With("method", "enable_group").Observe(time.Since(begin).Seconds())
@@ -75,7 +74,7 @@ func (ms *metricsMiddleware) EnableGroup(ctx context.Context, token string, id s
 }
 
 // DisableGroup instruments DisableGroup method with metrics.
-func (ms *metricsMiddleware) DisableGroup(ctx context.Context, token string, id string) (g mfgroups.Group, err error) {
+func (ms *metricsMiddleware) DisableGroup(ctx context.Context, token string, id string) (g groups.Group, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "disable_group").Add(1)
 		ms.latency.With("method", "disable_group").Observe(time.Since(begin).Seconds())
@@ -84,7 +83,7 @@ func (ms *metricsMiddleware) DisableGroup(ctx context.Context, token string, id 
 }
 
 // ListMemberships instruments ListMemberships method with metrics.
-func (ms *metricsMiddleware) ListMemberships(ctx context.Context, token, clientID string, gp mfgroups.Page) (mp mfgroups.Memberships, err error) {
+func (ms *metricsMiddleware) ListMemberships(ctx context.Context, token, clientID string, gp groups.Page) (mp groups.Memberships, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_memberships").Add(1)
 		ms.latency.With("method", "list_memberships").Observe(time.Since(begin).Seconds())

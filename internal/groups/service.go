@@ -36,10 +36,9 @@ type service struct {
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(g groups.Repository, t jwt.Repository, idp mainflux.IDProvider) Service {
+func NewService(g groups.Repository, idp mainflux.IDProvider) Service {
 	return service{
 		groups:     g,
-		tokens:     t,
 		idProvider: idp,
 	}
 }

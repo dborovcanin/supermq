@@ -40,7 +40,7 @@ func createGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err != nil {
 			return groupPageRes{}, err
 		}
-		return buildGroupsResponse(mfgroups.Page{Groups: gs}), nil
+		return buildGroupsResponse(mfgroups.GroupsPage{Groups: gs}), nil
 	}
 }
 
@@ -117,7 +117,7 @@ func listGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return groupPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
-		page, err := svc.ListGroups(ctx, req.token, req.Page)
+		page, err := svc.ListGroups(ctx, req.token, req.GroupsPage)
 		if err != nil {
 			return groupPageRes{}, err
 		}
@@ -137,7 +137,7 @@ func listMembershipsEndpoint(svc groups.Service) endpoint.Endpoint {
 			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
 
-		page, err := svc.ListMemberships(ctx, req.token, req.clientID, req.Page)
+		page, err := svc.ListMemberships(ctx, req.token, req.clientID, req.GroupsPage)
 		if err != nil {
 			return membershipPageRes{}, err
 		}
@@ -150,7 +150,7 @@ func listMembershipsEndpoint(svc groups.Service) endpoint.Endpoint {
 			},
 			Memberships: []viewMembershipRes{},
 		}
-		for _, g := range page.Groups {
+		for _, g := range page.Memberships {
 			res.Memberships = append(res.Memberships, viewMembershipRes{Group: g})
 		}
 
@@ -158,7 +158,7 @@ func listMembershipsEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
-func buildGroupsResponseTree(page mfgroups.Page) groupPageRes {
+func buildGroupsResponseTree(page mfgroups.GroupsPage) groupPageRes {
 	groupsMap := map[string]*mfgroups.Group{}
 	// Parents' map keeps its array of children.
 	parentsMap := map[string][]*mfgroups.Group{}
@@ -208,7 +208,7 @@ func toViewGroupRes(group mfgroups.Group) viewGroupRes {
 	return view
 }
 
-func buildGroupsResponse(gp mfgroups.Page) groupPageRes {
+func buildGroupsResponse(gp mfgroups.GroupsPage) groupPageRes {
 	res := groupPageRes{
 		pageRes: pageRes{
 			Total: gp.Total,

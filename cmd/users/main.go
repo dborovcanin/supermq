@@ -23,6 +23,10 @@ import (
 	redisclient "github.com/mainflux/mainflux/internal/clients/redis"
 	"github.com/mainflux/mainflux/internal/email"
 	"github.com/mainflux/mainflux/internal/env"
+	"github.com/mainflux/mainflux/internal/groups"
+	gapi "github.com/mainflux/mainflux/internal/groups/api"
+	gcache "github.com/mainflux/mainflux/internal/groups/redis"
+	gtracing "github.com/mainflux/mainflux/internal/groups/tracing"
 	"github.com/mainflux/mainflux/internal/postgres"
 	"github.com/mainflux/mainflux/internal/server"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
@@ -36,10 +40,6 @@ import (
 	uclients "github.com/mainflux/mainflux/users/clients/postgres"
 	ucache "github.com/mainflux/mainflux/users/clients/redis"
 	ctracing "github.com/mainflux/mainflux/users/clients/tracing"
-	"github.com/mainflux/mainflux/users/groups"
-	gapi "github.com/mainflux/mainflux/users/groups/api"
-	gcache "github.com/mainflux/mainflux/users/groups/redis"
-	gtracing "github.com/mainflux/mainflux/users/groups/tracing"
 	"github.com/mainflux/mainflux/users/hasher"
 	"github.com/mainflux/mainflux/users/jwt"
 	clientspg "github.com/mainflux/mainflux/users/postgres"
@@ -198,7 +198,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esCl
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
 	csvc := clients.NewService(cRepo, tokenizer, emailer, hsr, idp, c.PassRegex)
-	gsvc := groups.NewService(gRepo, tokenizer, idp)
+	gsvc := groups.NewService(gRepo, idp)
 
 	csvc = ucache.NewEventStoreMiddleware(ctx, csvc, esClient)
 	gsvc = gcache.NewEventStoreMiddleware(ctx, gsvc, esClient)

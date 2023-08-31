@@ -11,7 +11,7 @@ import (
 	"github.com/mainflux/mainflux/internal/api"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/logger"
-	"github.com/mainflux/mainflux/users/groups"
+	"github.com/mainflux/mainflux/pkg/groups"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 

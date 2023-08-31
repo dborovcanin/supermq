@@ -8,7 +8,7 @@ import (
 	"time"
 
 	mfredis "github.com/mainflux/mainflux/internal/clients/redis"
-	mfgroups "github.com/mainflux/mainflux/pkg/groups"
+	groups "github.com/mainflux/mainflux/pkg/groups"
 )
 
 const (
@@ -31,7 +31,7 @@ var (
 )
 
 type createGroupEvent struct {
-	mfgroups.Group
+	groups.Group
 }
 
 func (cge createGroupEvent) Encode() (map[string]interface{}, error) {
@@ -70,7 +70,7 @@ func (cge createGroupEvent) Encode() (map[string]interface{}, error) {
 }
 
 type updateGroupEvent struct {
-	mfgroups.Group
+	groups.Group
 }
 
 func (uge updateGroupEvent) Encode() (map[string]interface{}, error) {
@@ -131,7 +131,7 @@ func (rge removeGroupEvent) Encode() (map[string]interface{}, error) {
 }
 
 type viewGroupEvent struct {
-	mfgroups.Group
+	groups.Group
 }
 
 func (vge viewGroupEvent) Encode() (map[string]interface{}, error) {
@@ -177,7 +177,7 @@ func (vge viewGroupEvent) Encode() (map[string]interface{}, error) {
 }
 
 type listGroupEvent struct {
-	mfgroups.GroupsPage
+	groups.Page
 }
 
 func (lge listGroupEvent) Encode() (map[string]interface{}, error) {
@@ -219,7 +219,7 @@ func (lge listGroupEvent) Encode() (map[string]interface{}, error) {
 }
 
 type listGroupMembershipEvent struct {
-	mfgroups.GroupsPage
+	groups.Page
 	channelID string
 }
 

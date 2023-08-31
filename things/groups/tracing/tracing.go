@@ -25,7 +25,7 @@ func New(gsvc groups.Service, tracer trace.Tracer) groups.Service {
 }
 
 // ListMemberships traces the "ListMemberships" operation of the wrapped policies.Service.
-func (tm *tracingMiddleware) ListMemberships(ctx context.Context, token, clientID string, gm mfgroups.Page) (mfgroups.Memberships, error) {
+func (tm *tracingMiddleware) ListMemberships(ctx context.Context, token, clientID string, gm mfgroups.GroupsPage) (mfgroups.MembershipsPage, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_list_memberships")
 	defer span.End()
 	return tm.gsvc.ListMemberships(ctx, token, clientID, gm)
@@ -48,7 +48,7 @@ func (tm *tracingMiddleware) ViewGroup(ctx context.Context, token string, id str
 }
 
 // ListGroups traces the "ListGroups" operation of the wrapped policies.Service.
-func (tm *tracingMiddleware) ListGroups(ctx context.Context, token string, gm mfgroups.Page) (mfgroups.Page, error) {
+func (tm *tracingMiddleware) ListGroups(ctx context.Context, token string, gm mfgroups.GroupsPage) (mfgroups.GroupsPage, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_list_groups")
 	defer span.End()
 

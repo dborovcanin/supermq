@@ -443,9 +443,9 @@ func (svc service) ListMembers(ctx context.Context, token, groupID string, pm mf
 }
 
 func (svc service) authorize(ctx context.Context, subject, object, action string) error {
-	if subject == object {
-		return nil
-	}
+	// if subject == object {
+	// 	return nil
+	// }
 	// policy := policies.Policy{Subject: subject, Object: object, Actions: []string{action}}
 	// if err := policy.Validate(); err != nil {
 	// 	return err

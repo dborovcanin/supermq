@@ -87,10 +87,10 @@ func (svc service) ViewGroup(ctx context.Context, token string, id string) (grou
 	return svc.groups.RetrieveByID(ctx, id)
 }
 
-func (svc service) ListGroups(ctx context.Context, token string, gm groups.Page) (groups.Page, error) {
+func (svc service) ListGroups(ctx context.Context, token string, gm groups.GroupsPage) (groups.GroupsPage, error) {
 	userID, err := svc.identify(ctx, token)
 	if err != nil {
-		return groups.Page{}, err
+		return groups.GroupsPage{}, err
 	}
 
 	// If the user is admin, fetch all channels from the database.
@@ -104,10 +104,10 @@ func (svc service) ListGroups(ctx context.Context, token string, gm groups.Page)
 	return svc.groups.RetrieveAll(ctx, gm)
 }
 
-func (svc service) ListMemberships(ctx context.Context, token, clientID string, gm groups.Page) (groups.Memberships, error) {
+func (svc service) ListMemberships(ctx context.Context, token, clientID string, gm groups.GroupsPage) (groups.MembershipsPage, error) {
 	userID, err := svc.identify(ctx, token)
 	if err != nil {
-		return groups.Memberships{}, err
+		return groups.MembershipsPage{}, err
 	}
 
 	// If the user is admin, fetch all channels from the database.

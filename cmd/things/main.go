@@ -22,12 +22,17 @@ import (
 	pgclient "github.com/mainflux/mainflux/internal/clients/postgres"
 	redisclient "github.com/mainflux/mainflux/internal/clients/redis"
 	"github.com/mainflux/mainflux/internal/env"
+	"github.com/mainflux/mainflux/internal/groups"
+	gapi "github.com/mainflux/mainflux/internal/groups/api"
 	gpostgres "github.com/mainflux/mainflux/internal/groups/postgres"
+	chcache "github.com/mainflux/mainflux/internal/groups/redis"
+	gtracing "github.com/mainflux/mainflux/internal/groups/tracing"
 	"github.com/mainflux/mainflux/internal/postgres"
 	"github.com/mainflux/mainflux/internal/server"
 	grpcserver "github.com/mainflux/mainflux/internal/server/grpc"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
 	mflog "github.com/mainflux/mainflux/logger"
+	ggroups "github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/things/clients"
 	capi "github.com/mainflux/mainflux/things/clients/api"
@@ -35,10 +40,7 @@ import (
 	thcache "github.com/mainflux/mainflux/things/clients/redis"
 	localusers "github.com/mainflux/mainflux/things/clients/standalone"
 	ctracing "github.com/mainflux/mainflux/things/clients/tracing"
-	"github.com/mainflux/mainflux/things/groups"
-	gapi "github.com/mainflux/mainflux/things/groups/api"
-	chcache "github.com/mainflux/mainflux/things/groups/redis"
-	gtracing "github.com/mainflux/mainflux/things/groups/tracing"
+	ggapi "github.com/mainflux/mainflux/things/groups/api"
 	tpolicies "github.com/mainflux/mainflux/things/policies"
 	papi "github.com/mainflux/mainflux/things/policies/api"
 	grpcapi "github.com/mainflux/mainflux/things/policies/api/grpc"
@@ -174,7 +176,7 @@ func main() {
 	mux := bone.New()
 	hsp := httpserver.New(ctx, cancel, "things-policies", httpServerConfig, httpapi.MakeHandler(csvc, psvc, mux, logger), logger)
 	hsc := httpserver.New(ctx, cancel, "things-clients", httpServerConfig, capi.MakeHandler(csvc, mux, logger, cfg.InstanceID), logger)
-	hsg := httpserver.New(ctx, cancel, "things-groups", httpServerConfig, gapi.MakeHandler(gsvc, mux, logger), logger)
+	hsg := httpserver.New(ctx, cancel, "things-groups", httpServerConfig, ggapi.MakeHandler(gsvc, mux, logger), logger)
 
 	grpcServerConfig := server.Config{Port: defSvcAuthGRPCPort}
 	if err := env.Parse(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
@@ -211,7 +213,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth upolicies.AuthServiceClient, cacheClient *redis.Client, esClient *redis.Client, keyDuration string, tracer trace.Tracer, logger mflog.Logger) (clients.Service, groups.Service, tpolicies.Service) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth upolicies.AuthServiceClient, cacheClient *redis.Client, esClient *redis.Client, keyDuration string, tracer trace.Tracer, logger mflog.Logger) (clients.Service, ggroups.Service, tpolicies.Service) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	cRepo := cpostgres.NewRepository(database)
 	gRepo := gpostgres.New(database)
@@ -229,7 +231,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 
 	psvc := tpolicies.NewService(auth, pRepo, policyCache, idp)
 	csvc := clients.NewService(auth, psvc, cRepo, gRepo, thingCache, idp)
-	gsvc := groups.NewService(auth, psvc, gRepo, idp)
+	gsvc := groups.NewService(gRepo, idp)
 
 	csvc = thcache.NewEventStoreMiddleware(ctx, csvc, esClient)
 	gsvc = chcache.NewEventStoreMiddleware(ctx, gsvc, esClient)

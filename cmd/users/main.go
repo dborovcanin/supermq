@@ -23,7 +23,7 @@ import (
 	redisclient "github.com/mainflux/mainflux/internal/clients/redis"
 	"github.com/mainflux/mainflux/internal/email"
 	"github.com/mainflux/mainflux/internal/env"
-	"github.com/mainflux/mainflux/internal/groups"
+	mfgroups "github.com/mainflux/mainflux/internal/groups"
 	gapi "github.com/mainflux/mainflux/internal/groups/api"
 	gcache "github.com/mainflux/mainflux/internal/groups/redis"
 	gtracing "github.com/mainflux/mainflux/internal/groups/tracing"
@@ -32,7 +32,7 @@ import (
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
-	ggroups "github.com/mainflux/mainflux/pkg/groups"
+	"github.com/mainflux/mainflux/pkg/groups"
 	gpostgres "github.com/mainflux/mainflux/pkg/groups/postgres"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/users/clients"
@@ -177,7 +177,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (clients.Service, ggroups.Service) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (clients.Service, groups.Service) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	cRepo := uclients.NewRepository(database)
 	gRepo := gpostgres.New(database)
@@ -200,7 +200,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esCl
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
 	csvc := clients.NewService(cRepo, tokenizer, emailer, hsr, idp, c.PassRegex)
-	gsvc := groups.NewService(gRepo, idp)
+	gsvc := mfgroups.NewService(gRepo, idp)
 
 	csvc = ucache.NewEventStoreMiddleware(ctx, csvc, esClient)
 	gsvc = gcache.NewEventStoreMiddleware(ctx, gsvc, esClient)

@@ -40,6 +40,7 @@ import (
 	uclients "github.com/mainflux/mainflux/users/clients/postgres"
 	ucache "github.com/mainflux/mainflux/users/clients/redis"
 	ctracing "github.com/mainflux/mainflux/users/clients/tracing"
+	ugapi "github.com/mainflux/mainflux/users/groups/api"
 	"github.com/mainflux/mainflux/users/hasher"
 	"github.com/mainflux/mainflux/users/jwt"
 	clientspg "github.com/mainflux/mainflux/users/postgres"
@@ -152,7 +153,7 @@ func main() {
 	}
 	mux := bone.New()
 	hsc := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, mux, logger, cfg.InstanceID), logger)
-	hsg := httpserver.New(ctx, cancel, svcName, httpServerConfig, gapi.MakeHandler(gsvc, mux, logger), logger)
+	hsg := httpserver.New(ctx, cancel, svcName, httpServerConfig, ugapi.MakeHandler(gsvc, mux, logger), logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, mainflux.Version, logger, cancel)

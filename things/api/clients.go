@@ -9,111 +9,108 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/go-zoo/bone"
-	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/internal/api"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/things/clients"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-// MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc clients.Service, mux *bone.Mux, logger mflog.Logger, instanceID string) http.Handler {
+func clientsHandler(svc clients.Service, r *chi.Mux, logger mflog.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
+	r.Route("/things", func(r chi.Router) {
+		r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
+			createClientEndpoint(svc),
+			decodeCreateClientReq,
+			api.EncodeResponse,
+			opts...,
+		), "create_thing").ServeHTTP)
 
-	mux.Post("/things", otelhttp.NewHandler(kithttp.NewServer(
-		createClientEndpoint(svc),
-		decodeCreateClientReq,
-		api.EncodeResponse,
-		opts...,
-	), "create_thing"))
+		r.Post("//bulk", otelhttp.NewHandler(kithttp.NewServer(
+			createClientsEndpoint(svc),
+			decodeCreateClientsReq,
+			api.EncodeResponse,
+			opts...,
+		), "create_things").ServeHTTP)
 
-	mux.Post("/things/bulk", otelhttp.NewHandler(kithttp.NewServer(
-		createClientsEndpoint(svc),
-		decodeCreateClientsReq,
-		api.EncodeResponse,
-		opts...,
-	), "create_things"))
+		r.Get("/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
+			viewClientEndpoint(svc),
+			decodeViewClient,
+			api.EncodeResponse,
+			opts...,
+		), "view_thing").ServeHTTP)
 
-	mux.Get("/things/:thingID", otelhttp.NewHandler(kithttp.NewServer(
-		viewClientEndpoint(svc),
-		decodeViewClient,
-		api.EncodeResponse,
-		opts...,
-	), "view_thing"))
+		r.Get("/things", otelhttp.NewHandler(kithttp.NewServer(
+			listClientsEndpoint(svc),
+			decodeListClients,
+			api.EncodeResponse,
+			opts...,
+		), "list_things").ServeHTTP)
 
-	mux.Get("/things", otelhttp.NewHandler(kithttp.NewServer(
-		listClientsEndpoint(svc),
-		decodeListClients,
-		api.EncodeResponse,
-		opts...,
-	), "list_things"))
+		r.Get("/channels/{chanID}", otelhttp.NewHandler(kithttp.NewServer(
+			listMembersEndpoint(svc),
+			decodeListMembersRequest,
+			api.EncodeResponse,
+			opts...,
+		), "list_things_by_channel").ServeHTTP)
 
-	mux.Get("/channels/:chanID/things", otelhttp.NewHandler(kithttp.NewServer(
-		listMembersEndpoint(svc),
-		decodeListMembersRequest,
-		api.EncodeResponse,
-		opts...,
-	), "list_things_by_channel"))
+		r.Patch("/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientEndpoint(svc),
+			decodeUpdateClient,
+			api.EncodeResponse,
+			opts...,
+		), "update_thing").ServeHTTP)
 
-	mux.Patch("/things/:thingID", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientEndpoint(svc),
-		decodeUpdateClient,
-		api.EncodeResponse,
-		opts...,
-	), "update_thing"))
+		r.Patch("/{thingID}/tags", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientTagsEndpoint(svc),
+			decodeUpdateClientTags,
+			api.EncodeResponse,
+			opts...,
+		), "update_thing_tags").ServeHTTP)
 
-	mux.Patch("/things/:thingID/tags", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientTagsEndpoint(svc),
-		decodeUpdateClientTags,
-		api.EncodeResponse,
-		opts...,
-	), "update_thing_tags"))
+		r.Patch("/{thingID}/secret", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientSecretEndpoint(svc),
+			decodeUpdateClientCredentials,
+			api.EncodeResponse,
+			opts...,
+		), "update_thing_credentials").ServeHTTP)
 
-	mux.Patch("/things/:thingID/secret", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientSecretEndpoint(svc),
-		decodeUpdateClientCredentials,
-		api.EncodeResponse,
-		opts...,
-	), "update_thing_credentials"))
+		r.Patch("/{thingID}/owner", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientOwnerEndpoint(svc),
+			decodeUpdateClientOwner,
+			api.EncodeResponse,
+			opts...,
+		), "update_thing_owner").ServeHTTP)
 
-	mux.Patch("/things/:thingID/owner", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientOwnerEndpoint(svc),
-		decodeUpdateClientOwner,
-		api.EncodeResponse,
-		opts...,
-	), "update_thing_owner"))
+		r.Post("/{thingID}/enable", otelhttp.NewHandler(kithttp.NewServer(
+			enableClientEndpoint(svc),
+			decodeChangeClientStatus,
+			api.EncodeResponse,
+			opts...,
+		), "enable_thing").ServeHTTP)
 
-	mux.Post("/things/:thingID/enable", otelhttp.NewHandler(kithttp.NewServer(
-		enableClientEndpoint(svc),
-		decodeChangeClientStatus,
-		api.EncodeResponse,
-		opts...,
-	), "enable_thing"))
+		r.Post("/{thingID}/disable", otelhttp.NewHandler(kithttp.NewServer(
+			disableClientEndpoint(svc),
+			decodeChangeClientStatus,
+			api.EncodeResponse,
+			opts...,
+		), "disable_thing").ServeHTTP)
 
-	mux.Post("/things/:thingID/disable", otelhttp.NewHandler(kithttp.NewServer(
-		disableClientEndpoint(svc),
-		decodeChangeClientStatus,
-		api.EncodeResponse,
-		opts...,
-	), "disable_thing"))
+	})
 
-	mux.GetFunc("/health", mainflux.Health("things", instanceID))
-	mux.Handle("/metrics", promhttp.Handler())
-	return mux
+	return r
 }
 
 func decodeViewClient(_ context.Context, r *http.Request) (interface{}, error) {
 	req := viewClientReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "thingID"),
+		id:    chi.URLParam(r, "thingID"),
 	}
 
 	return req, nil
@@ -189,7 +186,7 @@ func decodeUpdateClient(_ context.Context, r *http.Request) (interface{}, error)
 	}
 	req := updateClientReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "thingID"),
+		id:    chi.URLParam(r, "thingID"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -204,7 +201,7 @@ func decodeUpdateClientTags(_ context.Context, r *http.Request) (interface{}, er
 	}
 	req := updateClientTagsReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "thingID"),
+		id:    chi.URLParam(r, "thingID"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -219,7 +216,7 @@ func decodeUpdateClientCredentials(_ context.Context, r *http.Request) (interfac
 	}
 	req := updateClientCredentialsReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "thingID"),
+		id:    chi.URLParam(r, "thingID"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -234,7 +231,7 @@ func decodeUpdateClientOwner(_ context.Context, r *http.Request) (interface{}, e
 	}
 	req := updateClientOwnerReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "thingID"),
+		id:    chi.URLParam(r, "thingID"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
@@ -276,7 +273,7 @@ func decodeCreateClientsReq(_ context.Context, r *http.Request) (interface{}, er
 func decodeChangeClientStatus(_ context.Context, r *http.Request) (interface{}, error) {
 	req := changeClientStatusReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "thingID"),
+		id:    chi.URLParam(r, "thingID"),
 	}
 
 	return req, nil
@@ -311,7 +308,7 @@ func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 			Limit:    l,
 			Metadata: m,
 		},
-		groupID: bone.GetValue(r, "chanID"),
+		groupID: chi.URLParam(r, "chanID"),
 	}
 	return req, nil
 }

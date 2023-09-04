@@ -11,8 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-redis/redis/v8"
-	"github.com/go-zoo/bone"
 	"github.com/jmoiron/sqlx"
 	chclient "github.com/mainflux/callhome/pkg/client"
 	"github.com/mainflux/mainflux"
@@ -29,22 +29,18 @@ import (
 	gtracing "github.com/mainflux/mainflux/internal/groups/tracing"
 	"github.com/mainflux/mainflux/internal/postgres"
 	"github.com/mainflux/mainflux/internal/server"
-	grpcserver "github.com/mainflux/mainflux/internal/server/grpc"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
 	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/pkg/uuid"
+	capi "github.com/mainflux/mainflux/things/api"
 	"github.com/mainflux/mainflux/things/clients"
-	capi "github.com/mainflux/mainflux/things/clients/api"
 	cpostgres "github.com/mainflux/mainflux/things/clients/postgres"
 	thcache "github.com/mainflux/mainflux/things/clients/redis"
 	localusers "github.com/mainflux/mainflux/things/clients/standalone"
 	ctracing "github.com/mainflux/mainflux/things/clients/tracing"
-	tgapi "github.com/mainflux/mainflux/things/groups/api"
 	tpolicies "github.com/mainflux/mainflux/things/policies"
 	papi "github.com/mainflux/mainflux/things/policies/api"
-	grpcapi "github.com/mainflux/mainflux/things/policies/api/grpc"
-	httpapi "github.com/mainflux/mainflux/things/policies/api/http"
 	ppostgres "github.com/mainflux/mainflux/things/policies/postgres"
 	pcache "github.com/mainflux/mainflux/things/policies/redis"
 	ppracing "github.com/mainflux/mainflux/things/policies/tracing"
@@ -52,8 +48,6 @@ import (
 	upolicies "github.com/mainflux/mainflux/users/policies"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -165,7 +159,7 @@ func main() {
 		logger.Info("Successfully connected to auth grpc server " + authHandler.Secure())
 	}
 
-	csvc, gsvc, psvc := newService(ctx, db, dbConfig, auth, cacheclient, esclient, cfg.CacheKeyDuration, tracer, logger)
+	csvc, gsvc, _ := newService(ctx, db, dbConfig, auth, cacheclient, esclient, cfg.CacheKeyDuration, tracer, logger)
 
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
@@ -173,10 +167,10 @@ func main() {
 		exitCode = 1
 		return
 	}
-	mux := bone.New()
-	hsp := httpserver.New(ctx, cancel, "things-policies", httpServerConfig, httpapi.MakeHandler(csvc, psvc, mux, logger), logger)
-	hsc := httpserver.New(ctx, cancel, "things-clients", httpServerConfig, capi.MakeHandler(csvc, mux, logger, cfg.InstanceID), logger)
-	hsg := httpserver.New(ctx, cancel, "things-groups", httpServerConfig, tgapi.MakeHandler(gsvc, mux, logger), logger)
+	mux := chi.NewRouter()
+	// hsp := httpserver.New(ctx, cancel, "things-policies", httpServerConfig, httpapi.MakeHandler(csvc, psvc, mux, logger), logger)
+	httpSvc := httpserver.New(ctx, cancel, "things-clients", httpServerConfig, capi.MakeHandler(csvc, gsvc, mux, logger, cfg.InstanceID), logger)
+	// hsg := httpserver.New(ctx, cancel, "things-groups", httpServerConfig, tgapi.MakeHandler(gsvc, mux, logger), logger)
 
 	grpcServerConfig := server.Config{Port: defSvcAuthGRPCPort}
 	if err := env.Parse(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
@@ -184,11 +178,11 @@ func main() {
 		exitCode = 1
 		return
 	}
-	registerThingsServiceServer := func(srv *grpc.Server) {
-		reflection.Register(srv)
-		tpolicies.RegisterAuthServiceServer(srv, grpcapi.NewServer(csvc, psvc))
-	}
-	gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, registerThingsServiceServer, logger)
+	// registerThingsServiceServer := func(srv *grpc.Server) {
+	// 	reflection.Register(srv)
+	// 	tpolicies.RegisterAuthServiceServer(srv, grpcapi.NewServer(csvc, psvc))
+	// }
+	// gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, registerThingsServiceServer, logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, mainflux.Version, logger, cancel)
@@ -197,15 +191,15 @@ func main() {
 
 	// Start all servers
 	g.Go(func() error {
-		return hsp.Start()
+		return httpSvc.Start()
 	})
 
-	g.Go(func() error {
-		return gs.Start()
-	})
+	// g.Go(func() error {
+	// 	return gs.Start()
+	// })
 
 	g.Go(func() error {
-		return server.StopSignalHandler(ctx, cancel, logger, svcName, hsc, hsg, hsp, gs)
+		return server.StopSignalHandler(ctx, cancel, logger, svcName, httpSvc)
 	})
 
 	if err := g.Wait(); err != nil {

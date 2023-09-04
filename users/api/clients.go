@@ -9,147 +9,136 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/go-zoo/bone"
-	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/internal/api"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/users/clients"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc clients.Service, mux *bone.Mux, logger mflog.Logger, instanceID string) http.Handler {
+func clientsHandler(svc clients.Service, r *chi.Mux, logger mflog.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
+	r.Route("/users", func(r chi.Router) {
+		r.Post("/", otelhttp.NewHandler(kithttp.NewServer(
+			registrationEndpoint(svc),
+			decodeCreateClientReq,
+			api.EncodeResponse,
+			opts...,
+		), "register_client").ServeHTTP)
 
-	mux.Post("/users", otelhttp.NewHandler(kithttp.NewServer(
-		registrationEndpoint(svc),
-		decodeCreateClientReq,
-		api.EncodeResponse,
-		opts...,
-	), "register_client"))
+		r.Get("/profile", otelhttp.NewHandler(kithttp.NewServer(
+			viewProfileEndpoint(svc),
+			decodeViewProfile,
+			api.EncodeResponse,
+			opts...,
+		), "view_profile").ServeHTTP)
 
-	mux.Get("/users/profile", otelhttp.NewHandler(kithttp.NewServer(
-		viewProfileEndpoint(svc),
-		decodeViewProfile,
-		api.EncodeResponse,
-		opts...,
-	), "view_profile"))
+		r.Get("/users/{id}", otelhttp.NewHandler(kithttp.NewServer(
+			viewClientEndpoint(svc),
+			decodeViewClient,
+			api.EncodeResponse,
+			opts...,
+		), "view_client").ServeHTTP)
 
-	mux.Get("/users/:id", otelhttp.NewHandler(kithttp.NewServer(
-		viewClientEndpoint(svc),
-		decodeViewClient,
-		api.EncodeResponse,
-		opts...,
-	), "view_client"))
+		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
+			listClientsEndpoint(svc),
+			decodeListClients,
+			api.EncodeResponse,
+			opts...,
+		), "list_clients").ServeHTTP)
 
-	mux.Get("/users", otelhttp.NewHandler(kithttp.NewServer(
-		listClientsEndpoint(svc),
-		decodeListClients,
-		api.EncodeResponse,
-		opts...,
-	), "list_clients"))
+		r.Patch("/secret", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientSecretEndpoint(svc),
+			decodeUpdateClientSecret,
+			api.EncodeResponse,
+			opts...,
+		), "update_client_secret").ServeHTTP)
 
-	mux.Get("/groups/:groupID/members", otelhttp.NewHandler(kithttp.NewServer(
-		listMembersEndpoint(svc),
-		decodeListMembersRequest,
-		api.EncodeResponse,
-		opts...,
-	), "list_members"))
+		r.Patch("/{id}", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientEndpoint(svc),
+			decodeUpdateClient,
+			api.EncodeResponse,
+			opts...,
+		), "update_client").ServeHTTP)
 
-	mux.Patch("/users/secret", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientSecretEndpoint(svc),
-		decodeUpdateClientSecret,
-		api.EncodeResponse,
-		opts...,
-	), "update_client_secret"))
+		r.Patch("/{id}/tags", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientTagsEndpoint(svc),
+			decodeUpdateClientTags,
+			api.EncodeResponse,
+			opts...,
+		), "update_client_tags").ServeHTTP)
 
-	mux.Patch("/users/:id", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientEndpoint(svc),
-		decodeUpdateClient,
-		api.EncodeResponse,
-		opts...,
-	), "update_client"))
+		r.Patch("/{id}/identity", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientIdentityEndpoint(svc),
+			decodeUpdateClientIdentity,
+			api.EncodeResponse,
+			opts...,
+		), "update_client_identity").ServeHTTP)
 
-	mux.Patch("/users/:id/tags", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientTagsEndpoint(svc),
-		decodeUpdateClientTags,
-		api.EncodeResponse,
-		opts...,
-	), "update_client_tags"))
+		r.Post("/password/reset-request", otelhttp.NewHandler(kithttp.NewServer(
+			passwordResetRequestEndpoint(svc),
+			decodePasswordResetRequest,
+			api.EncodeResponse,
+			opts...,
+		), "password_reset_req").ServeHTTP)
 
-	mux.Patch("/users/:id/identity", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientIdentityEndpoint(svc),
-		decodeUpdateClientIdentity,
-		api.EncodeResponse,
-		opts...,
-	), "update_client_identity"))
+		r.Put("/password/reset", otelhttp.NewHandler(kithttp.NewServer(
+			passwordResetEndpoint(svc),
+			decodePasswordReset,
+			api.EncodeResponse,
+			opts...,
+		), "password_reset").ServeHTTP)
 
-	mux.Post("/password/reset-request", otelhttp.NewHandler(kithttp.NewServer(
-		passwordResetRequestEndpoint(svc),
-		decodePasswordResetRequest,
-		api.EncodeResponse,
-		opts...,
-	), "password_reset_req"))
+		r.Patch("/{id}/owner", otelhttp.NewHandler(kithttp.NewServer(
+			updateClientOwnerEndpoint(svc),
+			decodeUpdateClientOwner,
+			api.EncodeResponse,
+			opts...,
+		), "update_client_owner").ServeHTTP)
 
-	mux.Put("/password/reset", otelhttp.NewHandler(kithttp.NewServer(
-		passwordResetEndpoint(svc),
-		decodePasswordReset,
-		api.EncodeResponse,
-		opts...,
-	), "password_reset"))
+		r.Post("/tokens/issue", otelhttp.NewHandler(kithttp.NewServer(
+			issueTokenEndpoint(svc),
+			decodeCredentials,
+			api.EncodeResponse,
+			opts...,
+		), "issue_token").ServeHTTP)
 
-	mux.Patch("/users/:id/owner", otelhttp.NewHandler(kithttp.NewServer(
-		updateClientOwnerEndpoint(svc),
-		decodeUpdateClientOwner,
-		api.EncodeResponse,
-		opts...,
-	), "update_client_owner"))
+		r.Post("/tokens/refresh", otelhttp.NewHandler(kithttp.NewServer(
+			refreshTokenEndpoint(svc),
+			decodeRefreshToken,
+			api.EncodeResponse,
+			opts...,
+		), "refresh_token").ServeHTTP)
 
-	mux.Post("/users/tokens/issue", otelhttp.NewHandler(kithttp.NewServer(
-		issueTokenEndpoint(svc),
-		decodeCredentials,
-		api.EncodeResponse,
-		opts...,
-	), "issue_token"))
+		r.Post("/{id}/enable", otelhttp.NewHandler(kithttp.NewServer(
+			enableClientEndpoint(svc),
+			decodeChangeClientStatus,
+			api.EncodeResponse,
+			opts...,
+		), "enable_client").ServeHTTP)
 
-	mux.Post("/users/tokens/refresh", otelhttp.NewHandler(kithttp.NewServer(
-		refreshTokenEndpoint(svc),
-		decodeRefreshToken,
-		api.EncodeResponse,
-		opts...,
-	), "refresh_token"))
+		r.Post("/{id}/disable", otelhttp.NewHandler(kithttp.NewServer(
+			disableClientEndpoint(svc),
+			decodeChangeClientStatus,
+			api.EncodeResponse,
+			opts...,
+		), "disable_client").ServeHTTP)
+	})
 
-	mux.Post("/users/:id/enable", otelhttp.NewHandler(kithttp.NewServer(
-		enableClientEndpoint(svc),
-		decodeChangeClientStatus,
-		api.EncodeResponse,
-		opts...,
-	), "enable_client"))
-
-	mux.Post("/users/:id/disable", otelhttp.NewHandler(kithttp.NewServer(
-		disableClientEndpoint(svc),
-		decodeChangeClientStatus,
-		api.EncodeResponse,
-		opts...,
-	), "disable_client"))
-
-	mux.GetFunc("/health", mainflux.Health("users", instanceID))
-	mux.Handle("/metrics", promhttp.Handler())
-
-	return mux
+	return r
 }
 
 func decodeViewClient(_ context.Context, r *http.Request) (interface{}, error) {
 	req := viewClientReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "id"),
+		id:    chi.URLParam(r, "id"),
 	}
 
 	return req, nil
@@ -237,7 +226,7 @@ func decodeUpdateClient(_ context.Context, r *http.Request) (interface{}, error)
 	}
 	req := updateClientReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "id"),
+		id:    chi.URLParam(r, "id"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
@@ -252,7 +241,7 @@ func decodeUpdateClientTags(_ context.Context, r *http.Request) (interface{}, er
 	}
 	req := updateClientTagsReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "id"),
+		id:    chi.URLParam(r, "id"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
@@ -267,7 +256,7 @@ func decodeUpdateClientIdentity(_ context.Context, r *http.Request) (interface{}
 	}
 	req := updateClientIdentityReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "id"),
+		id:    chi.URLParam(r, "id"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
@@ -324,7 +313,7 @@ func decodeUpdateClientOwner(_ context.Context, r *http.Request) (interface{}, e
 	}
 	req := updateClientOwnerReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "id"),
+		id:    chi.URLParam(r, "id"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
@@ -371,62 +360,62 @@ func decodeCreateClientReq(_ context.Context, r *http.Request) (interface{}, err
 func decodeChangeClientStatus(_ context.Context, r *http.Request) (interface{}, error) {
 	req := changeClientStatusReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "id"),
+		id:    chi.URLParam(r, "id"),
 	}
 
 	return req, nil
 }
 
-func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	s, err := apiutil.ReadStringQuery(r, api.StatusKey, api.DefClientStatus)
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	o, err := apiutil.ReadNumQuery[uint64](r, api.OffsetKey, api.DefOffset)
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	l, err := apiutil.ReadNumQuery[uint64](r, api.LimitKey, api.DefLimit)
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	m, err := apiutil.ReadMetadataQuery(r, api.MetadataKey, nil)
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	n, err := apiutil.ReadStringQuery(r, api.NameKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	i, err := apiutil.ReadStringQuery(r, api.IdentityKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	t, err := apiutil.ReadStringQuery(r, api.TagKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	oid, err := apiutil.ReadStringQuery(r, api.OwnerKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	st, err := mfclients.ToStatus(s)
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	req := listMembersReq{
-		token: apiutil.ExtractBearerToken(r),
-		Page: mfclients.Page{
-			Status:   st,
-			Offset:   o,
-			Limit:    l,
-			Metadata: m,
-			Identity: i,
-			Name:     n,
-			Tag:      t,
-			Owner:    oid,
-		},
-		groupID: bone.GetValue(r, "groupID"),
-	}
-	return req, nil
-}
+// func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+// 	s, err := apiutil.ReadStringQuery(r, api.StatusKey, api.DefClientStatus)
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	o, err := apiutil.ReadNumQuery[uint64](r, api.OffsetKey, api.DefOffset)
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	l, err := apiutil.ReadNumQuery[uint64](r, api.LimitKey, api.DefLimit)
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	m, err := apiutil.ReadMetadataQuery(r, api.MetadataKey, nil)
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	n, err := apiutil.ReadStringQuery(r, api.NameKey, "")
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	i, err := apiutil.ReadStringQuery(r, api.IdentityKey, "")
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	t, err := apiutil.ReadStringQuery(r, api.TagKey, "")
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	oid, err := apiutil.ReadStringQuery(r, api.OwnerKey, "")
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	st, err := mfclients.ToStatus(s)
+// 	if err != nil {
+// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
+// 	}
+// 	req := listMembersReq{
+// 		token: apiutil.ExtractBearerToken(r),
+// 		Page: mfclients.Page{
+// 			Status:   st,
+// 			Offset:   o,
+// 			Limit:    l,
+// 			Metadata: m,
+// 			Identity: i,
+// 			Name:     n,
+// 			Tag:      t,
+// 			Owner:    oid,
+// 		},
+// 		groupID: chi.URLParam(r, "groupID"),
+// 	}
+// 	return req, nil
+// }

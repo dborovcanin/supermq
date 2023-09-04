@@ -154,6 +154,10 @@ github.com/gin-gonic/gin/binding
 github.com/gin-gonic/gin/internal/bytesconv
 github.com/gin-gonic/gin/internal/json
 github.com/gin-gonic/gin/render
+# github.com/go-chi/chi/v5 v5.0.10
+## explicit; go 1.14
+github.com/go-chi/chi/v5
+github.com/go-chi/chi/v5/middleware
 # github.com/go-gorp/gorp/v3 v3.1.0
 ## explicit; go 1.18
 github.com/go-gorp/gorp/v3
@@ -845,9 +849,6 @@ go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/inte
 # go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0
 ## explicit; go 1.19
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
-# go.opentelemetry.io/contrib/propagators/jaeger v1.17.0
-## explicit; go 1.19
-go.opentelemetry.io/contrib/propagators/jaeger
 # go.opentelemetry.io/otel v1.16.0
 ## explicit; go 1.19
 go.opentelemetry.io/otel

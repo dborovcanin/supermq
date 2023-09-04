@@ -5,11 +5,11 @@ definition thing {
     relation editor : user
     relation viewer: user
 
-    relation organization:organization
+    relation domain:domain
     relation channel: channel
     relation group: group
 
-    permission delete = owner + group->admin + organization->admin
+    permission delete = owner + group->admin + domain->admin
     permission edit = delete + editor + channel->edit + group->edit
     permission share = edit
     permission connect = share
@@ -23,10 +23,10 @@ definition channel {
     relation editor: user
     relation viewer: user
 
-    relation organization:organization
+    relation domain:domain
     relation group: group
 
-    permission delete = owner + organization->admin
+    permission delete = owner + domain->admin
     permission edit = editor + delete  + group->edit
     permission share = edit
     permission disconnect = share
@@ -39,7 +39,8 @@ definition group {
     relation editor: user
     relation viewer: user
 
-    relation parent_group: group  | organization
+    relation parent_group: group
+    relation domain: domain
 
     permission admin = administrator + parent_group->admin
     permission delete = admin
@@ -47,7 +48,7 @@ definition group {
     permission view = viewer +  edit + parent_group->view
 }
 
-definition organization {
+definition domain {
     relation administrator: user
     relation direct_member: user
     relation create: user

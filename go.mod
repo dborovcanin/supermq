@@ -11,6 +11,7 @@ require (
 	github.com/eclipse/paho.mqtt.golang v1.4.2
 	github.com/fatih/color v1.15.0
 	github.com/fiorix/go-smpp v0.0.0-20210403173735-2894b96e70ba
+	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-kit/kit v0.12.0
 	github.com/go-kit/log v0.2.1
 	github.com/go-redis/redis/v8 v8.11.5
@@ -55,7 +56,6 @@ require (
 	go.mongodb.org/mongo-driver v1.12.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0
-	go.opentelemetry.io/contrib/propagators/jaeger v1.17.0
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.16.0
 	go.opentelemetry.io/otel/sdk v1.16.0

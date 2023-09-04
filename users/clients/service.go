@@ -52,6 +52,7 @@ type Service interface {
 type service struct {
 	clients    postgres.Repository
 	idProvider mainflux.IDProvider
+	auth       mainflux.AuthServiceClient
 	hasher     Hasher
 	tokens     jwt.Repository
 	email      Emailer

@@ -12,8 +12,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-redis/redis/v8"
-	"github.com/go-zoo/bone"
 	"github.com/jmoiron/sqlx"
 	chclient "github.com/mainflux/callhome/pkg/client"
 	"github.com/mainflux/mainflux"
@@ -35,13 +35,12 @@ import (
 	"github.com/mainflux/mainflux/pkg/groups"
 	gpostgres "github.com/mainflux/mainflux/pkg/groups/postgres"
 	"github.com/mainflux/mainflux/pkg/uuid"
+	capi "github.com/mainflux/mainflux/users/api"
 	"github.com/mainflux/mainflux/users/clients"
-	capi "github.com/mainflux/mainflux/users/clients/api"
 	"github.com/mainflux/mainflux/users/clients/emailer"
 	uclients "github.com/mainflux/mainflux/users/clients/postgres"
 	ucache "github.com/mainflux/mainflux/users/clients/redis"
 	ctracing "github.com/mainflux/mainflux/users/clients/tracing"
-	ugapi "github.com/mainflux/mainflux/users/groups/api"
 	"github.com/mainflux/mainflux/users/hasher"
 	"github.com/mainflux/mainflux/users/jwt"
 	clientspg "github.com/mainflux/mainflux/users/postgres"
@@ -123,6 +122,7 @@ func main() {
 		return
 	}
 	defer db.Close()
+	fmt.Println("JG", cfg.JaegerURL, cfg.InstanceID, svcName)
 
 	tp, err := jaegerclient.NewProvider(svcName, cfg.JaegerURL, cfg.InstanceID)
 	if err != nil {
@@ -136,7 +136,7 @@ func main() {
 		}
 	}()
 	tracer := tp.Tracer(svcName)
-
+	fmt.Println("TRACER", trace.FlagsSampled)
 	// Setup new redis event store client
 	esClient, err := redisclient.Setup(envPrefixES)
 	if err != nil {
@@ -152,9 +152,8 @@ func main() {
 		exitCode = 1
 		return
 	}
-	mux := bone.New()
-	hsc := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, mux, logger, cfg.InstanceID), logger)
-	hsg := httpserver.New(ctx, cancel, svcName, httpServerConfig, ugapi.MakeHandler(gsvc, mux, logger), logger)
+	mux := chi.NewRouter()
+	httpSvc := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, gsvc, mux, logger, cfg.InstanceID), logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, mainflux.Version, logger, cancel)
@@ -162,14 +161,11 @@ func main() {
 	}
 
 	g.Go(func() error {
-		return hsc.Start()
-	})
-	g.Go(func() error {
-		return hsg.Start()
+		return httpSvc.Start()
 	})
 
 	g.Go(func() error {
-		return server.StopSignalHandler(ctx, cancel, logger, svcName, hsc, hsg)
+		return server.StopSignalHandler(ctx, cancel, logger, svcName, httpSvc)
 	})
 
 	if err := g.Wait(); err != nil {

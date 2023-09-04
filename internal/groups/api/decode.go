@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-zoo/bone"
+	"github.com/go-chi/chi/v5"
 	"github.com/mainflux/mainflux/internal/api"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
@@ -37,7 +37,7 @@ func DecodeListMembershipRequest(_ context.Context, r *http.Request) (interface{
 
 	req := listMembershipReq{
 		token:    apiutil.ExtractBearerToken(r),
-		clientID: bone.GetValue(r, "userID"),
+		clientID: chi.URLParam(r, "userID"),
 		Page: mfgroups.Page{
 			Level:     level,
 			ID:        parentID,
@@ -107,7 +107,7 @@ func DecodeListParentsRequest(_ context.Context, r *http.Request) (interface{}, 
 		tree:  tree,
 		Page: mfgroups.Page{
 			Level:     level,
-			ID:        bone.GetValue(r, "groupID"),
+			ID:        chi.URLParam(r, "groupID"),
 			PageMeta:  pm,
 			Direction: 1,
 		},
@@ -136,7 +136,7 @@ func DecodeListChildrenRequest(_ context.Context, r *http.Request) (interface{},
 		tree:  tree,
 		Page: mfgroups.Page{
 			Level:     level,
-			ID:        bone.GetValue(r, "groupID"),
+			ID:        chi.URLParam(r, "groupID"),
 			PageMeta:  pm,
 			Direction: -1,
 		},
@@ -165,7 +165,7 @@ func DecodeGroupUpdate(_ context.Context, r *http.Request) (interface{}, error) 
 		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
 	}
 	req := updateGroupReq{
-		id:    bone.GetValue(r, "groupID"),
+		id:    chi.URLParam(r, "groupID"),
 		token: apiutil.ExtractBearerToken(r),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -177,7 +177,7 @@ func DecodeGroupUpdate(_ context.Context, r *http.Request) (interface{}, error) 
 func DecodeGroupRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	req := groupReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "groupID"),
+		id:    chi.URLParam(r, "groupID"),
 	}
 	return req, nil
 }
@@ -185,7 +185,7 @@ func DecodeGroupRequest(_ context.Context, r *http.Request) (interface{}, error)
 func DecodeChangeGroupStatus(_ context.Context, r *http.Request) (interface{}, error) {
 	req := changeGroupStatusReq{
 		token: apiutil.ExtractBearerToken(r),
-		id:    bone.GetValue(r, "groupID"),
+		id:    chi.URLParam(r, "groupID"),
 	}
 	return req, nil
 }

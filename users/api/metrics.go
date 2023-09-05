@@ -9,20 +9,20 @@ import (
 
 	"github.com/go-kit/kit/metrics"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 	"github.com/mainflux/mainflux/users/jwt"
 )
 
-var _ clients.Service = (*metricsMiddleware)(nil)
+var _ users.Service = (*metricsMiddleware)(nil)
 
 type metricsMiddleware struct {
 	counter metrics.Counter
 	latency metrics.Histogram
-	svc     clients.Service
+	svc     users.Service
 }
 
 // MetricsMiddleware instruments policies service by tracking request count and latency.
-func MetricsMiddleware(svc clients.Service, counter metrics.Counter, latency metrics.Histogram) clients.Service {
+func MetricsMiddleware(svc users.Service, counter metrics.Counter, latency metrics.Histogram) users.Service {
 	return &metricsMiddleware{
 		counter: counter,
 		latency: latency,

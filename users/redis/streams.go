@@ -9,7 +9,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	mfredis "github.com/mainflux/mainflux/internal/clients/redis"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 	"github.com/mainflux/mainflux/users/jwt"
 )
 
@@ -18,17 +18,17 @@ const (
 	streamLen = 1000
 )
 
-var _ clients.Service = (*eventStore)(nil)
+var _ users.Service = (*eventStore)(nil)
 
 type eventStore struct {
 	mfredis.Publisher
-	svc    clients.Service
+	svc    users.Service
 	client *redis.Client
 }
 
 // NewEventStoreMiddleware returns wrapper around users service that sends
 // events to event store.
-func NewEventStoreMiddleware(ctx context.Context, svc clients.Service, client *redis.Client) clients.Service {
+func NewEventStoreMiddleware(ctx context.Context, svc users.Service, client *redis.Client) users.Service {
 	es := eventStore{
 		svc:       svc,
 		client:    client,

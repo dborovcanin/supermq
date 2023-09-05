@@ -1,7 +1,7 @@
 // Copyright (c) Mainflux
 // SPDX-License-Identifier: Apache-2.0
 
-package clients
+package users
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/users/clients/postgres"
 	"github.com/mainflux/mainflux/users/jwt"
+	"github.com/mainflux/mainflux/users/postgres"
 )
 
 const (

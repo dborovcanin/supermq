@@ -7,21 +7,21 @@ import (
 	"context"
 
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 	"github.com/mainflux/mainflux/users/jwt"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
-var _ clients.Service = (*tracingMiddleware)(nil)
+var _ users.Service = (*tracingMiddleware)(nil)
 
 type tracingMiddleware struct {
 	tracer trace.Tracer
-	svc    clients.Service
+	svc    users.Service
 }
 
 // New returns a new group service with tracing capabilities.
-func New(svc clients.Service, tracer trace.Tracer) clients.Service {
+func New(svc users.Service, tracer trace.Tracer) users.Service {
 	return &tracingMiddleware{tracer, svc}
 }
 

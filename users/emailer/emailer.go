@@ -7,10 +7,10 @@ import (
 	"fmt"
 
 	"github.com/mainflux/mainflux/internal/email"
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 )
 
-var _ clients.Emailer = (*emailer)(nil)
+var _ users.Emailer = (*emailer)(nil)
 
 type emailer struct {
 	resetURL string
@@ -18,7 +18,7 @@ type emailer struct {
 }
 
 // New creates new emailer utility.
-func New(url string, c *email.Config) (clients.Emailer, error) {
+func New(url string, c *email.Config) (users.Emailer, error) {
 	e, err := email.New(c)
 	return &emailer{resetURL: url, agent: e}, err
 }

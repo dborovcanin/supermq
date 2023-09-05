@@ -10,10 +10,10 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 )
 
-func registrationEndpoint(svc clients.Service) endpoint.Endpoint {
+func registrationEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(createClientReq)
 		if err := req.validate(); err != nil {
@@ -32,7 +32,7 @@ func registrationEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func viewClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func viewClientEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(viewClientReq)
 		if err := req.validate(); err != nil {
@@ -47,7 +47,7 @@ func viewClientEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func viewProfileEndpoint(svc clients.Service) endpoint.Endpoint {
+func viewProfileEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(viewProfileReq)
 		if err := req.validate(); err != nil {
@@ -64,7 +64,7 @@ func viewProfileEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func listClientsEndpoint(svc clients.Service) endpoint.Endpoint {
+func listClientsEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listClientsReq)
 		if err := req.validate(); err != nil {
@@ -103,7 +103,7 @@ func listClientsEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func listMembersEndpoint(svc clients.Service) endpoint.Endpoint {
+func listMembersEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listMembersReq)
 		if err := req.validate(); err != nil {
@@ -117,7 +117,7 @@ func listMembersEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientReq)
 		if err := req.validate(); err != nil {
@@ -137,7 +137,7 @@ func updateClientEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientTagsEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientTagsEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientTagsReq)
 		if err := req.validate(); err != nil {
@@ -156,7 +156,7 @@ func updateClientTagsEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientIdentityEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientIdentityEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientIdentityReq)
 		if err := req.validate(); err != nil {
@@ -180,7 +180,7 @@ func updateClientIdentityEndpoint(svc clients.Service) endpoint.Endpoint {
 // When user clicks on a link it should get the ui with form to
 // enter new password, when form is submitted token and new password
 // must be sent as PUT request to 'password/reset' passwordResetEndpoint.
-func passwordResetRequestEndpoint(svc clients.Service) endpoint.Endpoint {
+func passwordResetRequestEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(passwResetReq)
 		if err := req.validate(); err != nil {
@@ -197,7 +197,7 @@ func passwordResetRequestEndpoint(svc clients.Service) endpoint.Endpoint {
 // This is endpoint that actually sets new password in password reset flow.
 // When user clicks on a link in email finally ends on this endpoint as explained in
 // the comment above.
-func passwordResetEndpoint(svc clients.Service) endpoint.Endpoint {
+func passwordResetEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(resetTokenReq)
 		if err := req.validate(); err != nil {
@@ -210,7 +210,7 @@ func passwordResetEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientSecretEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientSecretEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientSecretReq)
 		if err := req.validate(); err != nil {
@@ -224,7 +224,7 @@ func updateClientSecretEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientOwnerEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientOwnerEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientOwnerReq)
 		if err := req.validate(); err != nil {
@@ -244,7 +244,7 @@ func updateClientOwnerEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func issueTokenEndpoint(svc clients.Service) endpoint.Endpoint {
+func issueTokenEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(loginClientReq)
 		if err := req.validate(); err != nil {
@@ -263,7 +263,7 @@ func issueTokenEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func refreshTokenEndpoint(svc clients.Service) endpoint.Endpoint {
+func refreshTokenEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(tokenReq)
 		if err := req.validate(); err != nil {
@@ -283,7 +283,7 @@ func refreshTokenEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func enableClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func enableClientEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(changeClientStatusReq)
 		if err := req.validate(); err != nil {
@@ -297,7 +297,7 @@ func enableClientEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func disableClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func disableClientEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(changeClientStatusReq)
 		if err := req.validate(); err != nil {

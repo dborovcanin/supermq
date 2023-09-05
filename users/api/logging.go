@@ -10,19 +10,19 @@ import (
 
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 	"github.com/mainflux/mainflux/users/jwt"
 )
 
-var _ clients.Service = (*loggingMiddleware)(nil)
+var _ users.Service = (*loggingMiddleware)(nil)
 
 type loggingMiddleware struct {
 	logger mflog.Logger
-	svc    clients.Service
+	svc    users.Service
 }
 
 // LoggingMiddleware adds logging facilities to the clients service.
-func LoggingMiddleware(svc clients.Service, logger mflog.Logger) clients.Service {
+func LoggingMiddleware(svc users.Service, logger mflog.Logger) users.Service {
 	return &loggingMiddleware{logger, svc}
 }
 

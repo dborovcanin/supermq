@@ -35,15 +35,14 @@ import (
 	"github.com/mainflux/mainflux/pkg/groups"
 	gpostgres "github.com/mainflux/mainflux/pkg/groups/postgres"
 	"github.com/mainflux/mainflux/pkg/uuid"
+	"github.com/mainflux/mainflux/users"
 	capi "github.com/mainflux/mainflux/users/api"
-	"github.com/mainflux/mainflux/users/clients"
-	"github.com/mainflux/mainflux/users/clients/emailer"
-	uclients "github.com/mainflux/mainflux/users/clients/postgres"
-	ucache "github.com/mainflux/mainflux/users/clients/redis"
-	ctracing "github.com/mainflux/mainflux/users/clients/tracing"
+	"github.com/mainflux/mainflux/users/emailer"
 	"github.com/mainflux/mainflux/users/hasher"
 	"github.com/mainflux/mainflux/users/jwt"
 	clientspg "github.com/mainflux/mainflux/users/postgres"
+	ucache "github.com/mainflux/mainflux/users/redis"
+	ctracing "github.com/mainflux/mainflux/users/tracing"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 )
@@ -173,9 +172,9 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (clients.Service, groups.Service) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (users.Service, groups.Service) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
-	cRepo := uclients.NewRepository(database)
+	cRepo := clientspg.NewRepository(database)
 	gRepo := gpostgres.New(database)
 
 	idp := uuid.New()
@@ -195,7 +194,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esCl
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
-	csvc := clients.NewService(cRepo, tokenizer, emailer, hsr, idp, c.PassRegex)
+	csvc := users.NewService(cRepo, tokenizer, emailer, hsr, idp, c.PassRegex)
 	gsvc := mfgroups.NewService(gRepo, idp)
 
 	csvc = ucache.NewEventStoreMiddleware(ctx, csvc, esClient)
@@ -217,7 +216,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esCl
 	return csvc, gsvc
 }
 
-func createAdmin(ctx context.Context, c config, crepo uclients.Repository, hsr clients.Hasher, svc clients.Service) error {
+func createAdmin(ctx context.Context, c config, crepo clientspg.Repository, hsr users.Hasher, svc users.Service) error {
 	id, err := uuid.New().ID()
 	if err != nil {
 		return err

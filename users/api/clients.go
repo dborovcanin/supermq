@@ -16,12 +16,12 @@ import (
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func clientsHandler(svc clients.Service, r *chi.Mux, logger mflog.Logger) http.Handler {
+func clientsHandler(svc users.Service, r *chi.Mux, logger mflog.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}

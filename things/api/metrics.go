@@ -9,19 +9,19 @@ import (
 
 	"github.com/go-kit/kit/metrics"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
-	"github.com/mainflux/mainflux/things/clients"
+	"github.com/mainflux/mainflux/things"
 )
 
-var _ clients.Service = (*metricsMiddleware)(nil)
+var _ things.Service = (*metricsMiddleware)(nil)
 
 type metricsMiddleware struct {
 	counter metrics.Counter
 	latency metrics.Histogram
-	svc     clients.Service
+	svc     things.Service
 }
 
 // MetricsMiddleware returns a new metrics middleware wrapper.
-func MetricsMiddleware(svc clients.Service, counter metrics.Counter, latency metrics.Histogram) clients.Service {
+func MetricsMiddleware(svc things.Service, counter metrics.Counter, latency metrics.Histogram) things.Service {
 	return &metricsMiddleware{
 		counter: counter,
 		latency: latency,

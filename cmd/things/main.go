@@ -33,18 +33,17 @@ import (
 	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/pkg/uuid"
+	"github.com/mainflux/mainflux/things"
 	capi "github.com/mainflux/mainflux/things/api"
-	"github.com/mainflux/mainflux/things/clients"
-	cpostgres "github.com/mainflux/mainflux/things/clients/postgres"
-	thcache "github.com/mainflux/mainflux/things/clients/redis"
-	localusers "github.com/mainflux/mainflux/things/clients/standalone"
-	ctracing "github.com/mainflux/mainflux/things/clients/tracing"
 	tpolicies "github.com/mainflux/mainflux/things/policies"
 	papi "github.com/mainflux/mainflux/things/policies/api"
 	ppostgres "github.com/mainflux/mainflux/things/policies/postgres"
 	pcache "github.com/mainflux/mainflux/things/policies/redis"
 	ppracing "github.com/mainflux/mainflux/things/policies/tracing"
 	thingspg "github.com/mainflux/mainflux/things/postgres"
+	thcache "github.com/mainflux/mainflux/things/redis"
+	localusers "github.com/mainflux/mainflux/things/standalone"
+	ctracing "github.com/mainflux/mainflux/things/tracing"
 	upolicies "github.com/mainflux/mainflux/users/policies"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
@@ -207,9 +206,9 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth upolicies.AuthServiceClient, cacheClient *redis.Client, esClient *redis.Client, keyDuration string, tracer trace.Tracer, logger mflog.Logger) (clients.Service, groups.Service, tpolicies.Service) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth upolicies.AuthServiceClient, cacheClient *redis.Client, esClient *redis.Client, keyDuration string, tracer trace.Tracer, logger mflog.Logger) (things.Service, groups.Service, tpolicies.Service) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
-	cRepo := cpostgres.NewRepository(database)
+	cRepo := thingspg.NewRepository(database)
 	gRepo := gpostgres.New(database)
 	pRepo := ppostgres.NewRepository(database)
 
@@ -224,7 +223,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 	thingCache := thcache.NewCache(cacheClient, kDuration)
 
 	psvc := tpolicies.NewService(auth, pRepo, policyCache, idp)
-	csvc := clients.NewService(auth, psvc, cRepo, gRepo, thingCache, idp)
+	csvc := things.NewService(auth, psvc, cRepo, gRepo, thingCache, idp)
 	gsvc := mfgroups.NewService(gRepo, idp)
 
 	csvc = thcache.NewEventStoreMiddleware(ctx, csvc, esClient)

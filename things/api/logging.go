@@ -10,17 +10,17 @@ import (
 
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
-	"github.com/mainflux/mainflux/things/clients"
+	"github.com/mainflux/mainflux/things"
 )
 
-var _ clients.Service = (*loggingMiddleware)(nil)
+var _ things.Service = (*loggingMiddleware)(nil)
 
 type loggingMiddleware struct {
 	logger mflog.Logger
-	svc    clients.Service
+	svc    things.Service
 }
 
-func LoggingMiddleware(svc clients.Service, logger mflog.Logger) clients.Service {
+func LoggingMiddleware(svc things.Service, logger mflog.Logger) things.Service {
 	return &loggingMiddleware{logger, svc}
 }
 

@@ -1,7 +1,7 @@
 // Copyright (c) Mainflux
 // SPDX-License-Identifier: Apache-2.0
 
-package clients_test
+package things_test
 
 // import (
 // 	"context"

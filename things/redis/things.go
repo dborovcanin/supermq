@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/things/clients"
+	"github.com/mainflux/mainflux/things"
 )
 
 const (
@@ -18,7 +18,7 @@ const (
 	idPrefix  = "thing_id"
 )
 
-var _ clients.Cache = (*thingCache)(nil)
+var _ things.Cache = (*thingCache)(nil)
 
 type thingCache struct {
 	client      *redis.Client
@@ -26,7 +26,7 @@ type thingCache struct {
 }
 
 // NewCache returns redis thing cache implementation.
-func NewCache(client *redis.Client, duration time.Duration) clients.Cache {
+func NewCache(client *redis.Client, duration time.Duration) things.Cache {
 	return &thingCache{
 		client:      client,
 		keyDuration: duration,

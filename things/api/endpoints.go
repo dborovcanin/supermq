@@ -10,10 +10,10 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/things/clients"
+	"github.com/mainflux/mainflux/things"
 )
 
-func createClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func createClientEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(createClientReq)
 		if err := req.validate(); err != nil {
@@ -32,7 +32,7 @@ func createClientEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func createClientsEndpoint(svc clients.Service) endpoint.Endpoint {
+func createClientsEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(createClientsReq)
 		if err := req.validate(); err != nil {
@@ -55,7 +55,7 @@ func createClientsEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func viewClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func viewClientEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(viewClientReq)
 		if err := req.validate(); err != nil {
@@ -70,7 +70,7 @@ func viewClientEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func listClientsEndpoint(svc clients.Service) endpoint.Endpoint {
+func listClientsEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listClientsReq)
 		if err := req.validate(); err != nil {
@@ -108,7 +108,7 @@ func listClientsEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func listMembersEndpoint(svc clients.Service) endpoint.Endpoint {
+func listMembersEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listMembersReq)
 		if err := req.validate(); err != nil {
@@ -122,7 +122,7 @@ func listMembersEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientReq)
 		if err := req.validate(); err != nil {
@@ -142,7 +142,7 @@ func updateClientEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientTagsEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientTagsEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientTagsReq)
 		if err := req.validate(); err != nil {
@@ -161,7 +161,7 @@ func updateClientTagsEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientSecretEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientSecretEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientCredentialsReq)
 		if err := req.validate(); err != nil {
@@ -175,7 +175,7 @@ func updateClientSecretEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func updateClientOwnerEndpoint(svc clients.Service) endpoint.Endpoint {
+func updateClientOwnerEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(updateClientOwnerReq)
 		if err := req.validate(); err != nil {
@@ -195,7 +195,7 @@ func updateClientOwnerEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func enableClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func enableClientEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(changeClientStatusReq)
 		if err := req.validate(); err != nil {
@@ -209,7 +209,7 @@ func enableClientEndpoint(svc clients.Service) endpoint.Endpoint {
 	}
 }
 
-func disableClientEndpoint(svc clients.Service) endpoint.Endpoint {
+func disableClientEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(changeClientStatusReq)
 		if err := req.validate(); err != nil {

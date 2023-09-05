@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strings"
 
-	kitot "github.com/go-kit/kit/tracing/opentracing"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/go-zoo/bone"
 	"github.com/mainflux/mainflux"
@@ -17,32 +16,31 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/opentracing/opentracing-go"
 )
 
 const contentType = "application/json"
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc auth.Service, mux *bone.Mux, tracer opentracing.Tracer, logger logger.Logger) *bone.Mux {
+func MakeHandler(svc auth.Service, mux *bone.Mux, logger logger.Logger) *bone.Mux {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, encodeError)),
 	}
 	mux.Post("/keys", kithttp.NewServer(
-		kitot.TraceServer(tracer, "issue")(issueEndpoint(svc)),
+		issueEndpoint(svc),
 		decodeIssue,
 		encodeResponse,
 		opts...,
 	))
 
 	mux.Get("/keys/:id", kithttp.NewServer(
-		kitot.TraceServer(tracer, "retrieve")(retrieveEndpoint(svc)),
+		(retrieveEndpoint(svc)),
 		decodeKeyReq,
 		encodeResponse,
 		opts...,
 	))
 
 	mux.Delete("/keys/:id", kithttp.NewServer(
-		kitot.TraceServer(tracer, "revoke")(revokeEndpoint(svc)),
+		(revokeEndpoint(svc)),
 		decodeKeyReq,
 		encodeResponse,
 		opts...,

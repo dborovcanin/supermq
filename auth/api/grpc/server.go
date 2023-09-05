@@ -6,14 +6,12 @@ package grpc
 import (
 	"context"
 
-	kitot "github.com/go-kit/kit/tracing/opentracing"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"github.com/golang/protobuf/ptypes/empty"
 	mainflux "github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/auth"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/pkg/errors"
-	opentracing "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -37,70 +35,70 @@ type grpcServer struct {
 }
 
 // NewServer returns new AuthServiceServer instance.
-func NewServer(tracer opentracing.Tracer, svc auth.Service) mainflux.AuthServiceServer {
+func NewServer(svc auth.Service) mainflux.AuthServiceServer {
 	return &grpcServer{
 		issue: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "issue")(issueEndpoint(svc)),
+			(issueEndpoint(svc)),
 			decodeIssueRequest,
 			encodeIssueResponse,
 		),
 		identify: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "identify")(identifyEndpoint(svc)),
+			(identifyEndpoint(svc)),
 			decodeIdentifyRequest,
 			encodeIdentifyResponse,
 		),
 		authorize: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "authorize")(authorizeEndpoint(svc)),
+			(authorizeEndpoint(svc)),
 			decodeAuthorizeRequest,
 			encodeAuthorizeResponse,
 		),
 		addPolicy: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "add_policy")(addPolicyEndpoint(svc)),
+			(addPolicyEndpoint(svc)),
 			decodeAddPolicyRequest,
 			encodeAddPolicyResponse,
 		),
 		deletePolicy: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "delete_policy")(deletePolicyEndpoint(svc)),
+			(deletePolicyEndpoint(svc)),
 			decodeDeletePolicyRequest,
 			encodeDeletePolicyResponse,
 		),
 		listObjects: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "list_objects")(listObjectsEndpoint(svc)),
+			(listObjectsEndpoint(svc)),
 			decodeListObjectsRequest,
 			encodeListObjectsResponse,
 		),
 		listAllObjects: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "list_all_objects")(listAllObjectsEndpoint(svc)),
+			(listAllObjectsEndpoint(svc)),
 			decodeListObjectsRequest,
 			encodeListObjectsResponse,
 		),
 		countObjects: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "count_objects")(countObjectsEndpoint(svc)),
+			(countObjectsEndpoint(svc)),
 			decodeCountObjectsRequest,
 			encodeCountObjectsResponse,
 		),
 		listSubjects: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "list_subjects")(listSubjectsEndpoint(svc)),
+			(listSubjectsEndpoint(svc)),
 			decodeListSubjectsRequest,
 			encodeListSubjectsResponse,
 		),
 		listAllSubjects: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "list_all_subjects")(listAllSubjectsEndpoint(svc)),
+			(listAllSubjectsEndpoint(svc)),
 			decodeListSubjectsRequest,
 			encodeListSubjectsResponse,
 		),
 		countSubjects: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "count_subjects")(countSubjectsEndpoint(svc)),
+			(countSubjectsEndpoint(svc)),
 			decodeCountSubjectsRequest,
 			encodeCountSubjectsResponse,
 		),
 		assign: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "assign")(assignEndpoint(svc)),
+			(assignEndpoint(svc)),
 			decodeAssignRequest,
 			encodeEmptyResponse,
 		),
 		members: kitgrpc.NewServer(
-			kitot.TraceServer(tracer, "members")(membersEndpoint(svc)),
+			(membersEndpoint(svc)),
 			decodeMembersRequest,
 			encodeMembersResponse,
 		),

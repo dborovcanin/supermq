@@ -17,6 +17,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	chclient "github.com/mainflux/callhome/pkg/client"
 	"github.com/mainflux/mainflux"
+	authapi "github.com/mainflux/mainflux/auth/api/grpc"
 	"github.com/mainflux/mainflux/internal"
 	jaegerclient "github.com/mainflux/mainflux/internal/clients/jaeger"
 	pgclient "github.com/mainflux/mainflux/internal/clients/postgres"
@@ -30,6 +31,7 @@ import (
 	"github.com/mainflux/mainflux/internal/postgres"
 	"github.com/mainflux/mainflux/internal/server"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
+	"github.com/mainflux/mainflux/logger"
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/groups"
@@ -45,6 +47,9 @@ import (
 	ctracing "github.com/mainflux/mainflux/users/tracing"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -71,6 +76,10 @@ type config struct {
 	SendTelemetry   bool   `env:"MF_SEND_TELEMETRY"               envDefault:"true"`
 	InstanceID      string `env:"MF_USERS_INSTANCE_ID"            envDefault:""`
 	PassRegex       *regexp.Regexp
+	AuthTLS         bool
+	AuthCACerts     string
+	AuthURL         string        `env:"MF_AUTH_GRPC_URL" envDefault:"auth"`
+	AuthTimeout     time.Duration `env:"MF_AUTH_GRPC_TIMEOUT" envDfault:"1s"`
 }
 
 func main() {
@@ -135,7 +144,6 @@ func main() {
 		}
 	}()
 	tracer := tp.Tracer(svcName)
-	fmt.Println("TRACER", trace.FlagsSampled)
 	// Setup new redis event store client
 	esClient, err := redisclient.Setup(envPrefixES)
 	if err != nil {
@@ -194,7 +202,11 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esCl
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
-	csvc := users.NewService(cRepo, tokenizer, emailer, hsr, idp, c.PassRegex)
+	auth, close := connectToAuth(c, logger)
+	if close != nil {
+		defer close()
+	}
+	csvc := users.NewService(cRepo, auth, tokenizer, emailer, hsr, idp, c.PassRegex)
 	gsvc := mfgroups.NewService(gRepo, idp)
 
 	csvc = ucache.NewEventStoreMiddleware(ctx, csvc, esClient)
@@ -255,4 +267,30 @@ func createAdmin(ctx context.Context, c config, crepo clientspg.Repository, hsr 
 	}
 
 	return nil
+}
+
+func connectToAuth(cfg config, logger logger.Logger) (mainflux.AuthServiceClient, func() error) {
+	var opts []grpc.DialOption
+	if cfg.AuthTLS {
+		if cfg.AuthCACerts != "" {
+			tpc, err := credentials.NewClientTLSFromFile(cfg.AuthCACerts, "")
+			if err != nil {
+				logger.Error(fmt.Sprintf("Failed to create tls credentials: %s", err))
+				os.Exit(1)
+			}
+			opts = append(opts, grpc.WithTransportCredentials(tpc))
+		}
+	} else {
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		logger.Info("gRPC communication is not encrypted")
+	}
+	fmt.Println("URL:", cfg.AuthURL)
+	conn, err := grpc.Dial(cfg.AuthURL, opts...)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Failed to connect to auth service: %s", err))
+		os.Exit(1)
+	}
+	fmt.Println("AUTH URL:", cfg.AuthURL)
+
+	return authapi.NewClient(conn, cfg.AuthTimeout), conn.Close
 }

@@ -59,10 +59,11 @@ type service struct {
 	passRegex  *regexp.Regexp
 }
 
-// NewService returns a new Clients service implementation.
-func NewService(c postgres.Repository, t jwt.Repository, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
+// NewService returns a new Users service implementation.
+func NewService(c postgres.Repository, a mainflux.AuthServiceClient, t jwt.Repository, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
 	return service{
 		clients:    c,
+		auth:       a,
 		hasher:     h,
 		tokens:     t,
 		email:      e,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -12,6 +11,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	grpcapi "github.com/mainflux/mainflux/auth/api/grpc"
 
 	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
@@ -128,10 +129,7 @@ func main() {
 
 	db := connectToDB(cfg.dbConfig, logger)
 	defer db.Close()
-
-	tracer, closer := initJaeger("auth", cfg.jaegerURL, logger)
-	defer closer.Close()
-
+	fmt.Println("JURL:", cfg.jaegerURL)
 	dbTracer, dbCloser := initJaeger("auth_db", cfg.jaegerURL, logger)
 	defer dbCloser.Close()
 
@@ -146,8 +144,8 @@ func main() {
 	svc := newService(db, dbTracer, cfg.secret, logger, readerConn, writerConn, spicedbclient, cfg.loginDuration)
 	errs := make(chan error, 2)
 
-	go startHTTPServer(tracer, svc, cfg.httpPort, cfg.serverCert, cfg.serverKey, logger, errs)
-	go startGRPCServer(tracer, svc, cfg.grpcPort, cfg.serverCert, cfg.serverKey, logger, errs)
+	go startHTTPServer(svc, cfg.httpPort, cfg.serverCert, cfg.serverKey, logger, errs)
+	go startGRPCServer(svc, cfg.grpcPort, cfg.serverCert, cfg.serverKey, logger, errs)
 
 	go func() {
 		c := make(chan os.Signal)
@@ -201,7 +199,7 @@ func loadConfig() config {
 
 func initJaeger(svcName, url string, logger logger.Logger) (opentracing.Tracer, io.Closer) {
 	if url == "" {
-		return opentracing.NoopTracer{}, ioutil.NopCloser(nil)
+		return opentracing.NoopTracer{}, io.NopCloser(nil)
 	}
 
 	tracer, closer, err := jconfig.Configuration{
@@ -311,19 +309,19 @@ func newService(db *sqlx.DB, tracer opentracing.Tracer, secret string, logger lo
 	return svc
 }
 
-func startHTTPServer(tracer opentracing.Tracer, svc auth.Service, port string, certFile string, keyFile string, logger logger.Logger, errs chan error) {
+func startHTTPServer(svc auth.Service, port, certFile, keyFile string, logger logger.Logger, errs chan error) {
 	p := fmt.Sprintf(":%s", port)
 	if certFile != "" || keyFile != "" {
 		logger.Info(fmt.Sprintf("Authentication service started using https, cert %s key %s, exposed port %s", certFile, keyFile, port))
-		errs <- http.ListenAndServeTLS(p, certFile, keyFile, httpapi.MakeHandler(svc, tracer, logger))
+		errs <- http.ListenAndServeTLS(p, certFile, keyFile, httpapi.MakeHandler(svc, logger))
 		return
 	}
 	logger.Info(fmt.Sprintf("Authentication service started using http, exposed port %s", port))
-	errs <- http.ListenAndServe(p, httpapi.MakeHandler(svc, tracer, logger))
+	errs <- http.ListenAndServe(p, httpapi.MakeHandler(svc, logger))
 
 }
 
-func startGRPCServer(tracer opentracing.Tracer, svc auth.Service, port string, certFile string, keyFile string, logger logger.Logger, errs chan error) {
+func startGRPCServer(svc auth.Service, port string, certFile string, keyFile string, logger logger.Logger, errs chan error) {
 	p := fmt.Sprintf(":%s", port)
 	listener, err := net.Listen("tcp", p)
 	if err != nil {
@@ -344,7 +342,7 @@ func startGRPCServer(tracer opentracing.Tracer, svc auth.Service, port string, c
 		server = grpc.NewServer()
 	}
 
-	// mainflux.RegisterAuthServiceServer(server, grpcapi.NewServer(tracer, svc)) // TODO:fix
+	mainflux.RegisterAuthServiceServer(server, grpcapi.NewServer(svc))
 	logger.Info(fmt.Sprintf("Authentication gRPC service started, exposed port %s", port))
 	errs <- server.Serve(listener)
 }

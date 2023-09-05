@@ -8,11 +8,9 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
-	kitot "github.com/go-kit/kit/tracing/opentracing"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/mainflux/mainflux"
-	opentracing "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
 )
 
@@ -38,112 +36,112 @@ type grpcClient struct {
 }
 
 // NewClient returns new gRPC client instance.
-func NewClient(tracer opentracing.Tracer, conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthServiceClient {
+func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthServiceClient {
 	return &grpcClient{
-		issue: kitot.TraceClient(tracer, "issue")(kitgrpc.NewClient(
+		issue: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"Issue",
 			encodeIssueRequest,
 			decodeIssueResponse,
 			mainflux.UserIdentity{},
-		).Endpoint()),
-		identify: kitot.TraceClient(tracer, "identify")(kitgrpc.NewClient(
+		).Endpoint(),
+		identify: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"Identify",
 			encodeIdentifyRequest,
 			decodeIdentifyResponse,
 			mainflux.UserIdentity{},
-		).Endpoint()),
-		authorize: kitot.TraceClient(tracer, "authorize")(kitgrpc.NewClient(
+		).Endpoint(),
+		authorize: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"Authorize",
 			encodeAuthorizeRequest,
 			decodeAuthorizeResponse,
 			mainflux.AuthorizeRes{},
-		).Endpoint()),
-		addPolicy: kitot.TraceClient(tracer, "add_policy")(kitgrpc.NewClient(
+		).Endpoint(),
+		addPolicy: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"AddPolicy",
 			encodeAddPolicyRequest,
 			decodeAddPolicyResponse,
 			mainflux.AddPolicyRes{},
-		).Endpoint()),
-		deletePolicy: kitot.TraceClient(tracer, "delete_policy")(kitgrpc.NewClient(
+		).Endpoint(),
+		deletePolicy: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"DeletePolicy",
 			encodeDeletePolicyRequest,
 			decodeDeletePolicyResponse,
 			mainflux.DeletePolicyRes{},
-		).Endpoint()),
-		listObjects: kitot.TraceClient(tracer, "list_objects")(kitgrpc.NewClient(
+		).Endpoint(),
+		listObjects: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"ListObjects",
 			encodeListObjectsRequest,
 			decodeListObjectsResponse,
 			mainflux.ListObjectsRes{},
-		).Endpoint()),
-		listAllObjects: kitot.TraceClient(tracer, "list_all_objects")(kitgrpc.NewClient(
+		).Endpoint(),
+		listAllObjects: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"ListAllObjects",
 			encodeListObjectsRequest,
 			decodeListObjectsResponse,
 			mainflux.ListObjectsRes{},
-		).Endpoint()),
-		countObjects: kitot.TraceClient(tracer, "count_objects")(kitgrpc.NewClient(
+		).Endpoint(),
+		countObjects: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"CountObjects",
 			encodeCountObjectsRequest,
 			decodeCountObjectsResponse,
 			mainflux.CountObjectsRes{},
-		).Endpoint()),
-		listSubjects: kitot.TraceClient(tracer, "list_subjects")(kitgrpc.NewClient(
+		).Endpoint(),
+		listSubjects: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"ListSubjects",
 			encodeListSubjectsRequest,
 			decodeListSubjectsResponse,
 			mainflux.ListSubjectsRes{},
-		).Endpoint()),
-		listAllSubjects: kitot.TraceClient(tracer, "list_all_subjects")(kitgrpc.NewClient(
+		).Endpoint(),
+		listAllSubjects: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"ListAllSubjects",
 			encodeListSubjectsRequest,
 			decodeListSubjectsResponse,
 			mainflux.ListSubjectsRes{},
-		).Endpoint()),
-		countSubjects: kitot.TraceClient(tracer, "count_subjects")(kitgrpc.NewClient(
+		).Endpoint(),
+		countSubjects: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"CountSubjects",
 			encodeCountSubjectsRequest,
 			decodeCountSubjectsResponse,
 			mainflux.CountSubjectsRes{},
-		).Endpoint()),
-		assign: kitot.TraceClient(tracer, "assign")(kitgrpc.NewClient(
+		).Endpoint(),
+		assign: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"Assign",
 			encodeAssignRequest,
 			decodeAssignResponse,
 			mainflux.AuthorizeRes{},
-		).Endpoint()),
-		members: kitot.TraceClient(tracer, "members")(kitgrpc.NewClient(
+		).Endpoint(),
+		members: kitgrpc.NewClient(
 			conn,
 			svcName,
 			"Members",
 			encodeMembersRequest,
 			decodeMembersResponse,
 			mainflux.MembersRes{},
-		).Endpoint()),
+		).Endpoint(),
 
 		timeout: timeout,
 	}

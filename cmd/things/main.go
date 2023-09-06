@@ -140,6 +140,7 @@ func main() {
 	defer esclient.Close()
 
 	var auth upolicies.AuthServiceClient
+
 	switch cfg.StandaloneID != "" && cfg.StandaloneToken != "" {
 	case true:
 		auth = localusers.NewAuthService(cfg.StandaloneID, cfg.StandaloneToken)

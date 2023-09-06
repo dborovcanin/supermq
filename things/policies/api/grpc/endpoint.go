@@ -9,7 +9,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/things/clients"
+	"github.com/mainflux/mainflux/things"
 	"github.com/mainflux/mainflux/things/policies"
 )
 
@@ -34,7 +34,7 @@ func authorizeEndpoint(svc policies.Service) endpoint.Endpoint {
 	}
 }
 
-func identifyEndpoint(svc clients.Service) endpoint.Endpoint {
+func identifyEndpoint(svc things.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(identifyReq)
 		if err := req.validate(); err != nil {

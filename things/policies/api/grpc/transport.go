@@ -9,7 +9,7 @@ import (
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/things/clients"
+	"github.com/mainflux/mainflux/things"
 	"github.com/mainflux/mainflux/things/policies"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -24,7 +24,7 @@ type grpcServer struct {
 }
 
 // NewServer returns new ThingsServiceServer instance.
-func NewServer(csvc clients.Service, psvc policies.Service) policies.AuthServiceServer {
+func NewServer(csvc things.Service, psvc policies.Service) policies.AuthServiceServer {
 	return &grpcServer{
 		authorize: kitgrpc.NewServer(
 			authorizeEndpoint(psvc),

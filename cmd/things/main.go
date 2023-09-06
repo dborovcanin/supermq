@@ -14,8 +14,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
-	chclient "github.com/mainflux/callhome/pkg/client"
-	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/internal"
 	authclient "github.com/mainflux/mainflux/internal/clients/grpc/auth"
 	jaegerclient "github.com/mainflux/mainflux/internal/clients/jaeger"
@@ -167,9 +165,7 @@ func main() {
 		return
 	}
 	mux := chi.NewRouter()
-	// hsp := httpserver.New(ctx, cancel, "things-policies", httpServerConfig, httpapi.MakeHandler(csvc, psvc, mux, logger), logger)
 	httpSvc := httpserver.New(ctx, cancel, "things-clients", httpServerConfig, capi.MakeHandler(csvc, gsvc, mux, logger, cfg.InstanceID), logger)
-	// hsg := httpserver.New(ctx, cancel, "things-groups", httpServerConfig, tgapi.MakeHandler(gsvc, mux, logger), logger)
 
 	grpcServerConfig := server.Config{Port: defSvcAuthGRPCPort}
 	if err := env.Parse(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
@@ -183,10 +179,10 @@ func main() {
 	// }
 	// gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, registerThingsServiceServer, logger)
 
-	if cfg.SendTelemetry {
-		chc := chclient.New(svcName, mainflux.Version, logger, cancel)
-		go chc.CallHome(ctx)
-	}
+	// if cfg.SendTelemetry {
+	// 	chc := chclient.New(svcName, mainflux.Version, logger, cancel)
+	// 	go chc.CallHome(ctx)
+	// }
 
 	// Start all servers
 	g.Go(func() error {

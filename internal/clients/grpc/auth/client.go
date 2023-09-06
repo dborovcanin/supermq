@@ -4,6 +4,8 @@
 package auth
 
 import (
+	"fmt"
+
 	grpcclient "github.com/mainflux/mainflux/internal/clients/grpc"
 	"github.com/mainflux/mainflux/internal/env"
 	"github.com/mainflux/mainflux/pkg/errors"
@@ -21,6 +23,7 @@ func Setup(svcName string) (policies.AuthServiceClient, grpcclient.ClientHandler
 	if err := env.Parse(&config, env.Options{Prefix: envAuthGrpcPrefix}); err != nil {
 		return nil, nil, errors.Wrap(errGrpcConfig, err)
 	}
+	fmt.Println("URL:", config.URL)
 	c, ch, err := grpcclient.Setup(config, svcName)
 	if err != nil {
 		return nil, nil, err

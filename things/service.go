@@ -4,6 +4,7 @@ package things
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mainflux/mainflux"
@@ -13,7 +14,6 @@ import (
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
 	tpolicies "github.com/mainflux/mainflux/things/policies"
 	"github.com/mainflux/mainflux/things/postgres"
-	upolicies "github.com/mainflux/mainflux/users/policies"
 )
 
 const (
@@ -29,8 +29,37 @@ const (
 	clientEntityType = "client"
 )
 
+const (
+	administratorRelationKey = "administrator"
+	directMemberRelation     = "direct_member"
+	ownerRelation            = "owner"
+	editorRelation           = "owner"
+	viewerRelation           = "viewer"
+	organizationRelation     = "organization"
+	groupRelation            = "group"
+	channelRelation          = "channel"
+
+	adminPermission      = "admin"
+	ownerPermission      = "delete"
+	deletePermission     = "delete"
+	sharePermission      = "share"
+	editPermission       = "edit"
+	disconnectPermission = "disconnect"
+	connectPermission    = "connect"
+	viewPermission       = "view"
+	memberPermission     = "member"
+
+	userType         = "user"
+	organizationType = "organization"
+	thingType        = "thing"
+	channelType      = "channel"
+
+	mainfluxObject = "mainflux"
+	anyBodySubject = "_any_body"
+)
+
 type service struct {
-	uauth       upolicies.AuthServiceClient
+	auth        mainflux.AuthServiceClient
 	policies    tpolicies.Service
 	clients     postgres.Repository
 	clientCache Cache
@@ -39,9 +68,9 @@ type service struct {
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(uauth upolicies.AuthServiceClient, policies tpolicies.Service, c postgres.Repository, grepo mfgroups.Repository, tcache Cache, idp mainflux.IDProvider) Service {
+func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c postgres.Repository, grepo mfgroups.Repository, tcache Cache, idp mainflux.IDProvider) Service {
 	return service{
-		uauth:       uauth,
+		auth:        uauth,
 		policies:    policies,
 		clients:     c,
 		grepo:       grepo,
@@ -51,7 +80,10 @@ func NewService(uauth upolicies.AuthServiceClient, policies tpolicies.Service, c
 }
 
 func (svc service) CreateThings(ctx context.Context, token string, clis ...mfclients.Client) ([]mfclients.Client, error) {
-	userID, err := svc.identify(ctx, token)
+	// userID, err := svc.identify(ctx, token)
+	fmt.Println("running auth")
+	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
+	fmt.Println("id", userID, "err", err)
 	if err != nil {
 		return []mfclients.Client{}, err
 	}
@@ -72,7 +104,7 @@ func (svc service) CreateThings(ctx context.Context, token string, clis ...mfcli
 			cli.Credentials.Secret = key
 		}
 		if cli.Owner == "" {
-			cli.Owner = userID
+			cli.Owner = userID.GetId()
 		}
 		if cli.Status != mfclients.DisabledStatus && cli.Status != mfclients.EnabledStatus {
 			return []mfclients.Client{}, apiutil.ErrInvalidStatus
@@ -89,7 +121,8 @@ func (svc service) ViewClient(ctx context.Context, token string, id string) (mfc
 	if err != nil {
 		return mfclients.Client{}, err
 	}
-	if err := svc.authorize(ctx, userID, id, listRelationKey); err != nil {
+	if err := svc.authorize(ctx, userType, userID, viewPermission, thingType, id); err != nil {
+
 		return mfclients.Client{}, errors.Wrap(errors.ErrNotFound, err)
 	}
 	return svc.clients.RetrieveByID(ctx, id)
@@ -101,7 +134,7 @@ func (svc service) ListClients(ctx context.Context, token string, pm mfclients.P
 		return mfclients.ClientsPage{}, err
 	}
 
-	switch err = svc.checkAdmin(ctx, userID, thingsObjectKey, listRelationKey); err {
+	switch err {
 	// If the user is admin, fetch all things from database.
 	case nil:
 		switch {
@@ -150,7 +183,7 @@ func (svc service) UpdateClient(ctx context.Context, token string, cli mfclients
 	if err != nil {
 		return mfclients.Client{}, err
 	}
-	if err := svc.authorize(ctx, userID, cli.ID, updateRelationKey); err != nil {
+	if err := svc.authorize(ctx, userType, userID, editPermission, thingType, cli.ID); err != nil {
 		return mfclients.Client{}, err
 	}
 
@@ -170,7 +203,7 @@ func (svc service) UpdateClientTags(ctx context.Context, token string, cli mfcli
 	if err != nil {
 		return mfclients.Client{}, err
 	}
-	if err := svc.authorize(ctx, userID, cli.ID, updateRelationKey); err != nil {
+	if err := svc.authorize(ctx, userType, userID, editPermission, thingType, cli.ID); err != nil {
 		return mfclients.Client{}, err
 	}
 
@@ -189,7 +222,7 @@ func (svc service) UpdateClientSecret(ctx context.Context, token, id, key string
 	if err != nil {
 		return mfclients.Client{}, err
 	}
-	if err := svc.authorize(ctx, userID, id, updateRelationKey); err != nil {
+	if err := svc.authorize(ctx, userType, userID, editPermission, thingType, userID); err != nil {
 		return mfclients.Client{}, err
 	}
 
@@ -211,7 +244,8 @@ func (svc service) UpdateClientOwner(ctx context.Context, token string, cli mfcl
 	if err != nil {
 		return mfclients.Client{}, err
 	}
-	if err := svc.authorize(ctx, userID, cli.ID, updateRelationKey); err != nil {
+	if err := svc.authorize(ctx, userType, userID, editPermission, thingType, cli.ID); err != nil {
+
 		return mfclients.Client{}, err
 	}
 
@@ -263,7 +297,7 @@ func (svc service) changeClientStatus(ctx context.Context, token string, client 
 	if err != nil {
 		return mfclients.Client{}, err
 	}
-	if err := svc.authorize(ctx, userID, client.ID, deleteRelationKey); err != nil {
+	if err := svc.authorize(ctx, userType, userID, deletePermission, thingType, client.ID); err != nil {
 		return mfclients.Client{}, err
 	}
 	dbClient, err := svc.clients.RetrieveByID(ctx, client.ID)
@@ -282,10 +316,10 @@ func (svc service) ListClientsByGroup(ctx context.Context, token, groupID string
 	if err != nil {
 		return mfclients.MembersPage{}, err
 	}
-	// If the user is admin, fetch all things connected to the channel.
-	if err := svc.checkAdmin(ctx, userID, thingsObjectKey, listRelationKey); err == nil {
-		return svc.clients.Members(ctx, groupID, pm)
-	}
+	// // If the user is admin, fetch all things connected to the channel.
+	// if err := svc.checkAdmin(ctx, userID, thingsObjectKey, listRelationKey); err == nil {
+	// 	return svc.clients.Members(ctx, groupID, pm)
+	// }
 	pm.Owner = userID
 
 	return svc.clients.Members(ctx, groupID, pm)
@@ -307,40 +341,45 @@ func (svc service) Identify(ctx context.Context, key string) (string, error) {
 }
 
 func (svc service) identify(ctx context.Context, token string) (string, error) {
-	req := &upolicies.IdentifyReq{Token: token}
-	res, err := svc.uauth.Identify(ctx, req)
+	user, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
 		return "", err
 	}
-	return res.GetId(), nil
+	return user.GetId(), nil
 }
 
-func (svc service) authorize(ctx context.Context, subject, object, action string) error {
-	// If the user is admin, skip authorization.
-	if err := svc.checkAdmin(ctx, subject, thingsObjectKey, action); err == nil {
-		return nil
+func (svc *service) authorize(ctx context.Context, subjectType, subject, permission, objectType, object string) error {
+	req := &mainflux.AuthorizeReq{
+		SubjectType: subjectType,
+		Subject:     subject,
+		Permission:  permission,
+		Object:      object,
+		ObjectType:  objectType,
 	}
-
-	policy := tpolicies.AccessRequest{Subject: subject, Object: object, Action: action, Entity: clientEntityType}
-
-	_, err := svc.policies.Authorize(ctx, policy)
-	return err
-}
-
-// TODO : Only accept token as parameter since object and action are irrelevant.
-func (svc service) checkAdmin(ctx context.Context, subject, object, action string) error {
-	req := &upolicies.AuthorizeReq{
-		Subject:    subject,
-		Object:     object,
-		Action:     action,
-		EntityType: clientEntityType,
-	}
-	res, err := svc.uauth.Authorize(ctx, req)
+	res, err := svc.auth.Authorize(ctx, req)
 	if err != nil {
-		return err
+		return errors.Wrap(errors.ErrAuthorization, err)
 	}
 	if !res.GetAuthorized() {
 		return errors.ErrAuthorization
 	}
 	return nil
 }
+
+// TODO : Only accept token as parameter since object and action are irrelevant.
+// func (svc service) checkAdmin(ctx context.Context, subject, object, action string) error {
+// 	req := &upolicies.AuthorizeReq{
+// 		Subject:    subject,
+// 		Object:     object,
+// 		Action:     action,
+// 		EntityType: clientEntityType,
+// 	}
+// 	res, err := svc.auth.Authorize(ctx, req)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if !res.GetAuthorized() {
+// 		return errors.ErrAuthorization
+// 	}
+// 	return nil
+// }

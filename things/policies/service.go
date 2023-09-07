@@ -34,14 +34,14 @@ const (
 var ErrInvalidEntityType = errors.New("invalid entity type")
 
 type service struct {
-	auth        upolicies.AuthServiceClient
+	auth        mainflux.AuthServiceClient
 	policies    Repository
 	policyCache Cache
 	idProvider  mainflux.IDProvider
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(auth upolicies.AuthServiceClient, p Repository, ccache Cache, idp mainflux.IDProvider) Service {
+func NewService(auth mainflux.AuthServiceClient, p Repository, ccache Cache, idp mainflux.IDProvider) Service {
 	return service{
 		auth:        auth,
 		policies:    p,
@@ -281,8 +281,7 @@ func (svc service) checkPolicy(ctx context.Context, clientID string, p Policy) e
 }
 
 func (svc service) identify(ctx context.Context, token string) (string, error) {
-	req := &upolicies.IdentifyReq{Token: token}
-	res, err := svc.auth.Identify(ctx, req)
+	res, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
 		return "", errors.Wrap(errors.ErrAuthorization, err)
 	}
@@ -295,11 +294,11 @@ func (svc service) checkAdmin(ctx context.Context, id string) error {
 }
 
 func (svc service) usersAuthorize(ctx context.Context, subject, object, action, entity string) error {
-	req := &upolicies.AuthorizeReq{
-		Subject:    subject,
-		Object:     object,
-		Action:     action,
-		EntityType: entity,
+	req := &mainflux.AuthorizeReq{
+		Subject: subject,
+		Object:  object,
+		// Action:     action,
+		// EntityType: entity,
 	}
 	res, err := svc.auth.Authorize(ctx, req)
 	if err != nil {

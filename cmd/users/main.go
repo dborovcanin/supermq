@@ -17,8 +17,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	chclient "github.com/mainflux/callhome/pkg/client"
 	"github.com/mainflux/mainflux"
-	authapi "github.com/mainflux/mainflux/auth/api/grpc"
 	"github.com/mainflux/mainflux/internal"
+	authclient "github.com/mainflux/mainflux/internal/clients/grpc/auth"
 	jaegerclient "github.com/mainflux/mainflux/internal/clients/jaeger"
 	pgclient "github.com/mainflux/mainflux/internal/clients/postgres"
 	redisclient "github.com/mainflux/mainflux/internal/clients/redis"
@@ -31,13 +31,13 @@ import (
 	"github.com/mainflux/mainflux/internal/postgres"
 	"github.com/mainflux/mainflux/internal/server"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
-	"github.com/mainflux/mainflux/logger"
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/groups"
 	gpostgres "github.com/mainflux/mainflux/pkg/groups/postgres"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/users"
+
 	capi "github.com/mainflux/mainflux/users/api"
 	"github.com/mainflux/mainflux/users/emailer"
 	"github.com/mainflux/mainflux/users/hasher"
@@ -47,9 +47,6 @@ import (
 	ctracing "github.com/mainflux/mainflux/users/tracing"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -151,7 +148,16 @@ func main() {
 	}
 	defer esClient.Close()
 
-	csvc, gsvc := newService(ctx, db, dbConfig, esClient, tracer, cfg, ec, logger)
+	auth, authHandler, err := authclient.Setup(svcName)
+	if err != nil {
+		logger.Error(err.Error())
+		exitCode = 1
+		return
+	}
+	defer authHandler.Close()
+	logger.Info("Successfully connected to auth grpc server " + authHandler.Secure())
+
+	csvc, gsvc := newService(ctx, auth, db, dbConfig, esClient, tracer, cfg, ec, logger)
 
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
@@ -180,7 +186,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (users.Service, groups.Service) {
+func newService(ctx context.Context, auth mainflux.AuthServiceClient, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (users.Service, groups.Service) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	cRepo := clientspg.NewRepository(database)
 	gRepo := gpostgres.New(database)
@@ -202,10 +208,10 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, esCl
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
-	auth, close := connectToAuth(c, logger)
-	if close != nil {
-		defer close()
-	}
+	// auth, close := connectToAuth(c, logger)
+	// if close != nil {
+	// 	defer close()
+	// }
 	csvc := users.NewService(cRepo, auth, tokenizer, emailer, hsr, idp, c.PassRegex)
 	gsvc := mfgroups.NewService(gRepo, idp)
 
@@ -269,28 +275,28 @@ func createAdmin(ctx context.Context, c config, crepo clientspg.Repository, hsr 
 	return nil
 }
 
-func connectToAuth(cfg config, logger logger.Logger) (mainflux.AuthServiceClient, func() error) {
-	var opts []grpc.DialOption
-	if cfg.AuthTLS {
-		if cfg.AuthCACerts != "" {
-			tpc, err := credentials.NewClientTLSFromFile(cfg.AuthCACerts, "")
-			if err != nil {
-				logger.Error(fmt.Sprintf("Failed to create tls credentials: %s", err))
-				os.Exit(1)
-			}
-			opts = append(opts, grpc.WithTransportCredentials(tpc))
-		}
-	} else {
-		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		logger.Info("gRPC communication is not encrypted")
-	}
-	fmt.Println("URL:", cfg.AuthURL)
-	conn, err := grpc.Dial(cfg.AuthURL, opts...)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to connect to auth service: %s", err))
-		os.Exit(1)
-	}
-	fmt.Println("AUTH URL:", cfg.AuthURL)
+// func connectToAuth(cfg config, logger logger.Logger) (mainflux.AuthServiceClient, func() error) {
+// 	var opts []grpc.DialOption
+// 	if cfg.AuthTLS {
+// 		if cfg.AuthCACerts != "" {
+// 			tpc, err := credentials.NewClientTLSFromFile(cfg.AuthCACerts, "")
+// 			if err != nil {
+// 				logger.Error(fmt.Sprintf("Failed to create tls credentials: %s", err))
+// 				os.Exit(1)
+// 			}
+// 			opts = append(opts, grpc.WithTransportCredentials(tpc))
+// 		}
+// 	} else {
+// 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+// 		logger.Info("gRPC communication is not encrypted")
+// 	}
+// 	fmt.Println("URL:", cfg.AuthURL)
+// 	conn, err := grpc.Dial(cfg.AuthURL, opts...)
+// 	if err != nil {
+// 		logger.Error(fmt.Sprintf("Failed to connect to auth service: %s", err))
+// 		os.Exit(1)
+// 	}
+// 	fmt.Println("AUTH URL:", cfg.AuthURL)
 
-	return authapi.NewClient(conn, cfg.AuthTimeout), conn.Close
-}
+// 	return authapi.NewClient(conn, cfg.AuthTimeout), conn.Close
+// }

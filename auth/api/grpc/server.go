@@ -14,7 +14,6 @@ import (
 	"github.com/mainflux/mainflux/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var _ mainflux.AuthServiceServer = (*grpcServer)(nil)
@@ -217,8 +216,8 @@ func decodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, er
 }
 
 func encodeIssueResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(issueRes)
-	return &mainflux.Token{Value: res.value, Extra: structpb.NewNullValue().GetStructValue()}, nil
+	res := grpcRes.(*mainflux.Token)
+	return res, nil
 }
 
 func decodeIdentifyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {

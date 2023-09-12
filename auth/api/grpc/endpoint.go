@@ -24,13 +24,11 @@ func issueEndpoint(svc auth.Service) endpoint.Endpoint {
 			IssuerID: req.id,
 			IssuedAt: time.Now().UTC(),
 		}
-
 		tkn, err := svc.Issue(ctx, "", key)
 		if err != nil {
 			return issueRes{}, err
 		}
-
-		return issueRes{tkn.Value}, nil
+		return tkn, nil
 	}
 }
 

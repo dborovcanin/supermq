@@ -12,6 +12,7 @@ import (
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/ulid"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -36,6 +37,12 @@ const (
 	viewPermission  = "view"
 
 	mainfluxObject = "mainflux"
+)
+
+// Possible token types are access and refresh tokens.
+const (
+	RefreshToken = 0
+	AccessToken  = 1
 )
 
 var (
@@ -98,13 +105,14 @@ type Service interface {
 var _ Service = (*service)(nil)
 
 type service struct {
-	keys          KeyRepository
-	groups        GroupRepository
-	idProvider    mainflux.IDProvider
-	ulidProvider  mainflux.IDProvider
-	agent         PolicyAgent
-	tokenizer     Tokenizer
-	loginDuration time.Duration
+	keys            KeyRepository
+	groups          GroupRepository
+	idProvider      mainflux.IDProvider
+	ulidProvider    mainflux.IDProvider
+	agent           PolicyAgent
+	tokenizer       Tokenizer
+	loginDuration   time.Duration
+	refreshDuration time.Duration
 }
 
 // New instantiates the auth service implementation.
@@ -130,7 +138,8 @@ func (svc service) Issue(ctx context.Context, token string, key Key) (*mainflux.
 	case RecoveryKey:
 		return svc.tmpKey(recoveryDuration, key)
 	default:
-		return svc.tmpKey(svc.loginDuration, key)
+		ret, err := svc.accessKey(key)
+		return ret, err
 	}
 }
 
@@ -316,6 +325,30 @@ func (svc service) tmpKey(duration time.Duration, key Key) (*mainflux.Token, err
 	}
 
 	return &mainflux.Token{Value: secret}, nil
+}
+
+func (svc service) accessKey(key Key) (*mainflux.Token, error) {
+	key.Type = AccessToken
+	key.ExpiresAt = time.Now().Add(svc.loginDuration)
+	access, err := svc.tokenizer.Issue(key)
+	if err != nil {
+		return nil, errors.Wrap(errIssueTmp, err)
+	}
+	key.ExpiresAt = time.Now().Add(svc.refreshDuration)
+	key.Type = RefreshToken
+	refresh, err := svc.tokenizer.Issue(key)
+	if err != nil {
+		return nil, errors.Wrap(errIssueTmp, err)
+	}
+	rfrsh := structpb.NewStringValue(refresh)
+	extra := &structpb.Struct{
+		Fields: map[string]*structpb.Value{
+			"refresh_token": rfrsh,
+		},
+	}
+	// fmt.Println("extra", extra.GetStringValue())
+	// fmt.Println("extra struct", extra.GetStructValue())
+	return &mainflux.Token{Value: access, Extra: extra}, nil
 }
 
 func (svc service) userKey(ctx context.Context, token string, key Key) (*mainflux.Token, error) {

@@ -122,12 +122,7 @@ func (svc service) IssueToken(ctx context.Context, identity, secret string) (jwt
 	// 	Email:    dbUser.Credentials.Identity,
 	// }
 
-	tkn, err := svc.issue(ctx, dbUser.ID, dbUser.Credentials.Identity, 0)
-	if err != nil {
-		return jwt.Token{}, err
-	}
-
-	return jwt.Token{AccessToken: tkn, AccessType: "bearer"}, nil
+	return svc.issue(ctx, dbUser.ID, dbUser.Credentials.Identity, 0)
 }
 
 func (svc service) RefreshToken(ctx context.Context, refreshToken string) (jwt.Token, error) {
@@ -480,10 +475,21 @@ func (svc service) Identify(ctx context.Context, token string) (string, error) {
 }
 
 // Auth helpers
-func (svc service) issue(ctx context.Context, id, email string, keyType uint32) (string, error) {
-	key, err := svc.auth.Issue(ctx, &mainflux.IssueReq{Id: id, Email: email, Type: keyType})
+func (svc service) issue(ctx context.Context, id, email string, keyType uint32) (jwt.Token, error) {
+	tkn, err := svc.auth.Issue(ctx, &mainflux.IssueReq{Id: id, Email: email, Type: keyType})
 	if err != nil {
-		return "", errors.Wrap(errors.ErrNotFound, err)
+		return jwt.Token{}, errors.Wrap(errors.ErrNotFound, err)
 	}
-	return key.GetValue(), nil
+	extra := tkn.Extra.AsMap()["refresh_token"]
+	refresh, ok := extra.(string)
+	if !ok {
+		return jwt.Token{}, errors.ErrAuthentication
+	}
+	ret := jwt.Token{
+		AccessToken:  tkn.GetValue(),
+		RefreshToken: refresh,
+		AccessType:   "bearer",
+	}
+
+	return ret, nil
 }

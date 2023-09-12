@@ -44,7 +44,7 @@ func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthServic
 			"Issue",
 			encodeIssueRequest,
 			decodeIssueResponse,
-			mainflux.UserIdentity{},
+			mainflux.Token{},
 		).Endpoint(),
 		identify: kitgrpc.NewClient(
 			conn,
@@ -155,9 +155,9 @@ func (client grpcClient) Issue(ctx context.Context, req *mainflux.IssueReq, _ ..
 	if err != nil {
 		return nil, err
 	}
-
-	ir := res.(identityRes)
-	return &mainflux.Token{Value: ir.id}, nil
+	return res.(*mainflux.Token), nil
+	// // ir := res.(identityRes)
+	// return &mainflux.Token{Value: ir.id}, nil
 }
 
 func encodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -166,8 +166,9 @@ func encodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, er
 }
 
 func decodeIssueResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(*mainflux.UserIdentity)
-	return identityRes{id: res.GetId(), email: res.GetEmail()}, nil
+	// res := grpcRes.(*mainflux.UserIdentity)
+	// return identityRes{id: res.GetId(), email: res.GetEmail()}, nil
+	return grpcRes, nil
 }
 
 func (client grpcClient) Identify(ctx context.Context, token *mainflux.Token, _ ...grpc.CallOption) (*mainflux.UserIdentity, error) {

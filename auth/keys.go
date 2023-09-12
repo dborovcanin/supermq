@@ -22,8 +22,8 @@ var (
 )
 
 const (
-	// LoginKey is temporary User key received on successfull login.
-	LoginKey uint32 = iota
+	// AccessKey is temporary User key received on successfull login.
+	AccessKey uint32 = iota
 	// RecoveryKey represents a key for resseting password.
 	RecoveryKey
 	// APIKey enables the one to act on behalf of the user.

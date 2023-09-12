@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/auth"
 	log "github.com/mainflux/mainflux/logger"
 )
@@ -102,7 +103,7 @@ func (lm *loggingMiddleware) CountSubjects(ctx context.Context, pr auth.PolicyRe
 	return lm.svc.CountSubjects(ctx, pr)
 }
 
-func (lm *loggingMiddleware) Issue(ctx context.Context, token string, newKey auth.Key) (key auth.Key, secret string, err error) {
+func (lm *loggingMiddleware) Issue(ctx context.Context, token string, key auth.Key) (tkn *mainflux.Token, err error) {
 	defer func(begin time.Time) {
 		d := "infinite duration"
 		if !key.ExpiresAt.IsZero() {
@@ -116,7 +117,7 @@ func (lm *loggingMiddleware) Issue(ctx context.Context, token string, newKey aut
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
 
-	return lm.svc.Issue(ctx, token, newKey)
+	return lm.svc.Issue(ctx, token, key)
 }
 
 func (lm *loggingMiddleware) Revoke(ctx context.Context, token, id string) (err error) {

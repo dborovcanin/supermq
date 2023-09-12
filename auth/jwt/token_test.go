@@ -21,7 +21,7 @@ func key() auth.Key {
 	exp := time.Now().UTC().Add(10 * time.Minute).Round(time.Second)
 	return auth.Key{
 		ID:        "id",
-		Type:      auth.LoginKey,
+		Type:      auth.AccessKey,
 		Subject:   "user@email.com",
 		IssuerID:  "",
 		IssuedAt:  time.Now().UTC().Add(-10 * time.Second).Round(time.Second),

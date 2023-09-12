@@ -17,7 +17,7 @@ func (req identityReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
-	if req.kind != auth.LoginKey &&
+	if req.kind != auth.AccessKey &&
 		req.kind != auth.APIKey &&
 		req.kind != auth.RecoveryKey {
 		return apiutil.ErrInvalidAuthKey
@@ -36,7 +36,7 @@ func (req issueReq) validate() error {
 	if req.email == "" {
 		return apiutil.ErrMissingEmail
 	}
-	if req.keyType != auth.LoginKey &&
+	if req.keyType != auth.AccessKey &&
 		req.keyType != auth.APIKey &&
 		req.keyType != auth.RecoveryKey {
 		return apiutil.ErrInvalidAuthKey

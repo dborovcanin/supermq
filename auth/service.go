@@ -67,7 +67,7 @@ var (
 // an Auth service request.
 type Authn interface {
 	// Issue issues a new Key, returning its token value alongside.
-	Issue(ctx context.Context, token string, key Key) (Key, string, error)
+	Issue(ctx context.Context, token string, key Key) (*mainflux.Token, error)
 
 	// Revoke removes the Key with the provided id that is
 	// issued by the user identified by the provided key.
@@ -120,9 +120,9 @@ func New(keys KeyRepository, groups GroupRepository, idp mainflux.IDProvider, to
 	}
 }
 
-func (svc service) Issue(ctx context.Context, token string, key Key) (Key, string, error) {
+func (svc service) Issue(ctx context.Context, token string, key Key) (*mainflux.Token, error) {
 	if key.IssuedAt.IsZero() {
-		return Key{}, "", ErrInvalidKeyIssuedAt
+		return nil, ErrInvalidKeyIssuedAt
 	}
 	switch key.Type {
 	case APIKey:
@@ -165,7 +165,7 @@ func (svc service) Identify(ctx context.Context, token string) (Identity, error)
 	}
 
 	switch key.Type {
-	case RecoveryKey, LoginKey:
+	case RecoveryKey, AccessKey:
 		return Identity{ID: key.IssuerID, Email: key.Subject}, nil
 	case APIKey:
 		_, err := svc.keys.Retrieve(context.TODO(), key.IssuerID, key.ID)
@@ -309,20 +309,19 @@ func (svc service) CountSubjects(ctx context.Context, pr PolicyReq) (int, error)
 	return svc.agent.RetrieveAllSubjectsCount(ctx, pr)
 }
 
-func (svc service) tmpKey(duration time.Duration, key Key) (Key, string, error) {
-	key.ExpiresAt = key.IssuedAt.Add(duration)
+func (svc service) tmpKey(duration time.Duration, key Key) (*mainflux.Token, error) {
 	secret, err := svc.tokenizer.Issue(key)
 	if err != nil {
-		return Key{}, "", errors.Wrap(errIssueTmp, err)
+		return nil, errors.Wrap(errIssueTmp, err)
 	}
 
-	return key, secret, nil
+	return &mainflux.Token{Value: secret}, nil
 }
 
-func (svc service) userKey(ctx context.Context, token string, key Key) (Key, string, error) {
+func (svc service) userKey(ctx context.Context, token string, key Key) (*mainflux.Token, error) {
 	id, sub, err := svc.login(token)
 	if err != nil {
-		return Key{}, "", errors.Wrap(errIssueUser, err)
+		return nil, errors.Wrap(errIssueUser, err)
 	}
 
 	key.IssuerID = id
@@ -332,20 +331,20 @@ func (svc service) userKey(ctx context.Context, token string, key Key) (Key, str
 
 	keyID, err := svc.idProvider.ID()
 	if err != nil {
-		return Key{}, "", errors.Wrap(errIssueUser, err)
+		return nil, errors.Wrap(errIssueUser, err)
 	}
 	key.ID = keyID
 
 	if _, err := svc.keys.Save(ctx, key); err != nil {
-		return Key{}, "", errors.Wrap(errIssueUser, err)
+		return nil, errors.Wrap(errIssueUser, err)
 	}
 
-	secret, err := svc.tokenizer.Issue(key)
+	tkn, err := svc.tokenizer.Issue(key)
 	if err != nil {
-		return Key{}, "", errors.Wrap(errIssueUser, err)
+		return nil, errors.Wrap(errIssueUser, err)
 	}
 
-	return key, secret, nil
+	return &mainflux.Token{Value: tkn}, nil
 }
 
 func (svc service) login(token string) (string, string, error) {
@@ -354,7 +353,7 @@ func (svc service) login(token string) (string, string, error) {
 		return "", "", err
 	}
 	// Only login key token is valid for login.
-	if key.Type != LoginKey || key.IssuerID == "" {
+	if key.Type != AccessKey || key.IssuerID == "" {
 		return "", "", errors.ErrAuthentication
 	}
 

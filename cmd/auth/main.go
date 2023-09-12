@@ -286,7 +286,7 @@ func newService(db *sqlx.DB, tracer opentracing.Tracer, secret string, logger lo
 
 	pa = spicedb.NewPolicyAgent(spicedbClient)
 	idProvider := uuid.New()
-	t := jwt.New(secret)
+	t := jwt.New([]byte(secret))
 
 	svc := auth.New(keysRepo, groupsRepo, idProvider, t, pa, duration)
 	svc = api.LoggingMiddleware(svc, logger)

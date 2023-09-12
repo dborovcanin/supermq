@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/metrics"
+	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/auth"
 )
 
@@ -82,7 +83,7 @@ func (ms *metricsMiddleware) CountSubjects(ctx context.Context, pr auth.PolicyRe
 	return ms.svc.CountSubjects(ctx, pr)
 }
 
-func (ms *metricsMiddleware) Issue(ctx context.Context, token string, key auth.Key) (auth.Key, string, error) {
+func (ms *metricsMiddleware) Issue(ctx context.Context, token string, key auth.Key) (*mainflux.Token, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "issue_key").Add(1)
 		ms.latency.With("method", "issue_key").Observe(time.Since(begin).Seconds())

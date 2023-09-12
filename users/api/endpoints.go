@@ -257,7 +257,7 @@ func issueTokenEndpoint(svc users.Service) endpoint.Endpoint {
 		}
 		return tokenRes{
 			AccessToken:  token.AccessToken,
-			RefreshToken: token.RefreshToken,
+			RefreshToken: "test",
 			AccessType:   token.AccessType,
 		}, nil
 	}

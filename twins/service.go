@@ -103,7 +103,6 @@ func (ts *twinsService) AddTwin(ctx context.Context, token string, twin Twin, de
 	var id string
 	var b []byte
 	defer ts.publish(ctx, &id, &err, crudOp["createSucc"], crudOp["createFail"], &b)
-
 	res, err := ts.auth.Identify(ctx, &policies.IdentifyReq{Token: token})
 	if err != nil {
 		return Twin{}, err

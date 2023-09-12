@@ -127,7 +127,7 @@ func (svc service) IssueToken(ctx context.Context, identity, secret string) (jwt
 		return jwt.Token{}, err
 	}
 
-	return jwt.Token{AccessToken: tkn, AccessType: "brearer"}, nil
+	return jwt.Token{AccessToken: tkn, AccessType: "bearer"}, nil
 }
 
 func (svc service) RefreshToken(ctx context.Context, refreshToken string) (jwt.Token, error) {

@@ -5,8 +5,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -188,9 +186,6 @@ func encodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, er
 }
 
 func decodeIssueResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	// res := grpcRes.(*mainflux.UserIdentity)
-	// return identityRes{id: res.GetId(), email: res.GetEmail()}, nil
-	fmt.Println("response", grpcRes, reflect.TypeOf(grpcRes))
 	return grpcRes, nil
 }
 

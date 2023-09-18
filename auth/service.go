@@ -159,8 +159,6 @@ func (svc service) RetrieveKey(ctx context.Context, token, id string) (Key, erro
 
 func (svc service) Identify(ctx context.Context, token string) (Identity, error) {
 	key, err := svc.tokenizer.Parse(token)
-	fmt.Println("token", token)
-	fmt.Println("identiy", key.ID, key.Issuer, key.Subject, err)
 	if err == ErrAPIKeyExpired {
 		err = svc.keys.Remove(ctx, key.Issuer, key.ID)
 		return Identity{}, errors.Wrap(ErrAPIKeyExpired, err)

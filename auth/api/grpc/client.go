@@ -5,12 +5,15 @@ package grpc
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/auth"
 	"google.golang.org/grpc"
 )
 
@@ -151,23 +154,43 @@ func (client grpcClient) Issue(ctx context.Context, req *mainflux.IssueReq, _ ..
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.issue(ctx, issueReq{id: req.GetId(), email: req.GetEmail(), keyType: req.Type})
+	res, err := client.issue(ctx, issueReq{id: req.GetId(), email: req.GetEmail(), keyType: auth.KeyType(req.Type)})
 	if err != nil {
 		return nil, err
 	}
 	return res.(*mainflux.Token), nil
-	// // ir := res.(identityRes)
-	// return &mainflux.Token{Value: ir.id}, nil
+	// ir := res.(issueRes)
+	// // rfrsh := structpb.NewStringValue(refresh)
+	// // extra := &structpb.Struct{
+	// // 	Fields: map[string]*structpb.Value{
+	// // 		"refresh_token": rfrsh,
+	// // 	},
+	// // }
+	// fields := map[string]*structpb.Value{}
+	// for k, v := range ir.extra {
+	// 	val, err := structpb.NewValue(v)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	fields[k] = val
+	// }
+
+	// extra := &structpb.Struct{
+	// 	Fields: fields,
+	// }
+
+	// return &mainflux.Token{Value: ir.value, Extra: extra}, nil
 }
 
 func encodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(issueReq)
-	return &mainflux.IssueReq{Id: req.id, Email: req.email, Type: req.keyType}, nil
+	return &mainflux.IssueReq{Id: req.id, Email: req.email, Type: uint32(req.keyType)}, nil
 }
 
 func decodeIssueResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	// res := grpcRes.(*mainflux.UserIdentity)
 	// return identityRes{id: res.GetId(), email: res.GetEmail()}, nil
+	fmt.Println("response", grpcRes, reflect.TypeOf(grpcRes))
 	return grpcRes, nil
 }
 

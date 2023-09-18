@@ -71,8 +71,8 @@ func (kr repo) Retrieve(ctx context.Context, issuerID, id string) (auth.Key, err
 func (kr repo) Remove(ctx context.Context, issuerID, id string) error {
 	q := `DELETE FROM keys WHERE issuer_id = :issuer_id AND id = :id`
 	key := dbKey{
-		ID:       id,
-		IssuerID: issuerID,
+		ID:     id,
+		Issuer: issuerID,
 	}
 	if _, err := kr.db.NamedExecContext(ctx, q, key); err != nil {
 		return errors.Wrap(errDelete, err)
@@ -84,7 +84,7 @@ func (kr repo) Remove(ctx context.Context, issuerID, id string) error {
 type dbKey struct {
 	ID        string       `db:"id"`
 	Type      uint32       `db:"type"`
-	IssuerID  string       `db:"issuer_id"`
+	Issuer    string       `db:"issuer_id"`
 	Subject   string       `db:"subject"`
 	Revoked   bool         `db:"revoked"`
 	IssuedAt  time.Time    `db:"issued_at"`
@@ -94,8 +94,8 @@ type dbKey struct {
 func toDBKey(key auth.Key) dbKey {
 	ret := dbKey{
 		ID:       key.ID,
-		Type:     key.Type,
-		IssuerID: key.IssuerID,
+		Type:     uint32(key.Type),
+		Issuer:   key.Issuer,
 		Subject:  key.Subject,
 		IssuedAt: key.IssuedAt,
 	}
@@ -109,8 +109,8 @@ func toDBKey(key auth.Key) dbKey {
 func toKey(key dbKey) auth.Key {
 	ret := auth.Key{
 		ID:       key.ID,
-		Type:     key.Type,
-		IssuerID: key.IssuerID,
+		Type:     auth.KeyType(key.Type),
+		Issuer:   key.Issuer,
 		Subject:  key.Subject,
 		IssuedAt: key.IssuedAt,
 	}

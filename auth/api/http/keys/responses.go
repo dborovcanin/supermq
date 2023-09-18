@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/auth"
 )
 
 var (
@@ -35,12 +36,12 @@ func (res issueKeyRes) Empty() bool {
 }
 
 type retrieveKeyRes struct {
-	ID        string     `json:"id,omitempty"`
-	IssuerID  string     `json:"issuer_id,omitempty"`
-	Subject   string     `json:"subject,omitempty"`
-	Type      uint32     `json:"type,omitempty"`
-	IssuedAt  time.Time  `json:"issued_at,omitempty"`
-	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	ID        string       `json:"id,omitempty"`
+	IssuerID  string       `json:"issuer_id,omitempty"`
+	Subject   string       `json:"subject,omitempty"`
+	Type      auth.KeyType `json:"type,omitempty"`
+	IssuedAt  time.Time    `json:"issued_at,omitempty"`
+	ExpiresAt *time.Time   `json:"expires_at,omitempty"`
 }
 
 func (res retrieveKeyRes) Code() int {

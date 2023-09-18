@@ -10,7 +10,7 @@ import (
 
 type identityReq struct {
 	token string
-	kind  uint32
+	kind  auth.KeyType
 }
 
 func (req identityReq) validate() error {
@@ -29,7 +29,7 @@ func (req identityReq) validate() error {
 type issueReq struct {
 	id      string
 	email   string
-	keyType uint32
+	keyType auth.KeyType
 }
 
 func (req issueReq) validate() error {

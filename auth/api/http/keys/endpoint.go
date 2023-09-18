@@ -36,7 +36,7 @@ func issueEndpoint(svc auth.Service) endpoint.Endpoint {
 		}
 
 		res := issueKeyRes{
-			Value: tkn.GetValue(),
+			Value: tkn.Value,
 		}
 		// if !key.ExpiresAt.IsZero() {
 		// 	res.ExpiresAt = &key.ExpiresAt
@@ -60,7 +60,7 @@ func retrieveEndpoint(svc auth.Service) endpoint.Endpoint {
 		}
 		ret := retrieveKeyRes{
 			ID:       key.ID,
-			IssuerID: key.IssuerID,
+			IssuerID: key.Issuer,
 			Subject:  key.Subject,
 			Type:     key.Type,
 			IssuedAt: key.IssuedAt,

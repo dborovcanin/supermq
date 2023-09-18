@@ -19,16 +19,20 @@ func issueEndpoint(svc auth.Service) endpoint.Endpoint {
 		}
 
 		key := auth.Key{
-			Type:     req.keyType,
-			Subject:  req.email,
-			IssuerID: req.id,
-			IssuedAt: time.Now().UTC(),
+			Type:      req.keyType,
+			Subject:   req.email,
+			SubjectID: req.id,
+			IssuedAt:  time.Now().UTC(),
 		}
 		tkn, err := svc.Issue(ctx, "", key)
 		if err != nil {
 			return issueRes{}, err
 		}
-		return tkn, nil
+		ret := issueRes{
+			value: tkn.Value,
+			extra: tkn.Extra,
+		}
+		return ret, nil
 	}
 }
 

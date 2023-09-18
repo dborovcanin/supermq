@@ -4,7 +4,6 @@ package things
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/mainflux/mainflux"
@@ -80,10 +79,7 @@ func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c 
 }
 
 func (svc service) CreateThings(ctx context.Context, token string, clis ...mfclients.Client) ([]mfclients.Client, error) {
-	// userID, err := svc.identify(ctx, token)
-	fmt.Println("running auth")
 	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
-	fmt.Println("id", userID, "err", err)
 	if err != nil {
 		return []mfclients.Client{}, err
 	}

@@ -10,6 +10,7 @@ type identityRes struct {
 
 type issueRes struct {
 	value string
+	extra map[string]interface{}
 }
 
 type authorizeRes struct {

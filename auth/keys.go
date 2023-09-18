@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -21,9 +22,28 @@ var (
 	ErrAPIKeyExpired = errors.New("use of expired API key")
 )
 
+type KeyType uint32
+
+func (kt KeyType) String() string {
+	switch kt {
+	case AccessKey:
+		return "access"
+	case RefreshKey:
+		return "refresh"
+	case RecoveryKey:
+		return "recovery"
+	case APIKey:
+		return "API"
+	default:
+		return "unknown"
+	}
+}
+
 const (
 	// AccessKey is temporary User key received on successfull login.
-	AccessKey uint32 = iota
+	AccessKey KeyType = iota
+	// RefreshKey is a temporary User key used to generate a new access key.
+	RefreshKey
 	// RecoveryKey represents a key for resseting password.
 	RecoveryKey
 	// APIKey enables the one to act on behalf of the user.
@@ -32,12 +52,30 @@ const (
 
 // Key represents API key.
 type Key struct {
-	ID        string
-	Type      uint32
-	IssuerID  string
-	Subject   string
-	IssuedAt  time.Time
-	ExpiresAt time.Time
+	ID        string    `json:"id,omitempty"`
+	Type      KeyType   `json:"type,omitempty"`
+	Issuer    string    `json:"issuer,omitempty"`
+	SubjectID string    `json:"subject_id,omitempty"` // internal ID in our system
+	Subject   string    `json:"subject,omitempty"`    // email or username or other unique identifier
+	IssuedAt  time.Time `json:"issued_at,omitempty"`
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
+}
+
+func (key Key) String() string {
+	return fmt.Sprintf(`{
+	id: %s,
+	type: %s,
+	issuer_id: %s,
+	subject_id: %s,
+	subject: %s,
+	iat: %v,
+	eat: %v
+}`, key.ID, key.Type, key.Issuer, key.SubjectID, key.Subject, key.IssuedAt, key.ExpiresAt)
+}
+
+type Token struct {
+	Value string                 `json:"value,omitempty"`
+	Extra map[string]interface{} `json:"extra,omitempty"`
 }
 
 // Identity contains ID and Email.

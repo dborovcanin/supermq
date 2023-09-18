@@ -12,7 +12,6 @@ import (
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/ulid"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -37,12 +36,7 @@ const (
 	viewPermission  = "view"
 
 	mainfluxObject = "mainflux"
-)
-
-// Possible token types are access and refresh tokens.
-const (
-	RefreshToken = 0
-	AccessToken  = 1
+	refreshToken   = "refresh_token"
 )
 
 var (
@@ -74,7 +68,7 @@ var (
 // an Auth service request.
 type Authn interface {
 	// Issue issues a new Key, returning its token value alongside.
-	Issue(ctx context.Context, token string, key Key) (*mainflux.Token, error)
+	Issue(ctx context.Context, token string, key Key) (Token, error)
 
 	// Revoke removes the Key with the provided id that is
 	// issued by the user identified by the provided key.
@@ -128,9 +122,9 @@ func New(keys KeyRepository, groups GroupRepository, idp mainflux.IDProvider, to
 	}
 }
 
-func (svc service) Issue(ctx context.Context, token string, key Key) (*mainflux.Token, error) {
+func (svc service) Issue(ctx context.Context, token string, key Key) (Token, error) {
 	if key.IssuedAt.IsZero() {
-		return nil, ErrInvalidKeyIssuedAt
+		return Token{}, ErrInvalidKeyIssuedAt
 	}
 	switch key.Type {
 	case APIKey:
@@ -165,8 +159,10 @@ func (svc service) RetrieveKey(ctx context.Context, token, id string) (Key, erro
 
 func (svc service) Identify(ctx context.Context, token string) (Identity, error) {
 	key, err := svc.tokenizer.Parse(token)
+	fmt.Println("token", token)
+	fmt.Println("identiy", key.ID, key.Issuer, key.Subject, err)
 	if err == ErrAPIKeyExpired {
-		err = svc.keys.Remove(ctx, key.IssuerID, key.ID)
+		err = svc.keys.Remove(ctx, key.Issuer, key.ID)
 		return Identity{}, errors.Wrap(ErrAPIKeyExpired, err)
 	}
 	if err != nil {
@@ -175,13 +171,13 @@ func (svc service) Identify(ctx context.Context, token string) (Identity, error)
 
 	switch key.Type {
 	case RecoveryKey, AccessKey:
-		return Identity{ID: key.IssuerID, Email: key.Subject}, nil
+		return Identity{ID: key.Issuer, Email: key.Subject}, nil
 	case APIKey:
-		_, err := svc.keys.Retrieve(context.TODO(), key.IssuerID, key.ID)
+		_, err := svc.keys.Retrieve(context.TODO(), key.Issuer, key.ID)
 		if err != nil {
 			return Identity{}, errors.ErrAuthentication
 		}
-		return Identity{ID: key.IssuerID, Email: key.Subject}, nil
+		return Identity{ID: key.Issuer, Email: key.Subject}, nil
 	default:
 		return Identity{}, errors.ErrAuthentication
 	}
@@ -318,66 +314,59 @@ func (svc service) CountSubjects(ctx context.Context, pr PolicyReq) (int, error)
 	return svc.agent.RetrieveAllSubjectsCount(ctx, pr)
 }
 
-func (svc service) tmpKey(duration time.Duration, key Key) (*mainflux.Token, error) {
-	secret, err := svc.tokenizer.Issue(key)
+func (svc service) tmpKey(duration time.Duration, key Key) (Token, error) {
+	value, err := svc.tokenizer.Issue(key)
 	if err != nil {
-		return nil, errors.Wrap(errIssueTmp, err)
+		return Token{}, errors.Wrap(errIssueTmp, err)
 	}
 
-	return &mainflux.Token{Value: secret}, nil
+	return Token{Value: value}, nil
 }
 
-func (svc service) accessKey(key Key) (*mainflux.Token, error) {
-	key.Type = AccessToken
+func (svc service) accessKey(key Key) (Token, error) {
+	key.Type = AccessKey
 	key.ExpiresAt = time.Now().Add(svc.loginDuration)
 	access, err := svc.tokenizer.Issue(key)
 	if err != nil {
-		return nil, errors.Wrap(errIssueTmp, err)
+		return Token{}, errors.Wrap(errIssueTmp, err)
 	}
 	key.ExpiresAt = time.Now().Add(svc.refreshDuration)
-	key.Type = RefreshToken
+	key.Type = RefreshKey
 	refresh, err := svc.tokenizer.Issue(key)
 	if err != nil {
-		return nil, errors.Wrap(errIssueTmp, err)
+		return Token{}, errors.Wrap(errIssueTmp, err)
 	}
-	rfrsh := structpb.NewStringValue(refresh)
-	extra := &structpb.Struct{
-		Fields: map[string]*structpb.Value{
-			"refresh_token": rfrsh,
-		},
-	}
-	// fmt.Println("extra", extra.GetStringValue())
-	// fmt.Println("extra struct", extra.GetStructValue())
-	return &mainflux.Token{Value: access, Extra: extra}, nil
+	extra := map[string]interface{}{refreshToken: refresh}
+	return Token{Value: access, Extra: extra}, nil
 }
 
-func (svc service) userKey(ctx context.Context, token string, key Key) (*mainflux.Token, error) {
+func (svc service) userKey(ctx context.Context, token string, key Key) (Token, error) {
 	id, sub, err := svc.login(token)
 	if err != nil {
-		return nil, errors.Wrap(errIssueUser, err)
+		return Token{}, errors.Wrap(errIssueUser, err)
 	}
 
-	key.IssuerID = id
+	key.SubjectID = id
 	if key.Subject == "" {
 		key.Subject = sub
 	}
 
 	keyID, err := svc.idProvider.ID()
 	if err != nil {
-		return nil, errors.Wrap(errIssueUser, err)
+		return Token{}, errors.Wrap(errIssueUser, err)
 	}
 	key.ID = keyID
 
 	if _, err := svc.keys.Save(ctx, key); err != nil {
-		return nil, errors.Wrap(errIssueUser, err)
+		return Token{}, errors.Wrap(errIssueUser, err)
 	}
 
 	tkn, err := svc.tokenizer.Issue(key)
 	if err != nil {
-		return nil, errors.Wrap(errIssueUser, err)
+		return Token{}, errors.Wrap(errIssueUser, err)
 	}
 
-	return &mainflux.Token{Value: tkn}, nil
+	return Token{Value: tkn}, nil
 }
 
 func (svc service) login(token string) (string, string, error) {
@@ -386,11 +375,11 @@ func (svc service) login(token string) (string, string, error) {
 		return "", "", err
 	}
 	// Only login key token is valid for login.
-	if key.Type != AccessKey || key.IssuerID == "" {
+	if key.Type != AccessKey || key.Issuer == "" {
 		return "", "", errors.ErrAuthentication
 	}
 
-	return key.IssuerID, key.Subject, nil
+	return key.Issuer, key.Subject, nil
 }
 
 // Done

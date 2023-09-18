@@ -4,7 +4,8 @@
 package jwt
 
 import (
-	"time"
+	"encoding/json"
+	"fmt"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -14,7 +15,7 @@ import (
 
 const (
 	issuerName = "mainflux.auth"
-	identity   = "identity"
+	identity   = "subject_id"
 	tokenType  = "type"
 )
 
@@ -31,12 +32,15 @@ func New(secret []byte) auth.Tokenizer {
 
 func (t tokenizer) Issue(key auth.Key) (string, error) {
 	tkn, err := jwt.NewBuilder().
+		JwtID(key.ID).
 		Issuer(issuerName).
-		IssuedAt(time.Now()).
-		Subject(key.ID).
-		Claim(issuerName, key.Subject).
+		IssuedAt(key.IssuedAt).
+		Subject(key.Subject).
+		Claim(identity, key.SubjectID).
 		Claim(tokenType, key.Type).
 		Expiration(key.ExpiresAt).Build()
+
+	fmt.Println("Issuing:", key)
 	if err != nil {
 		return "", errors.Wrap(errors.ErrAuthentication, err)
 	}
@@ -56,22 +60,65 @@ func (t tokenizer) Parse(token string) (auth.Key, error) {
 	if err != nil {
 		return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
 	}
-	tType, ok := tkn.Get(tokenType)
-	tt, ok1 := tType.(uint32)
-	if !(ok && ok1) {
-		return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
+	if err := jwt.Validate(tkn); err != nil {
+		fmt.Println("INALID", err)
+		return auth.Key{}, err
 	}
-	identity, ok := tkn.Get(identity)
-	id, ok1 := identity.(string)
-	if !(ok && ok1) {
-		return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
+	fmt.Println("parsed", tkn)
+	//	tt, ok := tkn.Get(tokenType)
+	//	if !ok {
+	//		return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
+	//	}
+	//	var tType auth.KeyType
+	//	for k, v := range tkn.PrivateClaims() {
+	//		fmt.Println(k, v)
+	//	}
+	jsn, err := json.Marshal(tkn.PrivateClaims())
+	if err != nil {
+		return auth.Key{}, err
 	}
-	key := auth.Key{
-		ID:      tkn.Subject(),
-		Type:    tt,
-		Subject: id,
+	fmt.Println("TYPE")
+	fmt.Println(tkn.Get("type"))
+	var key auth.Key
+	if err := json.Unmarshal(jsn, &key); err != nil {
+		return auth.Key{}, err
 	}
 
+	// 	switch t := tt.(type) {
+	// 	case float64:
+	// 		tType = auth.KeyType(t)
+	// 	case uint32:
+	// 		tType = auth.KeyType(t)
+	// 	case int:
+	// 		tType = auth.KeyType(t)
+	// 	}
+	// tt, ok1 := tType.(auth.KeyType)
+	// fmt.Println("ttype", tType, reflect.TypeOf(tType))
+	// if !(ok && ok1) {
+	// 	return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
+	// }
+	//identity, ok := tkn.Get(identity)
+	//fmt.Println("type parsed")
+	//id, ok1 := identity.(string)
+	//if !(ok && ok1) {
+	//	return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
+	//}
+	//fmt.Println("key parsed OK", key)
+	//	key = auth.Key{
+	//		ID:        tkn.JwtID(),
+	//		Type:      tType,
+	//		Issuer:    tkn.Issuer(),
+	//		SubjectID: id,
+	//		Subject:   tkn.Subject(),
+	//		IssuedAt:  tkn.IssuedAt(),
+	//		ExpiresAt: tkn.Expiration(),
+	//	}
+	key.ID = tkn.JwtID()
+	key.Issuer = tkn.Issuer()
+	key.Subject = tkn.Subject()
+	key.IssuedAt = tkn.IssuedAt()
+	key.ExpiresAt = tkn.Expiration()
+	fmt.Println("KEY", key)
 	return key, nil
 }
 

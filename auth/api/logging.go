@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/auth"
 	log "github.com/mainflux/mainflux/logger"
 )
@@ -103,13 +102,13 @@ func (lm *loggingMiddleware) CountSubjects(ctx context.Context, pr auth.PolicyRe
 	return lm.svc.CountSubjects(ctx, pr)
 }
 
-func (lm *loggingMiddleware) Issue(ctx context.Context, token string, key auth.Key) (tkn *mainflux.Token, err error) {
+func (lm *loggingMiddleware) Issue(ctx context.Context, token string, key auth.Key) (tkn auth.Token, err error) {
 	defer func(begin time.Time) {
-		d := "infinite duration"
-		if !key.ExpiresAt.IsZero() {
-			d = fmt.Sprintf("the key with expiration date %v", key.ExpiresAt)
+		d := ""
+		if key.Type != auth.AccessKey && !key.ExpiresAt.IsZero() {
+			d = fmt.Sprintf("with expiration date %v", key.ExpiresAt)
 		}
-		message := fmt.Sprintf("Method issue for %s took %s to complete", d, time.Since(begin))
+		message := fmt.Sprintf("Method issue for %d key %s took %s to complete", key.Type, d, time.Since(begin))
 		if err != nil {
 			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
 			return

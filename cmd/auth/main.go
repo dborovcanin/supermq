@@ -60,7 +60,7 @@ const (
 	defKetoWriteHost = "mainflux-keto"
 	defKetoReadPort  = "4466"
 	defKetoWritePort = "4467"
-	defLoginDuration = "10h"
+	defLoginDuration = "30m"
 
 	defSpiceDBHost       = "localhost"
 	defSpiceDBPort       = "50051"
@@ -90,7 +90,7 @@ const (
 	envKetoWriteHost = "MF_KETO_WRITE_REMOTE_HOST"
 	envKetoReadPort  = "MF_KETO_READ_REMOTE_PORT"
 	envKetoWritePort = "MF_KETO_WRITE_REMOTE_PORT"
-	envLoginDuration = "MF_AUTH_LOGIN_TOKEN_DURATION"
+	envLoginDuration = "MF_AUTH_ACCESS_TOKEN_DURATION"
 )
 
 type config struct {

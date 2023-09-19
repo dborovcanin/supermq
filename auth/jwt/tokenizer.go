@@ -33,15 +33,18 @@ func New(secret []byte) auth.Tokenizer {
 }
 
 func (t tokenizer) Issue(key auth.Key) (string, error) {
-	tkn, err := jwt.NewBuilder().
-		JwtID(key.ID).
+	builder := jwt.NewBuilder()
+	builder.
 		Issuer(issuerName).
 		IssuedAt(key.IssuedAt).
 		Subject(key.Subject).
 		Claim(identity, key.SubjectID).
 		Claim(tokenType, key.Type).
 		Expiration(key.ExpiresAt).Build()
-
+	if key.ID != "" {
+		builder.JwtID(key.ID)
+	}
+	tkn, err := builder.Build()
 	if err != nil {
 		return "", errors.Wrap(errors.ErrAuthentication, err)
 	}

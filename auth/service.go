@@ -138,7 +138,7 @@ func (svc service) Issue(ctx context.Context, token string, key Key) (Token, err
 }
 
 func (svc service) Revoke(ctx context.Context, token, id string) error {
-	issuerID, _, err := svc.login(token)
+	issuerID, _, err := svc.authenticate(token)
 	if err != nil {
 		return errors.Wrap(errRevoke, err)
 	}
@@ -149,7 +149,7 @@ func (svc service) Revoke(ctx context.Context, token, id string) error {
 }
 
 func (svc service) RetrieveKey(ctx context.Context, token, id string) (Key, error) {
-	issuerID, _, err := svc.login(token)
+	issuerID, _, err := svc.authenticate(token)
 	if err != nil {
 		return Key{}, errors.Wrap(errRetrieve, err)
 	}
@@ -339,7 +339,7 @@ func (svc service) accessKey(key Key) (Token, error) {
 }
 
 func (svc service) userKey(ctx context.Context, token string, key Key) (Token, error) {
-	id, sub, err := svc.login(token)
+	id, sub, err := svc.authenticate(token)
 	if err != nil {
 		return Token{}, errors.Wrap(errIssueUser, err)
 	}
@@ -367,19 +367,6 @@ func (svc service) userKey(ctx context.Context, token string, key Key) (Token, e
 	return Token{Value: tkn}, nil
 }
 
-func (svc service) login(token string) (string, string, error) {
-	key, err := svc.tokenizer.Parse(token)
-	if err != nil {
-		return "", "", err
-	}
-	// Only login key token is valid for login.
-	if key.Type != AccessKey || key.Issuer == "" {
-		return "", "", errors.ErrAuthentication
-	}
-
-	return key.Issuer, key.Subject, nil
-}
-
 // Done
 func (svc service) CreateGroup(ctx context.Context, token string, group Group) (Group, error) {
 	user, err := svc.Identify(ctx, token)
@@ -392,7 +379,7 @@ func (svc service) CreateGroup(ctx context.Context, token string, group Group) (
 		return Group{}, err
 	}
 
-	timestamp := getTimestmap()
+	timestamp := timestamp()
 	group.UpdatedAt = timestamp
 	group.CreatedAt = timestamp
 
@@ -542,7 +529,7 @@ func (svc service) UpdateGroup(ctx context.Context, token string, group Group) (
 		return Group{}, errors.Wrap(errors.ErrAuthorization, err)
 	}
 
-	group.UpdatedAt = getTimestmap()
+	group.UpdatedAt = timestamp()
 	return svc.groups.Update(ctx, group)
 }
 
@@ -690,6 +677,19 @@ func (svc service) ListMemberships(ctx context.Context, token string, memberID s
 	return svc.groups.MembershipsByGroupIDs(ctx, lpr.Policies, memberID, pm)
 }
 
-func getTimestmap() time.Time {
+func timestamp() time.Time {
 	return time.Now().UTC().Round(time.Millisecond)
+}
+
+func (svc service) authenticate(token string) (string, string, error) {
+	key, err := svc.tokenizer.Parse(token)
+	if err != nil {
+		return "", "", err
+	}
+	// Only login key token is valid for login.
+	if key.Type != AccessKey || key.Issuer == "" {
+		return "", "", errors.ErrAuthentication
+	}
+
+	return key.Issuer, key.Subject, nil
 }

@@ -28,6 +28,22 @@ const (
 	entityType = "client"
 )
 
+const (
+	administratorRelationKey = "administrator"
+	directMemberRelation     = "direct_member"
+	createRelation           = "create"
+
+	adminPermission      = "admin"
+	memberPermission     = "member"
+	createUserPermission = "create_user"
+
+	userType         = "user"
+	organizationType = "organization"
+
+	mainfluxObject = "mainflux"
+	anyBodySubject = "_any_body"
+)
+
 var (
 	// ErrMissingResetToken indicates malformed or missing reset token
 	// for reseting password.
@@ -99,6 +115,10 @@ func (svc service) RegisterClient(ctx context.Context, token string, cli mfclien
 	}
 	cli.ID = clientID
 	cli.CreatedAt = time.Now()
+
+	if err := svc.claimOwnership(ctx, userType, cli.ID, directMemberRelation, "", organizationType, mainfluxObject); err != nil {
+		return mfclients.Client{}, err
+	}
 
 	client, err := svc.clients.Save(ctx, cli)
 	if err != nil {
@@ -492,4 +512,23 @@ func (svc service) issue(ctx context.Context, id, email string, keyType uint32) 
 	}
 
 	return ret, nil
+}
+
+func (svc service) claimOwnership(ctx context.Context, subjectType, subject, relation, permission, objectType, object string) error {
+	req := &mainflux.AddPolicyReq{
+		SubjectType: subjectType,
+		Subject:     subject,
+		Relation:    relation,
+		Permission:  permission,
+		Object:      object,
+		ObjectType:  objectType,
+	}
+	res, err := svc.auth.AddPolicy(ctx, req)
+	if err != nil {
+		return errors.Wrap(errors.ErrAuthorization, err)
+	}
+	if !res.GetAuthorized() {
+		return errors.ErrAuthorization
+	}
+	return nil
 }

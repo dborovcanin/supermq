@@ -78,38 +78,55 @@ func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c 
 	}
 }
 
-func (svc service) CreateThings(ctx context.Context, token string, clis ...mfclients.Client) ([]mfclients.Client, error) {
+func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclients.Client) ([]mfclients.Client, error) {
 	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
-		return []mfclients.Client{}, err
+		return []mfclients.Client{}, errors.Wrap(errors.ErrAuthorization, err)
 	}
 	var clients []mfclients.Client
-	for _, cli := range clis {
-		if cli.ID == "" {
+	for _, c := range cls {
+		if c.ID == "" {
 			clientID, err := svc.idProvider.ID()
 			if err != nil {
 				return []mfclients.Client{}, err
 			}
-			cli.ID = clientID
+			c.ID = clientID
 		}
-		if cli.Credentials.Secret == "" {
+		if c.Credentials.Secret == "" {
 			key, err := svc.idProvider.ID()
 			if err != nil {
 				return []mfclients.Client{}, err
 			}
-			cli.Credentials.Secret = key
+			c.Credentials.Secret = key
 		}
-		if cli.Owner == "" {
-			cli.Owner = userID.GetId()
+		if c.Owner == "" {
+			c.Owner = userID.GetId()
 		}
-		if cli.Status != mfclients.DisabledStatus && cli.Status != mfclients.EnabledStatus {
+		if c.Status != mfclients.DisabledStatus && c.Status != mfclients.EnabledStatus {
 			return []mfclients.Client{}, apiutil.ErrInvalidStatus
 		}
-		cli.CreatedAt = time.Now()
-		clients = append(clients, cli)
+		c.CreatedAt = time.Now()
+		clients = append(clients, c)
 	}
 
-	return svc.clients.Save(ctx, clients...)
+	saved, err := svc.clients.Save(ctx, clients...)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, c := range saved {
+		policy := mainflux.AddPolicyReq{
+			SubjectType: userType,
+			Subject:     userID.GetId(),
+			Relation:    ownerRelation,
+			ObjectType:  thingType,
+			Object:      c.ID,
+		}
+		if _, err := svc.auth.AddPolicy(ctx, &policy); err != nil {
+			return nil, err
+		}
+	}
+	return saved, nil
 }
 
 func (svc service) ViewClient(ctx context.Context, token string, id string) (mfclients.Client, error) {

@@ -38,7 +38,6 @@ func (pa policyAgent) CheckPolicy(ctx context.Context, pr auth.PolicyReq) error 
 		Relation:  pr.Relation,
 		Subject:   getSubject(pr),
 	})
-	fmt.Println(err)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrAuthorization)
 	}

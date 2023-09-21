@@ -247,6 +247,7 @@ func decodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}
 	req := grpcReq.(*mainflux.AuthorizeReq)
 	return authReq{Namespace: req.GetNamespace(),
 		SubjectType: req.GetSubjectType(),
+		SubjectKind: req.GetSubjectKind(),
 		Subject:     req.GetSubject(),
 		Relation:    req.GetRelation(),
 		Permission:  req.GetPermission(),
@@ -256,7 +257,7 @@ func decodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}
 
 func encodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(authorizeRes)
-	return &mainflux.AuthorizeRes{Authorized: res.authorized}, nil
+	return &mainflux.AuthorizeRes{Authorized: res.authorized, Id: res.id}, nil
 }
 
 func decodeAddPolicyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {

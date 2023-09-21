@@ -220,6 +220,7 @@ func (client grpcClient) Authorize(ctx context.Context, req *mainflux.AuthorizeR
 		Namespace:   req.GetNamespace(),
 		SubjectType: req.GetSubjectType(),
 		Subject:     req.GetSubject(),
+		SubjectKind: req.GetSubjectKind(),
 		Relation:    req.GetRelation(),
 		Permission:  req.GetPermission(),
 		ObjectType:  req.GetObjectType(),
@@ -230,12 +231,12 @@ func (client grpcClient) Authorize(ctx context.Context, req *mainflux.AuthorizeR
 	}
 
 	ar := res.(authorizeRes)
-	return &mainflux.AuthorizeRes{Authorized: ar.authorized}, err
+	return &mainflux.AuthorizeRes{Authorized: ar.authorized, Id: ar.id}, err
 }
 
 func decodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(*mainflux.AuthorizeRes)
-	return authorizeRes{authorized: res.Authorized}, nil
+	return authorizeRes{authorized: res.Authorized, id: res.Id}, nil
 }
 
 func encodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -244,6 +245,7 @@ func encodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}
 		Namespace:   req.Namespace,
 		SubjectType: req.SubjectType,
 		Subject:     req.Subject,
+		SubjectKind: req.SubjectKind,
 		Relation:    req.Relation,
 		Permission:  req.Permission,
 		ObjectType:  req.ObjectType,

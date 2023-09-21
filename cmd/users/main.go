@@ -213,7 +213,7 @@ func newService(ctx context.Context, auth mainflux.AuthServiceClient, db *sqlx.D
 	// 	defer close()
 	// }
 	csvc := users.NewService(cRepo, auth, tokenizer, emailer, hsr, idp, c.PassRegex)
-	gsvc := mfgroups.NewService(gRepo, idp)
+	gsvc := mfgroups.NewService(gRepo, idp, auth)
 
 	csvc = ucache.NewEventStoreMiddleware(ctx, csvc, esClient)
 	gsvc = gcache.NewEventStoreMiddleware(ctx, gsvc, esClient)

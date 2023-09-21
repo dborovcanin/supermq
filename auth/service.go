@@ -39,6 +39,11 @@ const (
 	refreshToken   = "refresh_token"
 )
 
+const (
+	tokenKind = "token"
+	idKind    = "id"
+)
+
 var (
 	// ErrFailedToRetrieveMembers failed to retrieve group members.
 	ErrFailedToRetrieveMembers = errors.New("failed to retrieve group members")
@@ -182,6 +187,14 @@ func (svc service) Identify(ctx context.Context, token string) (Identity, error)
 }
 
 func (svc service) Authorize(ctx context.Context, pr PolicyReq) error {
+	switch pr.SubjectKind {
+	case tokenKind:
+		id, err := svc.Identify(ctx, pr.Subject)
+		if err != nil {
+			return err
+		}
+		pr.Subject = id.ID
+	}
 	if err := svc.agent.CheckPolicy(ctx, pr); err != nil {
 		return errors.Wrap(errors.ErrAuthorization, err)
 	}

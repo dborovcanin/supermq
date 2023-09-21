@@ -14,6 +14,7 @@ type issueRes struct {
 }
 
 type authorizeRes struct {
+	id         string
 	authorized bool
 }
 

@@ -90,6 +90,7 @@ func (req membersReq) validate() error {
 type authReq struct {
 	Namespace   string
 	SubjectType string
+	SubjectKind string
 	Subject     string
 	Relation    string
 	Permission  string
@@ -105,6 +106,10 @@ func (req authReq) validate() error {
 	if req.Object == "" {
 		return apiutil.ErrMissingPolicyObj
 	}
+
+	// if req.SubjectKind == "" {
+	// 	return apiutil.ErrMissingPolicySub
+	// }
 
 	if req.Permission == "" {
 		return apiutil.ErrMalformedPolicyAct

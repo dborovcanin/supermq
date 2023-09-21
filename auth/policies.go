@@ -13,6 +13,7 @@ type PolicyReq struct {
 	Namespace       string `json:",omitempty"`
 	Subject         string `json:"subject"`
 	SubjectType     string `json:"subject_type"`
+	SubjectKind     string `json:"subject_kind"`
 	SubjectRelation string `json:",omitempty"`
 	Object          string `json:"object"`
 	ObjectType      string `json:"object_type"`

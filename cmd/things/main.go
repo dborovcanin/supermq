@@ -221,7 +221,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 
 	psvc := tpolicies.NewService(auth, pRepo, policyCache, idp)
 	csvc := things.NewService(auth, psvc, cRepo, gRepo, thingCache, idp)
-	gsvc := mfgroups.NewService(gRepo, idp)
+	gsvc := mfgroups.NewService(gRepo, idp, auth)
 
 	csvc = thcache.NewEventStoreMiddleware(ctx, csvc, esClient)
 	gsvc = ghcache.NewEventStoreMiddleware(ctx, gsvc, esClient)

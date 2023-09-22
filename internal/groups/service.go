@@ -142,13 +142,11 @@ func (svc service) ListMemberships(ctx context.Context, token, clientID string, 
 }
 
 func (svc service) UpdateGroup(ctx context.Context, token string, g groups.Group) (groups.Group, error) {
-	id, err := svc.identify(ctx, token)
+	id, err := svc.authorize(ctx, userType, token, editPermission, channelType, g.ID)
 	if err != nil {
 		return groups.Group{}, err
 	}
-	if err := svc.authorizeByID(ctx, id, g.ID, updateRelationKey); err != nil {
-		return groups.Group{}, err
-	}
+
 	g.UpdatedAt = time.Now()
 	g.UpdatedBy = id
 
@@ -182,11 +180,8 @@ func (svc service) DisableGroup(ctx context.Context, token, id string) (groups.G
 }
 
 func (svc service) changeGroupStatus(ctx context.Context, token string, group groups.Group) (groups.Group, error) {
-	id, err := svc.identify(ctx, token)
+	id, err := svc.authorize(ctx, userType, token, editPermission, channelType, group.ID)
 	if err != nil {
-		return groups.Group{}, err
-	}
-	if err := svc.authorizeByID(ctx, id, group.ID, deleteRelationKey); err != nil {
 		return groups.Group{}, err
 	}
 	dbGroup, err := svc.groups.RetrieveByID(ctx, group.ID)

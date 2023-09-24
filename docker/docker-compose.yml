@@ -108,7 +108,7 @@ services:
     networks:
       - mainflux-base-net
     volumes:
-      - ./spicedb/schema.zed:/schema.zed
+      - ./spicedb/schema.zed:${MF_SPICEDB_SCHEMA_FILE}
 
   # nginx:
   #   image: nginx:1.23.3-alpine

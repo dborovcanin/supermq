@@ -1,59 +1,24 @@
-definition user {}
-
-definition thing {
-    relation owner: user
-    relation editor : user
-    relation viewer: user
-
-    relation domain:domain
-    relation channel: channel
-    relation group: group
-
-    permission delete = owner + group->admin + domain->admin
-    permission edit = delete + editor + channel->edit + group->edit
-    permission share = edit
-    permission connect = share
-    permission disconnect = share
-    permission view = viewer + channel +  share + group->view + channel->view
-
+definition user {
+	relation owner: user
 }
 
-definition channel {
-    relation owner: user
-    relation editor: user
-    relation viewer: user
-
-    relation domain:domain
-    relation group: group
-
-    permission delete = owner + domain->admin
-    permission edit = editor + delete  + group->edit
-    permission share = edit
-    permission disconnect = share
-    permission connect = share
-    permission view = viewer + edit + group->view
+definition thing {
+	relation owner: user
+	relation group: group
+	permission delete = owner + group->admin
+	permission edit = owner + group->edit
+	permission view = edit + group->view
+	permission share = edit // change group memberships
 }
 
 definition group {
-    relation administrator: user
-    relation editor: user
-    relation viewer: user
-
-    relation parent_group: group
-    relation domain: domain
-
-    permission admin = administrator + parent_group->admin
-    permission delete = admin
-    permission edit = delete + editor + administrator + parent_group->editor
-    permission view = viewer +  edit + parent_group->view
-}
-
-definition domain {
-    relation administrator: user
-    relation direct_member: user
-    relation create: user
-
-    permission admin = administrator
-    permission create_user = create + admin
-    permission member = direct_member + administrator
+	relation admin: user
+	relation editor: user
+	relation viewer: user
+	relation parent_group: group
+	permission administrator = admin + parent_group->admin
+	permission delete = admin
+	permission edit = editor + admin + parent_group->editor
+	permission view = viewer + edit + parent_group->view
+	permission share = edit // add or remove users
 }

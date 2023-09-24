@@ -116,12 +116,12 @@ func (svc service) RegisterClient(ctx context.Context, token string, cli mfclien
 	cli.ID = clientID
 	cli.CreatedAt = time.Now()
 
-	if err := svc.claimOwnership(ctx, userType, cli.ID, directMemberRelation, "", organizationType, mainfluxObject); err != nil {
+	client, err := svc.clients.Save(ctx, cli)
+	if err != nil {
 		return mfclients.Client{}, err
 	}
 
-	client, err := svc.clients.Save(ctx, cli)
-	if err != nil {
+	if err := svc.claimOwnership(ctx, userType, cli.ID, directMemberRelation, "", organizationType, mainfluxObject); err != nil {
 		return mfclients.Client{}, err
 	}
 

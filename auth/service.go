@@ -115,15 +115,16 @@ type service struct {
 }
 
 // New instantiates the auth service implementation.
-func New(keys KeyRepository, groups GroupRepository, idp mainflux.IDProvider, tokenizer Tokenizer, policyAgent PolicyAgent, duration time.Duration) Service {
+func New(keys KeyRepository, groups GroupRepository, idp mainflux.IDProvider, tokenizer Tokenizer, policyAgent PolicyAgent, loginDuration, refreshDuration time.Duration) Service {
 	return &service{
-		tokenizer:     tokenizer,
-		keys:          keys,
-		groups:        groups,
-		idProvider:    idp,
-		ulidProvider:  ulid.New(),
-		agent:         policyAgent,
-		loginDuration: duration,
+		tokenizer:       tokenizer,
+		keys:            keys,
+		groups:          groups,
+		idProvider:      idp,
+		ulidProvider:    ulid.New(),
+		agent:           policyAgent,
+		loginDuration:   loginDuration,
+		refreshDuration: refreshDuration,
 	}
 }
 

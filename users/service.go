@@ -37,8 +37,8 @@ const (
 	memberPermission     = "member"
 	createUserPermission = "create_user"
 
-	userType         = "user"
-	organizationType = "organization"
+	userType = "user"
+	// organizationType = "organization"
 
 	mainfluxObject = "mainflux"
 	anyBodySubject = "_any_body"
@@ -70,18 +70,17 @@ type service struct {
 	idProvider mainflux.IDProvider
 	auth       mainflux.AuthServiceClient
 	hasher     Hasher
-	tokens     jwt.Repository
-	email      Emailer
-	passRegex  *regexp.Regexp
+	// tokens     jwt.Repository
+	email     Emailer
+	passRegex *regexp.Regexp
 }
 
 // NewService returns a new Users service implementation.
-func NewService(c postgres.Repository, a mainflux.AuthServiceClient, t jwt.Repository, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
+func NewService(c postgres.Repository, a mainflux.AuthServiceClient, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
 	return service{
 		clients:    c,
 		auth:       a,
 		hasher:     h,
-		tokens:     t,
 		email:      e,
 		idProvider: idp,
 		passRegex:  pr,
@@ -121,10 +120,6 @@ func (svc service) RegisterClient(ctx context.Context, token string, cli mfclien
 		return mfclients.Client{}, err
 	}
 
-	if err := svc.claimOwnership(ctx, userType, cli.ID, directMemberRelation, "", organizationType, mainfluxObject); err != nil {
-		return mfclients.Client{}, err
-	}
-
 	return client, nil
 }
 
@@ -146,18 +141,21 @@ func (svc service) IssueToken(ctx context.Context, identity, secret string) (jwt
 }
 
 func (svc service) RefreshToken(ctx context.Context, refreshToken string) (jwt.Token, error) {
-	claims, err := svc.tokens.Parse(ctx, refreshToken)
-	if err != nil {
-		return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
-	}
-	if claims.Type != jwt.RefreshToken {
-		return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
-	}
-	if _, err := svc.clients.RetrieveByID(ctx, claims.ClientID); err != nil {
-		return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
-	}
+	return jwt.Token{}, nil
+	// return svc.issue(ctx, dbUser.ID, dbUser.Credentials.Identity, 0)
 
-	return svc.tokens.Issue(ctx, claims)
+	// claims, err := svc.tokens.Parse(ctx, refreshToken)
+	// if err != nil {
+	// 	return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
+	// }
+	// if claims.Type != jwt.RefreshToken {
+	// 	return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
+	// }
+	// if _, err := svc.clients.RetrieveByID(ctx, claims.ClientID); err != nil {
+	// 	return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
+	// }
+
+	// return svc.tokens.Issue(ctx, claims)
 }
 
 func (svc service) ViewClient(ctx context.Context, token string, id string) (mfclients.Client, error) {
@@ -304,19 +302,20 @@ func (svc service) UpdateClientIdentity(ctx context.Context, token, clientID, id
 }
 
 func (svc service) GenerateResetToken(ctx context.Context, email, host string) error {
-	client, err := svc.clients.RetrieveByIdentity(ctx, email)
-	if err != nil || client.Credentials.Identity == "" {
-		return errors.ErrNotFound
-	}
-	claims := jwt.Claims{
-		ClientID: client.ID,
-		Email:    client.Credentials.Identity,
-	}
-	t, err := svc.tokens.Issue(ctx, claims)
-	if err != nil {
-		return errors.Wrap(ErrRecoveryToken, err)
-	}
-	return svc.SendPasswordReset(ctx, host, email, client.Name, t.AccessToken)
+	// client, err := svc.clients.RetrieveByIdentity(ctx, email)
+	// if err != nil || client.Credentials.Identity == "" {
+	// 	return errors.ErrNotFound
+	// }
+	// claims := jwt.Claims{
+	// 	ClientID: client.ID,
+	// 	Email:    client.Credentials.Identity,
+	// }
+	// t, err := svc.tokens.Issue(ctx, claims)
+	// if err != nil {
+	// 	return errors.Wrap(ErrRecoveryToken, err)
+	// }
+	// return svc.SendPasswordReset(ctx, host, email, client.Name, t.AccessToken)
+	return nil
 }
 
 func (svc service) ResetSecret(ctx context.Context, resetToken, secret string) error {
@@ -483,15 +482,11 @@ func (svc service) authorize(ctx context.Context, subject, object, action string
 }
 
 func (svc service) Identify(ctx context.Context, token string) (string, error) {
-	claims, err := svc.tokens.Parse(ctx, token)
+	ret, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {
 		return "", err
 	}
-	if claims.Type != jwt.AccessToken {
-		return "", errors.ErrAuthentication
-	}
-
-	return claims.ClientID, nil
+	return ret.Id, nil
 }
 
 // Auth helpers

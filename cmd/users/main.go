@@ -41,7 +41,6 @@ import (
 	capi "github.com/mainflux/mainflux/users/api"
 	"github.com/mainflux/mainflux/users/emailer"
 	"github.com/mainflux/mainflux/users/hasher"
-	"github.com/mainflux/mainflux/users/jwt"
 	clientspg "github.com/mainflux/mainflux/users/postgres"
 	ucache "github.com/mainflux/mainflux/users/redis"
 	ctracing "github.com/mainflux/mainflux/users/tracing"
@@ -194,16 +193,6 @@ func newService(ctx context.Context, auth mainflux.AuthServiceClient, db *sqlx.D
 	idp := uuid.New()
 	hsr := hasher.New()
 
-	aDuration, err := time.ParseDuration(c.AccessDuration)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to parse access token duration: %s", err.Error()))
-	}
-	rDuration, err := time.ParseDuration(c.RefreshDuration)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to parse refresh token duration: %s", err.Error()))
-	}
-	tokenizer := jwt.NewRepository([]byte(c.SecretKey), aDuration, rDuration)
-
 	emailer, err := emailer.New(c.ResetURL, &ec)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
@@ -212,7 +201,7 @@ func newService(ctx context.Context, auth mainflux.AuthServiceClient, db *sqlx.D
 	// if close != nil {
 	// 	defer close()
 	// }
-	csvc := users.NewService(cRepo, auth, tokenizer, emailer, hsr, idp, c.PassRegex)
+	csvc := users.NewService(cRepo, auth, emailer, hsr, idp, c.PassRegex)
 	gsvc := mfgroups.NewService(gRepo, idp, auth)
 
 	csvc = ucache.NewEventStoreMiddleware(ctx, csvc, esClient)

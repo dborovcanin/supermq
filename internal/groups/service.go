@@ -32,8 +32,8 @@ const (
 	ownerRelation   = "owner"
 	channelRelation = "channel"
 
-	userType    = "user"
-	channelType = "channel"
+	userType  = "user"
+	groupType = "group"
 
 	adminPermission      = "admin"
 	ownerPermission      = "delete"
@@ -91,7 +91,7 @@ func (svc service) CreateGroup(ctx context.Context, token string, g groups.Group
 		SubjectType: userType,
 		Subject:     ownerID,
 		Relation:    ownerRelation,
-		ObjectType:  channelType,
+		ObjectType:  groupType,
 		Object:      g.ID,
 	}
 	if _, err := svc.auth.AddPolicy(ctx, &policy); err != nil {
@@ -101,7 +101,7 @@ func (svc service) CreateGroup(ctx context.Context, token string, g groups.Group
 }
 
 func (svc service) ViewGroup(ctx context.Context, token string, id string) (groups.Group, error) {
-	_, err := svc.authorize(ctx, userType, token, viewPermission, channelType, id)
+	_, err := svc.authorize(ctx, userType, token, viewPermission, groupType, id)
 	if err != nil {
 		return groups.Group{}, err
 	}
@@ -142,7 +142,7 @@ func (svc service) ListMemberships(ctx context.Context, token, clientID string, 
 }
 
 func (svc service) UpdateGroup(ctx context.Context, token string, g groups.Group) (groups.Group, error) {
-	id, err := svc.authorize(ctx, userType, token, editPermission, channelType, g.ID)
+	id, err := svc.authorize(ctx, userType, token, editPermission, groupType, g.ID)
 	if err != nil {
 		return groups.Group{}, err
 	}
@@ -180,7 +180,7 @@ func (svc service) DisableGroup(ctx context.Context, token, id string) (groups.G
 }
 
 func (svc service) changeGroupStatus(ctx context.Context, token string, group groups.Group) (groups.Group, error) {
-	id, err := svc.authorize(ctx, userType, token, editPermission, channelType, group.ID)
+	id, err := svc.authorize(ctx, userType, token, editPermission, groupType, group.ID)
 	if err != nil {
 		return groups.Group{}, err
 	}

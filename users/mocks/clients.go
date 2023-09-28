@@ -8,7 +8,7 @@ import (
 
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/users/clients/postgres"
+	"github.com/mainflux/mainflux/users/postgres"
 	"github.com/stretchr/testify/mock"
 )
 

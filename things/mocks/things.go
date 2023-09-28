@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/things/clients"
+	"github.com/mainflux/mainflux/things"
 )
 
 type clientCacheMock struct {
@@ -17,7 +17,7 @@ type clientCacheMock struct {
 }
 
 // NewCache returns mock cache instance.
-func NewCache() clients.Cache {
+func NewCache() things.Cache {
 	return &clientCacheMock{
 		things: make(map[string]string),
 	}

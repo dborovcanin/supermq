@@ -4,13 +4,13 @@
 package mocks
 
 import (
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 )
 
 type emailerMock struct{}
 
 // NewEmailer provides emailer instance for  the test.
-func NewEmailer() clients.Emailer {
+func NewEmailer() users.Emailer {
 	return &emailerMock{}
 }
 

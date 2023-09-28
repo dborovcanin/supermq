@@ -17,7 +17,7 @@ var id = 0
 
 // NewService use mock dependencies to create real twins service.
 func NewService(tokens map[string]string) twins.Service {
-	auth := NewAuthServiceClient(tokens)
+	auth := NewAuthServiceClient(tokens, map[string][]SubjectSet{})
 	twinsRepo := NewTwinRepository()
 	twinCache := NewTwinCache()
 	statesRepo := NewStateRepository()

@@ -131,31 +131,19 @@ func (svc service) IssueToken(ctx context.Context, identity, secret string) (jwt
 	if err := svc.hasher.Compare(secret, dbUser.Credentials.Secret); err != nil {
 		return jwt.Token{}, errors.Wrap(errors.ErrLogin, err)
 	}
-
-	// claims := jwt.Claims{
-	// 	ClientID: dbUser.ID,
-	// 	Email:    dbUser.Credentials.Identity,
-	// }
-
-	return svc.issue(ctx, dbUser.ID, dbUser.Credentials.Identity, 0)
+	tkn, err := svc.auth.Issue(ctx, &mainflux.IssueReq{Id: dbUser.ID, Email: dbUser.Credentials.Identity, Type: 0})
+	if err != nil {
+		return jwt.Token{}, errors.Wrap(errors.ErrNotFound, err)
+	}
+	return parseToken(tkn)
 }
 
 func (svc service) RefreshToken(ctx context.Context, refreshToken string) (jwt.Token, error) {
-	return jwt.Token{}, nil
-	// return svc.issue(ctx, dbUser.ID, dbUser.Credentials.Identity, 0)
-
-	// claims, err := svc.tokens.Parse(ctx, refreshToken)
-	// if err != nil {
-	// 	return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
-	// }
-	// if claims.Type != jwt.RefreshToken {
-	// 	return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
-	// }
-	// if _, err := svc.clients.RetrieveByID(ctx, claims.ClientID); err != nil {
-	// 	return jwt.Token{}, errors.Wrap(errors.ErrAuthentication, err)
-	// }
-
-	// return svc.tokens.Issue(ctx, claims)
+	tkn, err := svc.auth.Refresh(ctx, &mainflux.RefreshReq{Value: refreshToken})
+	if err != nil {
+		return jwt.Token{}, err
+	}
+	return parseToken(tkn)
 }
 
 func (svc service) ViewClient(ctx context.Context, token string, id string) (mfclients.Client, error) {
@@ -463,7 +451,14 @@ func (svc service) ListMembers(ctx context.Context, token, groupID string, pm mf
 	return svc.clients.Members(ctx, groupID, pm)
 }
 
-func (svc service) authorize(ctx context.Context, subject, object, action string) error {
+func (svc service) authorize(ctx context.Context, token, object, action string) error {
+	// req := &mainflux.AuthorizeReq{
+	// 	SubjectType: userType,
+	// 	SubjectKind: token,
+	// 	ObjectType:  userType,
+	// 	Object:      object,
+	// 	Permission:  action,
+	// }
 	// if subject == object {
 	// 	return nil
 	// }
@@ -494,6 +489,24 @@ func (svc service) issue(ctx context.Context, id, email string, keyType uint32) 
 	tkn, err := svc.auth.Issue(ctx, &mainflux.IssueReq{Id: id, Email: email, Type: keyType})
 	if err != nil {
 		return jwt.Token{}, errors.Wrap(errors.ErrNotFound, err)
+	}
+	extra := tkn.Extra.AsMap()["refresh_token"]
+	refresh, ok := extra.(string)
+	if !ok {
+		return jwt.Token{}, errors.ErrAuthentication
+	}
+	ret := jwt.Token{
+		AccessToken:  tkn.GetValue(),
+		RefreshToken: refresh,
+		AccessType:   "bearer",
+	}
+
+	return ret, nil
+}
+
+func parseToken(tkn *mainflux.Token) (jwt.Token, error) {
+	if tkn == nil {
+		return jwt.Token{}, errors.New("invalid token")
 	}
 	extra := tkn.Extra.AsMap()["refresh_token"]
 	refresh, ok := extra.(string)

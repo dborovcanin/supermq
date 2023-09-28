@@ -21,6 +21,8 @@ var _ mainflux.AuthServiceClient = (*grpcClient)(nil)
 
 type grpcClient struct {
 	issue           endpoint.Endpoint
+	login           endpoint.Endpoint
+	refresh         endpoint.Endpoint
 	identify        endpoint.Endpoint
 	authorize       endpoint.Endpoint
 	addPolicy       endpoint.Endpoint
@@ -45,6 +47,22 @@ func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthServic
 			"Issue",
 			encodeIssueRequest,
 			decodeIssueResponse,
+			mainflux.Token{},
+		).Endpoint(),
+		login: kitgrpc.NewClient(
+			conn,
+			svcName,
+			"Login",
+			encodeLoginRequest,
+			decodeLoginResponse,
+			mainflux.Token{},
+		).Endpoint(),
+		refresh: kitgrpc.NewClient(
+			conn,
+			svcName,
+			"Refresh",
+			encodeRefreshRequest,
+			decodeRefreshResponse,
 			mainflux.Token{},
 		).Endpoint(),
 		identify: kitgrpc.NewClient(
@@ -157,27 +175,6 @@ func (client grpcClient) Issue(ctx context.Context, req *mainflux.IssueReq, _ ..
 		return nil, err
 	}
 	return res.(*mainflux.Token), nil
-	// ir := res.(issueRes)
-	// // rfrsh := structpb.NewStringValue(refresh)
-	// // extra := &structpb.Struct{
-	// // 	Fields: map[string]*structpb.Value{
-	// // 		"refresh_token": rfrsh,
-	// // 	},
-	// // }
-	// fields := map[string]*structpb.Value{}
-	// for k, v := range ir.extra {
-	// 	val, err := structpb.NewValue(v)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	fields[k] = val
-	// }
-
-	// extra := &structpb.Struct{
-	// 	Fields: fields,
-	// }
-
-	// return &mainflux.Token{Value: ir.value, Extra: extra}, nil
 }
 
 func encodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -186,6 +183,46 @@ func encodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, er
 }
 
 func decodeIssueResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	return grpcRes, nil
+}
+
+func (client grpcClient) Login(ctx context.Context, req *mainflux.LoginReq, _ ...grpc.CallOption) (*mainflux.Token, error) {
+	ctx, close := context.WithTimeout(ctx, client.timeout)
+	defer close()
+
+	res, err := client.login(ctx, issueReq{id: req.GetId(), email: req.GetEmail(), keyType: auth.APIKey})
+	if err != nil {
+		return nil, err
+	}
+	return res.(*mainflux.Token), nil
+}
+
+func encodeLoginRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(issueReq)
+	return &mainflux.LoginReq{Id: req.id, Email: req.email}, nil
+}
+
+func decodeLoginResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	return grpcRes, nil
+}
+
+func (client grpcClient) Refresh(ctx context.Context, req *mainflux.RefreshReq, _ ...grpc.CallOption) (*mainflux.Token, error) {
+	ctx, close := context.WithTimeout(ctx, client.timeout)
+	defer close()
+
+	res, err := client.refresh(ctx, refreshReq{value: req.GetValue()})
+	if err != nil {
+		return nil, err
+	}
+	return res.(*mainflux.Token), nil
+}
+
+func encodeRefreshRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(refreshReq)
+	return &mainflux.RefreshReq{Value: req.value}, nil
+}
+
+func decodeRefreshResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	return grpcRes, nil
 }
 

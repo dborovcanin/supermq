@@ -22,6 +22,8 @@ var _ mainflux.AuthServiceServer = (*grpcServer)(nil)
 type grpcServer struct {
 	mainflux.UnimplementedAuthServiceServer
 	issue           kitgrpc.Handler
+	login           kitgrpc.Handler
+	refresh         kitgrpc.Handler
 	identify        kitgrpc.Handler
 	authorize       kitgrpc.Handler
 	addPolicy       kitgrpc.Handler
@@ -42,6 +44,16 @@ func NewServer(svc auth.Service) mainflux.AuthServiceServer {
 		issue: kitgrpc.NewServer(
 			(issueEndpoint(svc)),
 			decodeIssueRequest,
+			encodeIssueResponse,
+		),
+		login: kitgrpc.NewServer(
+			(loginEndpoint(svc)),
+			decodeLoginRequest,
+			encodeIssueResponse,
+		),
+		refresh: kitgrpc.NewServer(
+			(refreshEndpoint(svc)),
+			decodeRefreshRequest,
 			encodeIssueResponse,
 		),
 		identify: kitgrpc.NewServer(
@@ -109,6 +121,22 @@ func NewServer(svc auth.Service) mainflux.AuthServiceServer {
 
 func (s *grpcServer) Issue(ctx context.Context, req *mainflux.IssueReq) (*mainflux.Token, error) {
 	_, res, err := s.issue.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, encodeError(err)
+	}
+	return res.(*mainflux.Token), nil
+}
+
+func (s *grpcServer) Login(ctx context.Context, req *mainflux.LoginReq) (*mainflux.Token, error) {
+	_, res, err := s.login.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, encodeError(err)
+	}
+	return res.(*mainflux.Token), nil
+}
+
+func (s *grpcServer) Refresh(ctx context.Context, req *mainflux.RefreshReq) (*mainflux.Token, error) {
+	_, res, err := s.refresh.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, encodeError(err)
 	}
@@ -214,6 +242,16 @@ func (s *grpcServer) Members(ctx context.Context, req *mainflux.MembersReq) (*ma
 func decodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.IssueReq)
 	return issueReq{id: req.GetId(), email: req.GetEmail(), keyType: auth.KeyType(req.GetType())}, nil
+}
+
+func decodeLoginRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*mainflux.LoginReq)
+	return issueReq{id: req.GetId(), email: req.GetEmail(), keyType: auth.AccessKey}, nil
+}
+
+func decodeRefreshRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*mainflux.RefreshReq)
+	return refreshReq{value: req.GetValue()}, nil
 }
 
 func encodeIssueResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {

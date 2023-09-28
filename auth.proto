@@ -18,6 +18,8 @@ service ThingsService {
 
 service AuthService {
     rpc Issue(IssueReq) returns (Token) {}
+    rpc Login(LoginReq) returns (Token) {}
+    rpc Refresh(RefreshReq) returns (Token) {}
     rpc Identify(Token) returns (UserIdentity) {}
     rpc Authorize(AuthorizeReq) returns (AuthorizeRes) {}
     rpc AddPolicy(AddPolicyReq) returns (AddPolicyRes) {}
@@ -72,6 +74,16 @@ message IssueReq {
     string id    = 1;
     string email = 2;
     uint32 type  = 3;
+}
+
+message LoginReq {
+    string id    = 1;
+    string email = 2;
+    string domain = 3;
+}
+
+message RefreshReq {
+    string value = 1;
 }
 
 message AuthorizeReq {

@@ -22,9 +22,53 @@ func issueEndpoint(svc auth.Service) endpoint.Endpoint {
 			Type:      req.keyType,
 			Subject:   req.email,
 			SubjectID: req.id,
+		}
+		tkn, err := svc.Issue(ctx, "", key)
+		if err != nil {
+			return issueRes{}, err
+		}
+		ret := issueRes{
+			value: tkn.Value,
+			extra: tkn.Extra,
+		}
+		return ret, nil
+	}
+}
+
+func loginEndpoint(svc auth.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(issueReq)
+		if err := req.validate(); err != nil {
+			return issueRes{}, err
+		}
+
+		key := auth.Key{
+			Type:      req.keyType,
+			Subject:   req.email,
+			SubjectID: req.id,
 			IssuedAt:  time.Now().UTC(),
 		}
 		tkn, err := svc.Issue(ctx, "", key)
+		if err != nil {
+			return issueRes{}, err
+		}
+		ret := issueRes{
+			value: tkn.Value,
+			extra: tkn.Extra,
+		}
+		return ret, nil
+	}
+}
+
+func refreshEndpoint(svc auth.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(refreshReq)
+		if err := req.validate(); err != nil {
+			return issueRes{}, err
+		}
+
+		key := auth.Key{Type: auth.RefreshKey}
+		tkn, err := svc.Issue(ctx, req.value, key)
 		if err != nil {
 			return issueRes{}, err
 		}

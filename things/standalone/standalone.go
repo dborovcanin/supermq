@@ -27,6 +27,13 @@ func NewAuthService(id, token string) mainflux.AuthServiceClient {
 	}
 }
 
+func (repo singleUserRepo) Login(ctx context.Context, in *mainflux.LoginReq, opts ...grpc.CallOption) (*mainflux.Token, error) {
+	return nil, nil
+}
+func (repo singleUserRepo) Refresh(ctx context.Context, in *mainflux.RefreshReq, opts ...grpc.CallOption) (*mainflux.Token, error) {
+	return nil, nil
+}
+
 // func (repo singleUserRepo) Identify(ctx context.Context, req *policies.IdentifyReq, opts ...grpc.CallOption) (*policies.IdentifyRes, error) {
 // 	if repo.token != req.GetToken() {
 // 		return nil, errors.ErrAuthentication
@@ -46,6 +53,7 @@ func NewAuthService(id, token string) mainflux.AuthServiceClient {
 func (repo singleUserRepo) Issue(ctx context.Context, in *mainflux.IssueReq, opts ...grpc.CallOption) (*mainflux.Token, error) {
 	return nil, nil
 }
+
 func (repo singleUserRepo) Identify(ctx context.Context, in *mainflux.Token, opts ...grpc.CallOption) (*mainflux.UserIdentity, error) {
 	// return nil, nil
 	if repo.token != in.GetValue() {

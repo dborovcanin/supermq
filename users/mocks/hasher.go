@@ -5,16 +5,16 @@ package mocks
 
 import (
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/users/clients"
+	"github.com/mainflux/mainflux/users"
 )
 
-var _ clients.Hasher = (*hasherMock)(nil)
+var _ users.Hasher = (*hasherMock)(nil)
 
 type hasherMock struct{}
 
 // NewHasher creates "no-op" hasher for test purposes. This implementation will
 // return secrets without changing them.
-func NewHasher() clients.Hasher {
+func NewHasher() users.Hasher {
 	return &hasherMock{}
 }
 

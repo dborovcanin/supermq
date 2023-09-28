@@ -6,25 +6,31 @@ package mocks
 import (
 	"context"
 
-	"github.com/mainflux/mainflux/things/policies"
+	"github.com/mainflux/mainflux"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var _ policies.AuthServiceClient = (*thingsServiceMock)(nil)
+var _ mainflux.ThingsServiceClient = (*thingsServiceMock)(nil)
 
 type thingsServiceMock struct {
 	channels map[string]string
 }
 
 // NewThingsService returns mock implementation of things service.
-func NewThingsService(channels map[string]string) policies.AuthServiceClient {
+func NewThingsService(channels map[string]string) mainflux.ThingsServiceClient {
 	return &thingsServiceMock{channels}
 }
 
-func (svc thingsServiceMock) Authorize(context.Context, *policies.AuthorizeReq, ...grpc.CallOption) (*policies.AuthorizeRes, error) {
-	return &policies.AuthorizeRes{Authorized: true}, nil
+func (svc thingsServiceMock) Identify(context.Context, *mainflux.Token, ...grpc.CallOption) (*mainflux.ThingID, error) {
+	panic("not implemented")
 }
-
-func (svc thingsServiceMock) Identify(context.Context, *policies.IdentifyReq, ...grpc.CallOption) (*policies.IdentifyRes, error) {
+func (svc thingsServiceMock) CanAccessByKey(ctx context.Context, in *mainflux.AccessByKeyReq, opts ...grpc.CallOption) (*mainflux.ThingID, error) {
+	panic("not implemented")
+}
+func (svc thingsServiceMock) IsChannelOwner(ctx context.Context, in *mainflux.ChannelOwnerReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	panic("not implemented")
+}
+func (svc thingsServiceMock) CanAccessByID(ctx context.Context, in *mainflux.AccessByIDReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	panic("not implemented")
 }

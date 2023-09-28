@@ -13,7 +13,7 @@ import (
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	cpostgres "github.com/mainflux/mainflux/things/clients/postgres"
+	cpostgres "github.com/mainflux/mainflux/things/postgres"
 	"github.com/stretchr/testify/assert"
 )
 

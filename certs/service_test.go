@@ -12,7 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-zoo/bone"
+	"github.com/go-chi/chi/v5"
+	"github.com/mainflux/mainflux"
 	bsmocks "github.com/mainflux/mainflux/bootstrap/mocks"
 	"github.com/mainflux/mainflux/certs"
 	"github.com/mainflux/mainflux/certs/mocks"
@@ -20,10 +21,9 @@ import (
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	mfsdk "github.com/mainflux/mainflux/pkg/sdk/go"
-	"github.com/mainflux/mainflux/things/clients"
-	httpapi "github.com/mainflux/mainflux/things/clients/api"
-	thmocks "github.com/mainflux/mainflux/things/clients/mocks"
-	upolicies "github.com/mainflux/mainflux/users/policies"
+	"github.com/mainflux/mainflux/things"
+	httpapi "github.com/mainflux/mainflux/things/api"
+	usersmocks "github.com/mainflux/mainflux/users/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,12 +49,11 @@ const (
 var adminRelationKeys = []string{"c_update", "c_list", "c_delete", "c_share"}
 
 func newService(tokens map[string]string) (certs.Service, error) {
-	ac := bsmocks.NewAuthClient(map[string]string{token: email})
+	ac := bsmocks.NewAuthClient(map[string]string{token: email}, map[string][]bsmocks.SubjectSet{})
 
 	server := newThingsServer(newThingsService(ac))
 
-	policies := []thmocks.MockSubjectSet{{Object: "token", Relation: adminRelationKeys}}
-	auth := thmocks.NewAuthService(tokens, map[string][]thmocks.MockSubjectSet{token: policies})
+	auth := usersmocks.NewAuthService(tokens, map[string][]usersmocks.SubjectSet{})
 
 	config := mfsdk.Config{
 		ThingsURL: server.URL,
@@ -78,7 +77,7 @@ func newService(tokens map[string]string) (certs.Service, error) {
 	return certs.New(auth, repo, sdk, pki), nil
 }
 
-func newThingsService(auth upolicies.AuthServiceClient) clients.Service {
+func newThingsService(auth mainflux.AuthServiceClient) things.Service {
 	ths := make(map[string]mfclients.Client, thingsNum)
 	for i := 0; i < thingsNum; i++ {
 		id := strconv.Itoa(i + 1)
@@ -365,9 +364,9 @@ func TestViewCert(t *testing.T) {
 	}
 }
 
-func newThingsServer(svc clients.Service) *httptest.Server {
+func newThingsServer(svc things.Service) *httptest.Server {
 	logger := logger.NewMock()
-	mux := bone.New()
-	httpapi.MakeHandler(svc, mux, logger, instanceID)
+	mux := chi.NewMux()
+	httpapi.MakeHandler(svc, nil, mux, logger, instanceID)
 	return httptest.NewServer(mux)
 }

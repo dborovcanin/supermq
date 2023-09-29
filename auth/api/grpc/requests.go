@@ -45,6 +45,18 @@ func (req issueReq) validate() error {
 	return nil
 }
 
+type refreshReq struct {
+	value string
+}
+
+func (req refreshReq) validate() error {
+	if req.value == "" {
+		return apiutil.ErrMissingSecret
+	}
+
+	return nil
+}
+
 type assignReq struct {
 	token     string
 	groupID   string

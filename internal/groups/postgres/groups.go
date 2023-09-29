@@ -356,7 +356,7 @@ func toDBGroup(g mfgroups.Group) (dbGroup, error) {
 func toGroup(g dbGroup) (mfgroups.Group, error) {
 	var metadata mfclients.Metadata
 	if g.Metadata != nil {
-		if err := json.Unmarshal([]byte(g.Metadata), &metadata); err != nil {
+		if err := json.Unmarshal(g.Metadata, &metadata); err != nil {
 			return mfgroups.Group{}, errors.Wrap(errors.ErrMalformedEntity, err)
 		}
 	}
@@ -436,7 +436,7 @@ type dbGroupPage struct {
 	Status   mfclients.Status `db:"status"`
 }
 
-func (gr groupRepository) processRows(rows *sqlx.Rows) ([]mfgroups.Group, error) {
+func (repo groupRepository) processRows(rows *sqlx.Rows) ([]mfgroups.Group, error) {
 	var items []mfgroups.Group
 	for rows.Next() {
 		dbg := dbGroup{}

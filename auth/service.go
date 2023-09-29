@@ -129,12 +129,12 @@ func New(keys KeyRepository, groups GroupRepository, idp mainflux.IDProvider, to
 }
 
 func (svc service) Issue(ctx context.Context, token string, key Key) (Token, error) {
-	if key.IssuedAt.IsZero() {
-		return Token{}, ErrInvalidKeyIssuedAt
-	}
+	key.IssuedAt = time.Now().UTC()
 	switch key.Type {
 	case APIKey:
 		return svc.userKey(ctx, token, key)
+	case RefreshKey:
+		return svc.refreshKey(ctx, token, key)
 	case RecoveryKey:
 		return svc.tmpKey(recoveryDuration, key)
 	default:
@@ -336,6 +336,33 @@ func (svc service) tmpKey(duration time.Duration, key Key) (Token, error) {
 }
 
 func (svc service) accessKey(key Key) (Token, error) {
+	key.Type = AccessKey
+	key.ExpiresAt = time.Now().Add(svc.loginDuration)
+	access, err := svc.tokenizer.Issue(key)
+	if err != nil {
+		return Token{}, errors.Wrap(errIssueTmp, err)
+	}
+	key.ExpiresAt = time.Now().Add(svc.refreshDuration)
+	key.Type = RefreshKey
+	refresh, err := svc.tokenizer.Issue(key)
+	if err != nil {
+		return Token{}, errors.Wrap(errIssueTmp, err)
+	}
+	extra := map[string]interface{}{refreshToken: refresh}
+	return Token{Value: access, Extra: extra}, nil
+}
+
+func (svc service) refreshKey(ctx context.Context, token string, key Key) (Token, error) {
+	k, err := svc.tokenizer.Parse(token)
+	if err != nil {
+		return Token{}, err
+	}
+	if k.Type != RefreshKey {
+		return Token{}, errIssueUser
+	}
+	key.ID = k.ID
+	key.Subject = k.Subject
+	key.SubjectID = k.SubjectID
 	key.Type = AccessKey
 	key.ExpiresAt = time.Now().Add(svc.loginDuration)
 	access, err := svc.tokenizer.Issue(key)

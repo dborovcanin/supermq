@@ -32,7 +32,7 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 			opts...,
 		), "create_thing").ServeHTTP)
 
-		r.Post("//bulk", otelhttp.NewHandler(kithttp.NewServer(
+		r.Post("/bulk", otelhttp.NewHandler(kithttp.NewServer(
 			createClientsEndpoint(svc),
 			decodeCreateClientsReq,
 			api.EncodeResponse,

@@ -49,9 +49,10 @@ const (
 	memberPermission     = "member"
 
 	userType         = "user"
+	tokenKind        = "token"
 	organizationType = "organization"
 	thingType        = "thing"
-	channelType      = "channel"
+	channelType      = "group"
 
 	mainfluxObject = "mainflux"
 	anyBodySubject = "_any_body"
@@ -130,12 +131,8 @@ func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclie
 }
 
 func (svc service) ViewClient(ctx context.Context, token string, id string) (mfclients.Client, error) {
-	userID, err := svc.identify(ctx, token)
+	id, err := svc.authorize(ctx, userType, tokenKind, token, viewPermission, thingType, id)
 	if err != nil {
-		return mfclients.Client{}, err
-	}
-	if err := svc.authorize(ctx, userType, userID, viewPermission, thingType, id); err != nil {
-
 		return mfclients.Client{}, errors.Wrap(errors.ErrNotFound, err)
 	}
 	return svc.clients.RetrieveByID(ctx, id)
@@ -192,11 +189,8 @@ func (svc service) ListClients(ctx context.Context, token string, pm mfclients.P
 }
 
 func (svc service) UpdateClient(ctx context.Context, token string, cli mfclients.Client) (mfclients.Client, error) {
-	userID, err := svc.identify(ctx, token)
+	userID, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, cli.ID)
 	if err != nil {
-		return mfclients.Client{}, err
-	}
-	if err := svc.authorize(ctx, userType, userID, editPermission, thingType, cli.ID); err != nil {
 		return mfclients.Client{}, err
 	}
 
@@ -212,11 +206,9 @@ func (svc service) UpdateClient(ctx context.Context, token string, cli mfclients
 }
 
 func (svc service) UpdateClientTags(ctx context.Context, token string, cli mfclients.Client) (mfclients.Client, error) {
-	userID, err := svc.identify(ctx, token)
+	userID, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, cli.ID)
+
 	if err != nil {
-		return mfclients.Client{}, err
-	}
-	if err := svc.authorize(ctx, userType, userID, editPermission, thingType, cli.ID); err != nil {
 		return mfclients.Client{}, err
 	}
 
@@ -231,11 +223,8 @@ func (svc service) UpdateClientTags(ctx context.Context, token string, cli mfcli
 }
 
 func (svc service) UpdateClientSecret(ctx context.Context, token, id, key string) (mfclients.Client, error) {
-	userID, err := svc.identify(ctx, token)
+	userID, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, userType, id)
 	if err != nil {
-		return mfclients.Client{}, err
-	}
-	if err := svc.authorize(ctx, userType, userID, editPermission, thingType, userID); err != nil {
 		return mfclients.Client{}, err
 	}
 
@@ -253,12 +242,9 @@ func (svc service) UpdateClientSecret(ctx context.Context, token, id, key string
 }
 
 func (svc service) UpdateClientOwner(ctx context.Context, token string, cli mfclients.Client) (mfclients.Client, error) {
-	userID, err := svc.identify(ctx, token)
-	if err != nil {
-		return mfclients.Client{}, err
-	}
-	if err := svc.authorize(ctx, userType, userID, editPermission, thingType, cli.ID); err != nil {
+	userID, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, cli.ID)
 
+	if err != nil {
 		return mfclients.Client{}, err
 	}
 
@@ -306,11 +292,8 @@ func (svc service) DisableClient(ctx context.Context, token, id string) (mfclien
 }
 
 func (svc service) changeClientStatus(ctx context.Context, token string, client mfclients.Client) (mfclients.Client, error) {
-	userID, err := svc.identify(ctx, token)
+	userID, err := svc.authorize(ctx, userType, tokenKind, token, deletePermission, thingType, client.ID)
 	if err != nil {
-		return mfclients.Client{}, err
-	}
-	if err := svc.authorize(ctx, userType, userID, deletePermission, thingType, client.ID); err != nil {
 		return mfclients.Client{}, err
 	}
 	dbClient, err := svc.clients.RetrieveByID(ctx, client.ID)
@@ -361,22 +344,24 @@ func (svc service) identify(ctx context.Context, token string) (string, error) {
 	return user.GetId(), nil
 }
 
-func (svc *service) authorize(ctx context.Context, subjectType, subject, permission, objectType, object string) error {
+func (svc *service) authorize(ctx context.Context, subjType, subjKind, subj, perm, objType, obj string) (string, error) {
 	req := &mainflux.AuthorizeReq{
-		SubjectType: subjectType,
-		Subject:     subject,
-		Permission:  permission,
-		Object:      object,
-		ObjectType:  objectType,
+		SubjectType: subjType,
+		SubjectKind: subjKind,
+		Subject:     subj,
+		Permission:  perm,
+		ObjectType:  objType,
+		Object:      obj,
 	}
 	res, err := svc.auth.Authorize(ctx, req)
 	if err != nil {
-		return errors.Wrap(errors.ErrAuthorization, err)
+		return "", errors.Wrap(errors.ErrAuthorization, err)
 	}
+
 	if !res.GetAuthorized() {
-		return errors.ErrAuthorization
+		return "", errors.ErrAuthorization
 	}
-	return nil
+	return res.GetId(), nil
 }
 
 // TODO : Only accept token as parameter since object and action are irrelevant.

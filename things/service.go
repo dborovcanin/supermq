@@ -4,7 +4,6 @@ package things
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/mainflux/mainflux"
@@ -81,38 +80,33 @@ func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c 
 }
 
 func (svc service) Connect(ctx context.Context, token, thingID, channelID, permission string) error {
-	fmt.Println("CALL CONN ")
 	_, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, thingID)
 	if err != nil {
-		fmt.Println("ERR", err)
 		return errors.Wrap(errors.ErrAuthorization, err)
 	}
-	fmt.Println("authorized")
 	req := &mainflux.AddPolicyReq{
-		SubjectType: thingType,
-		Subject:     thingID,
-		Permission:  groupRelation,
-		ObjectType:  channelType,
-		Object:      channelID,
+		SubjectType: channelType,
+		Subject:     channelID,
+		Relation:    groupRelation,
+		ObjectType:  thingType,
+		Object:      thingID,
 	}
 
 	_, err = svc.auth.AddPolicy(ctx, req)
-	fmt.Println("ERR")
 	return err
 }
 
 func (svc service) Disconnect(ctx context.Context, token, thingID, channelID, permission string) error {
-	fmt.Println("LALL DISCON")
 	_, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, thingID)
 	if err != nil {
 		return errors.Wrap(errors.ErrAuthorization, err)
 	}
 	req := &mainflux.DeletePolicyReq{
-		SubjectType: thingType,
-		Subject:     thingID,
-		Permission:  groupRelation,
-		ObjectType:  channelType,
-		Object:      channelID,
+		SubjectType: channelType,
+		Subject:     channelID,
+		Relation:    groupRelation,
+		ObjectType:  thingType,
+		Object:      thingID,
 	}
 
 	_, err = svc.auth.DeletePolicy(ctx, req)
@@ -172,7 +166,7 @@ func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclie
 }
 
 func (svc service) ViewClient(ctx context.Context, token string, id string) (mfclients.Client, error) {
-	id, err := svc.authorize(ctx, userType, tokenKind, token, viewPermission, thingType, id)
+	_, err := svc.authorize(ctx, userType, tokenKind, token, viewPermission, thingType, id)
 	if err != nil {
 		return mfclients.Client{}, errors.Wrap(errors.ErrNotFound, err)
 	}

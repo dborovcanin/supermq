@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -46,7 +45,6 @@ func connectEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return connnRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
-		fmt.Println("connn")
 		if err := svc.Connect(ctx, req.token, req.ThingID, req.ChannelID, req.Permission); err != nil {
 			return connnRes{}, err
 		}
@@ -61,7 +59,6 @@ func disconnectEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return connnRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
-		fmt.Println("disconnn")
 		if err := svc.Disconnect(ctx, req.token, req.ThingID, req.ChannelID, req.Permission); err != nil {
 			return connnRes{}, err
 		}

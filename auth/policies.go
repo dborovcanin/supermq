@@ -5,6 +5,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 )
 
 // PolicyReq represents an argument struct for making a policy related
@@ -19,6 +20,11 @@ type PolicyReq struct {
 	ObjectType      string `json:"object_type"`
 	Relation        string `json:"relation"`
 	Permission      string `json:",omitempty"`
+}
+
+func (pr PolicyReq) String() string {
+	data, _ := json.Marshal(pr)
+	return string(data)
 }
 
 type PolicyRes struct {

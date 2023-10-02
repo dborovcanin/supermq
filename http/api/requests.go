@@ -19,6 +19,6 @@ func (req publishReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerKey
 	}
-fmt.Println("test")
+	fmt.Println("test")
 	return nil
 }

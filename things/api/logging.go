@@ -155,3 +155,27 @@ func (lm *loggingMiddleware) Identify(ctx context.Context, key string) (id strin
 	}(time.Now())
 	return lm.svc.Identify(ctx, key)
 }
+
+func (lm *loggingMiddleware) Connect(ctx context.Context, token, thingID, channelID, permission string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method connect for thing %s and channel %s took %s to complete", thingID, channelID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+	return lm.svc.Connect(ctx, token, thingID, channelID, permission)
+}
+
+func (lm *loggingMiddleware) Disconnect(ctx context.Context, token, thingID, channelID, permission string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method disconnect for thing %s and channnel %s took %s to complete", thingID, channelID, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+	return lm.svc.Disconnect(ctx, token, thingID, channelID, permission)
+}

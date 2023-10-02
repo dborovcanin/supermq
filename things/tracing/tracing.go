@@ -114,3 +114,14 @@ func (tm *tracingMiddleware) Identify(ctx context.Context, key string) (string, 
 	defer span.End()
 	return tm.svc.Identify(ctx, key)
 }
+
+func (tm *tracingMiddleware) Connect(ctx context.Context, token, thingID, channelID, permission string) error {
+	ctx, span := tm.tracer.Start(ctx, "connect", trace.WithAttributes(attribute.String("thing", thingID), attribute.String("channel", channelID)))
+	defer span.End()
+	return tm.svc.Connect(ctx, token, thingID, channelID, permission)
+}
+func (tm *tracingMiddleware) Disconnect(ctx context.Context, token, thingID, channelID, permission string) error {
+	ctx, span := tm.tracer.Start(ctx, "connect", trace.WithAttributes(attribute.String("thing", thingID), attribute.String("channel", channelID)))
+	defer span.End()
+	return tm.svc.Disconnect(ctx, token, thingID, channelID, permission)
+}

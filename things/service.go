@@ -79,6 +79,41 @@ func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c 
 	}
 }
 
+func (svc service) Connect(ctx context.Context, token, thingID, channelID, permission string) error {
+	_, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, thingID)
+	if err != nil {
+		return errors.Wrap(errors.ErrAuthorization, err)
+	}
+	req := &mainflux.AddPolicyReq{
+		SubjectType: thingType,
+		Subject:     thingID,
+		Permission:  groupRelation,
+		ObjectType:  channelType,
+		Object:      channelID,
+	}
+
+	_, err = svc.auth.AddPolicy(ctx, req)
+	return err
+}
+
+func (svc service) Disconnect(ctx context.Context, token, thingID, channelID, permission string) error {
+	_, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, thingID)
+	if err != nil {
+		return errors.Wrap(errors.ErrAuthorization, err)
+	}
+	req := &mainflux.DeletePolicyReq{
+		SubjectType: thingType,
+		Subject:     thingID,
+		Permission:  groupRelation,
+		ObjectType:  channelType,
+		Object:      channelID,
+	}
+
+	_, err = svc.auth.DeletePolicy(ctx, req)
+	return err
+
+}
+
 func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclients.Client) ([]mfclients.Client, error) {
 	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {

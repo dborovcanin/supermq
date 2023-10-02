@@ -4,6 +4,7 @@ package things
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mainflux/mainflux"
@@ -80,10 +81,13 @@ func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c 
 }
 
 func (svc service) Connect(ctx context.Context, token, thingID, channelID, permission string) error {
+	fmt.Println("CALL CONN ")
 	_, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, thingID)
 	if err != nil {
+		fmt.Println("ERR", err)
 		return errors.Wrap(errors.ErrAuthorization, err)
 	}
+	fmt.Println("authorized")
 	req := &mainflux.AddPolicyReq{
 		SubjectType: thingType,
 		Subject:     thingID,
@@ -93,10 +97,12 @@ func (svc service) Connect(ctx context.Context, token, thingID, channelID, permi
 	}
 
 	_, err = svc.auth.AddPolicy(ctx, req)
+	fmt.Println("ERR")
 	return err
 }
 
 func (svc service) Disconnect(ctx context.Context, token, thingID, channelID, permission string) error {
+	fmt.Println("LALL DISCON")
 	_, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, thingID)
 	if err != nil {
 		return errors.Wrap(errors.ErrAuthorization, err)

@@ -198,9 +198,9 @@ func (es *eventStore) Identify(ctx context.Context, key string) (string, error) 
 	return thingID, nil
 }
 
-func (es *eventStore) Connect(ctx context.Context, key, thingID, channelID, permission string) error {
-	return nil
+func (es *eventStore) Connect(ctx context.Context, token, thingID, channelID, permission string) error {
+	return es.svc.Connect(ctx, token, thingID, channelID, permission)
 }
-func (es *eventStore) Disconnect(ctx context.Context, key, thingID, channelID, permission string) error {
-	return nil
+func (es *eventStore) Disconnect(ctx context.Context, token, thingID, channelID, permission string) error {
+	return es.svc.Disconnect(ctx, token, thingID, channelID, permission)
 }

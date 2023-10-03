@@ -11,15 +11,22 @@ definition thing {
 	permission share = edit
 }
 
+definition role {
+	relation admin: user
+	relation editor: user
+	relation viewer: user
+}
+
 definition group {
 	relation owner: user
 	relation admin: user
 	relation editor: user
 	relation viewer: user
 	relation parent_group: group
-	permission administrator = owner + admin + parent_group->admin
+	relation role_group: role
+	permission administrator = owner + admin + parent_group->admin + role_group->admin
 	permission delete = administrator
-	permission edit = administrator + editor + parent_group->editor
-	permission view = viewer + edit + parent_group->view
+	permission edit = administrator + editor + parent_group->editor + role_group->editor
+	permission view = viewer + edit + parent_group->view + role_group->editor
 	permission share = edit
 }

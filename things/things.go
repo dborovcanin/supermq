@@ -47,6 +47,12 @@ type Service interface {
 
 	// Identify returns thing ID for given thing key.
 	Identify(ctx context.Context, key string) (string, error)
+
+	// Connect creates a policy for the Things and the Channel.
+	Connect(ctx context.Context, token, thingID, channelID, permission string) error
+
+	// Disconnect removes a policy for the Things and the Channel.
+	Disconnect(ctx context.Context, token, thingID, channelID, permission string) error
 }
 
 // Cache contains thing caching interface.

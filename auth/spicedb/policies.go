@@ -101,30 +101,17 @@ func (pa policyAgent) DeletePolicies(ctx context.Context, prs []auth.PolicyReq) 
 	return nil
 }
 
-// func (pa policyAgent) DeletePolicies(ctx context.Context, prs []auth.PolicyReq) error {
-// 	var errs error
-// 	for _, pr := range prs {
-// 		if err := pa.DeletePolicy(ctx, pr); err != nil {
-// 			errors.Wrap(errs, fmt.Errorf("failed to remove policies for %v : %w", pr, err))
-// 		}
-// 	}
-// 	return errs
-// }
-
 func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error {
-	updates := []*v1.RelationshipUpdate{
-		{
-			Operation: v1.RelationshipUpdate_OPERATION_DELETE,
-			Relationship: &v1.Relationship{
-				Resource: &v1.ObjectReference{ObjectType: pr.ObjectType, ObjectId: pr.Object},
-				Relation: pr.Relation,
-				Subject:  &v1.SubjectReference{Object: &v1.ObjectReference{ObjectType: pr.SubjectType, ObjectId: pr.Subject}, OptionalRelation: pr.SubjectRelation},
-			},
+	req := &v1.DeleteRelationshipsRequest{
+		RelationshipFilter: &v1.RelationshipFilter{
+			ResourceType:       pr.ObjectType,
+			OptionalResourceId: pr.Object,
+			OptionalRelation:   pr.Relation,
 		},
 	}
-	_, err := pa.permissionClient.WriteRelationships(ctx, &v1.WriteRelationshipsRequest{Updates: updates})
+	r, err := pa.permissionClient.DeleteRelationships(ctx, req)
 	if err != nil {
-		return errors.Wrap(errors.ErrMalformedEntity, fmt.Errorf("failed to add policy: %w", err))
+		return errors.Wrap(errors.ErrMalformedEntity, fmt.Errorf("failed to remove the policy: %w", err))
 	}
 	return nil
 }

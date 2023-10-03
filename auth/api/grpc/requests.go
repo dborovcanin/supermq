@@ -149,7 +149,7 @@ func (req policyReq) validate() error {
 		return apiutil.ErrMissingPolicyObj
 	}
 
-	if req.Relation == "" {
+	if req.Relation == "" && req.Permission == "" {
 		return apiutil.ErrMalformedPolicyAct
 	}
 

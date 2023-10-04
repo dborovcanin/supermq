@@ -190,6 +190,28 @@ func DecodeChangeGroupStatus(_ context.Context, r *http.Request) (interface{}, e
 	return req, nil
 }
 
+func DecodeAssignMembers(_ context.Context, r *http.Request) (interface{}, error) {
+	req := assignReq{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func DecodeUnassignMembers(_ context.Context, r *http.Request) (interface{}, error) {
+	req := assignReq{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
 func decodePageMeta(r *http.Request) (mfgroups.PageMeta, error) {
 	s, err := apiutil.ReadStringQuery(r, api.StatusKey, api.DefGroupStatus)
 	if err != nil {

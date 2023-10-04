@@ -112,3 +112,53 @@ func (req changeGroupStatusReq) validate() error {
 	}
 	return nil
 }
+
+type assignReq struct {
+	token      string
+	groupID    string
+	Relation   string   `json:"relation"`
+	MemberKind string   `json:"member_kind"`
+	Members    []string `json:"members"`
+}
+
+func (req assignReq) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.MemberKind == "" {
+		return apiutil.ErrMissingMemberType
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.Members) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}
+
+type unassignReq struct {
+	token   string
+	groupID string
+	Members []string `json:"members"`
+}
+
+func (req unassignReq) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.Members) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}

@@ -19,6 +19,8 @@ var (
 	_ mainflux.Response = (*changeStatusRes)(nil)
 	_ mainflux.Response = (*viewGroupRes)(nil)
 	_ mainflux.Response = (*updateGroupRes)(nil)
+	_ mainflux.Response = (*assignRes)(nil)
+	_ mainflux.Response = (*unassignRes)(nil)
 )
 
 type viewMembershipRes struct {
@@ -151,4 +153,32 @@ func (res changeStatusRes) Headers() map[string]string {
 
 func (res changeStatusRes) Empty() bool {
 	return false
+}
+
+type assignRes struct{}
+
+func (res assignRes) Code() int {
+	return http.StatusOK
+}
+
+func (res assignRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res assignRes) Empty() bool {
+	return true
+}
+
+type unassignRes struct{}
+
+func (res unassignRes) Code() int {
+	return http.StatusNoContent
+}
+
+func (res unassignRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res unassignRes) Empty() bool {
+	return true
 }

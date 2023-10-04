@@ -5,6 +5,7 @@ package groups
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mainflux/mainflux"
@@ -32,8 +33,15 @@ const (
 	ownerRelation   = "owner"
 	channelRelation = "channel"
 
-	userType  = "user"
-	groupType = "group"
+	usersKind    = "users"
+	groupsKind   = "groups"
+	thingsKind   = "things"
+	channelsKind = "channels"
+
+	userType    = "user"
+	groupType   = "group"
+	thingType   = "thing"
+	channelType = "channel"
 
 	adminPermission      = "admin"
 	ownerPermission      = "delete"
@@ -177,6 +185,130 @@ func (svc service) DisableGroup(ctx context.Context, token, id string) (groups.G
 		return groups.Group{}, err
 	}
 	return group, nil
+}
+
+// Yet to do
+func (svc service) Assign(ctx context.Context, token, groupID, relation, memberKind string, memberIDs ...string) error {
+	_, err := svc.authorize(ctx, userType, token, editPermission, groupType, groupID)
+	if err != nil {
+		return err
+	}
+
+	if err := svc.groups.Assign(ctx, groupID, memberKind, memberIDs...); err != nil {
+		return err
+	}
+
+	prs := []*mainflux.AddPolicyReq{}
+	switch memberKind {
+	case thingsKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, &mainflux.AddPolicyReq{
+				SubjectType: groupType,
+				Subject:     groupID,
+				Relation:    relation,
+				ObjectType:  thingType,
+				Object:      memberID,
+			})
+		}
+	case channelsKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, &mainflux.AddPolicyReq{
+				SubjectType: groupType,
+				Subject:     groupID,
+				Relation:    relation,
+				ObjectType:  channelType,
+				Object:      memberID,
+			})
+		}
+	case groupsKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, &mainflux.AddPolicyReq{
+				SubjectType: groupType,
+				Subject:     memberID,
+				Relation:    relation,
+				ObjectType:  groupType,
+				Object:      groupID,
+			})
+		}
+	case usersKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, &mainflux.AddPolicyReq{
+				SubjectType: userType,
+				Subject:     memberID,
+				Relation:    relation,
+				ObjectType:  groupType,
+				Object:      groupID,
+			})
+		}
+	default:
+		for _, memberID := range memberIDs {
+			prs = append(prs, &mainflux.AddPolicyReq{
+				SubjectType: userType,
+				Subject:     memberID,
+				Relation:    relation,
+				ObjectType:  groupType,
+				Object:      groupID,
+			})
+		}
+	}
+
+	for _, pr := range prs {
+		if _, err := svc.auth.AddPolicy(ctx, pr); err != nil {
+			return fmt.Errorf("failed to add policies : %w", err)
+		}
+	}
+	return nil
+}
+
+// Yet to do
+func (svc service) Unassign(ctx context.Context, token, groupID string, memberIDs ...string) error {
+	_, err := svc.authorize(ctx, userType, token, editPermission, groupType, groupID)
+	if err != nil {
+		return err
+	}
+
+	prs := []*mainflux.DeletePolicyReq{}
+	for _, memberID := range memberIDs {
+
+		prs = append(prs, &mainflux.DeletePolicyReq{
+			SubjectType: userType,
+			Subject:     memberID,
+			ObjectType:  groupType,
+			Object:      groupID,
+		})
+		//  member is thing - same logic is used in previous code, so followed same, not to break api
+		prs = append(prs, &mainflux.DeletePolicyReq{
+			SubjectType: thingType,
+			Subject:     memberID,
+			ObjectType:  groupType,
+			Object:      groupID,
+		})
+		//  member is channel - same logic is used in previous code, so followed same, not to break api
+		prs = append(prs, &mainflux.DeletePolicyReq{
+			SubjectType: channelType,
+			Subject:     memberID,
+			ObjectType:  groupType,
+			Object:      groupID,
+		})
+
+		//  member is group - same logic is used in previous code, so followed same, not to break api
+		prs = append(prs, &mainflux.DeletePolicyReq{
+			SubjectType: groupType,
+			Subject:     memberID,
+			ObjectType:  groupType,
+			Object:      groupID,
+		})
+	}
+
+	for _, pr := range prs {
+		if _, err := svc.auth.DeletePolicy(ctx, pr); err != nil {
+			return fmt.Errorf("failed to delete policies : %w", err)
+		}
+	}
+	if err := svc.groups.Unassign(ctx, groupID, memberIDs...); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (svc service) changeGroupStatus(ctx context.Context, token string, group groups.Group) (groups.Group, error) {

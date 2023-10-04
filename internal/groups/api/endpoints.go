@@ -143,6 +143,33 @@ func ListMembershipsEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
+func AssignMembersEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(assignReq)
+		if err := req.validate(); err != nil {
+			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
+			return nil, err
+		}
+		return assignRes{}, nil
+	}
+}
+
+func UnassignMembersEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(unassignReq)
+		if err := req.validate(); err != nil {
+			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+
+		if err := svc.Unassign(ctx, req.token, req.groupID, req.Members...); err != nil {
+			return nil, err
+		}
+		return unassignReq{}, nil
+	}
+}
+
 func buildGroupsResponseTree(page mfgroups.Page) groupPageRes {
 	groupsMap := map[string]*mfgroups.Group{}
 	// Parents' map keeps its array of children.

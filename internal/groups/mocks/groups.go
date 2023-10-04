@@ -78,3 +78,11 @@ func (m *Repository) Update(ctx context.Context, g mfgroups.Group) (mfgroups.Gro
 
 	return ret.Get(0).(mfgroups.Group), ret.Error(1)
 }
+
+func (m *Repository) Unassign(ctx context.Context, groupID string, memberIDs ...string) error {
+	return nil
+}
+
+func (m *Repository) Assign(ctx context.Context, groupID, groupType string, memberIDs ...string) error {
+	return nil
+}

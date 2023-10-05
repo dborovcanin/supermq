@@ -79,6 +79,20 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 			api.EncodeResponse,
 			opts...,
 		), "disable_group").ServeHTTP)
+
+		r.Post("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
+			gapi.AssignMembersEndpoint(svc),
+			gapi.DecodeAssignMembers,
+			api.EncodeResponse,
+			opts...,
+		), "assign_members").ServeHTTP)
+
+		r.Delete("/{groupID}/:groupID/members", otelhttp.NewHandler(kithttp.NewServer(
+			gapi.UnassignMembersEndpoint(svc),
+			gapi.DecodeUnassignMembers,
+			api.EncodeResponse,
+			opts...,
+		), "unassign_members").ServeHTTP)
 	})
 
 	return r

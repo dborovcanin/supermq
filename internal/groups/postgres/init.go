@@ -12,28 +12,28 @@ func Migration() *migrate.MemoryMigrationSource {
 	return &migrate.MemoryMigrationSource{
 		Migrations: []*migrate.Migration{
 			{
-				Id: "clients_01",
-				// VARCHAR(36) for colums with IDs as UUIDS have a maximum of 36 characters
-				// STATUS 0 to imply enabled and 1 to imply disabled
+				Id: "group_1",
 				Up: []string{
-					`CREATE TABLE IF NOT EXISTS clients (
+					`CREATE TABLE IF NOT EXISTS groups (
 						id			VARCHAR(36) PRIMARY KEY,
-						name		VARCHAR(1024),
-						owner_id	VARCHAR(36),
-						identity	VARCHAR(254),
-						secret		VARCHAR(4096) NOT NULL UNIQUE,
-						tags		TEXT[],
+						parent_id	VARCHAR(36),
+						owner_id	VARCHAR(36) NOT NULL,
+						name		VARCHAR(1024) NOT NULL,
+						description	VARCHAR(1024),
 						metadata	JSONB,
 						created_at	TIMESTAMP,
 						updated_at	TIMESTAMP,
 						updated_by  VARCHAR(254),
-						status		SMALLINT NOT NULL DEFAULT 0 CHECK (status >= 0)
+						status		SMALLINT NOT NULL DEFAULT 0 CHECK (status >= 0),
+						UNIQUE		(owner_id, name),
+						FOREIGN KEY	(parent_id) REFERENCES groups (id) ON DELETE CASCADE
 					)`,
 				},
 				Down: []string{
-					`DROP TABLE IF EXISTS clients`,
+					`DROP TABLE IF EXISTS groups`,
 				},
 			},
 		},
 	}
+
 }

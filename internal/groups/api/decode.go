@@ -175,7 +175,7 @@ func DecodeChangeGroupStatus(_ context.Context, r *http.Request) (interface{}, e
 	return req, nil
 }
 
-func DecodeAssignMembers(_ context.Context, r *http.Request) (interface{}, error) {
+func DecodeAssignMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	req := assignReq{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
@@ -186,8 +186,8 @@ func DecodeAssignMembers(_ context.Context, r *http.Request) (interface{}, error
 	return req, nil
 }
 
-func DecodeUnassignMembers(_ context.Context, r *http.Request) (interface{}, error) {
-	req := assignReq{
+func DecodeUnassignMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := unassignReq{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
 	}
@@ -197,12 +197,12 @@ func DecodeUnassignMembers(_ context.Context, r *http.Request) (interface{}, err
 	return req, nil
 }
 
-func DecodeListMembers(_ context.Context, r *http.Request) (interface{}, error) {
+func DecodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	memberKind, err := apiutil.ReadStringQuery(r, api.MemberKindKey, "")
 	if err != nil {
 		return nil, apiutil.ErrInvalidQueryParams
 	}
-	req := listMembers{
+	req := listMembersReq{
 		token:      apiutil.ExtractBearerToken(r),
 		groupID:    chi.URLParam(r, "groupID"),
 		memberKind: memberKind,

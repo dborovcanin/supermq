@@ -178,13 +178,13 @@ func (req unassignReq) validate() error {
 	return nil
 }
 
-type listMembers struct {
+type listMembersReq struct {
 	token      string
 	groupID    string
 	memberKind string
 }
 
-func (req listMembers) validate() error {
+func (req listMembersReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}

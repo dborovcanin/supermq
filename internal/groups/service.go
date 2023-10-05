@@ -215,6 +215,7 @@ func (svc service) ListMemberships(ctx context.Context, token, groupID, memberKi
 	case usersKind:
 		uids, err := svc.auth.ListAllSubjects(ctx, &mainflux.ListSubjectsReq{
 			SubjectType: userType,
+			Permission:  viewPermission,
 			Object:      groupID,
 			ObjectType:  groupType,
 		})

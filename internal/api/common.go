@@ -18,6 +18,8 @@ import (
 
 const (
 	MemberKindKey    = "member_kind"
+	PermissionKey    = "permission"
+	RelationKey      = "relation"
 	StatusKey        = "status"
 	OffsetKey        = "offset"
 	LimitKey         = "limit"

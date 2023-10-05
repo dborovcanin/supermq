@@ -78,3 +78,19 @@ func (tm *tracingMiddleware) DisableGroup(ctx context.Context, token, id string)
 
 	return tm.gsvc.DisableGroup(ctx, token, id)
 }
+
+// Assign traces the "Assign" operation of the wrapped groups.Service.
+func (tm *tracingMiddleware) Assign(ctx context.Context, token string, groupID string, relation string, memberKind string, memberIDs ...string) error {
+	ctx, span := tm.tracer.Start(ctx, "svc_assign", trace.WithAttributes(attribute.String("id", groupID)))
+	defer span.End()
+
+	return tm.gsvc.Assign(ctx, token, groupID, relation, memberKind, memberIDs...)
+}
+
+// Unassign traces the "Unassign" operation of the wrapped groups.Service.
+func (tm *tracingMiddleware) Unassign(ctx context.Context, token string, groupID string, memberIDs ...string) error {
+	ctx, span := tm.tracer.Start(ctx, "svc_unassign", trace.WithAttributes(attribute.String("id", groupID)))
+	defer span.End()
+
+	return tm.gsvc.Unassign(ctx, token, groupID, memberIDs...)
+}

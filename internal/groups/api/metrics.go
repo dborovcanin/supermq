@@ -90,3 +90,23 @@ func (ms *metricsMiddleware) ListMemberships(ctx context.Context, token, clientI
 	}(time.Now())
 	return ms.svc.ListMemberships(ctx, token, clientID, gp)
 }
+
+// Assign instruments Assign method with metrics.
+func (ms *metricsMiddleware) Assign(ctx context.Context, token, groupID string, relation string, memberKind string, memberIDs ...string) (err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "assign").Add(1)
+		ms.latency.With("method", "assign").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.Assign(ctx, token, groupID, relation, memberKind, memberIDs...)
+}
+
+// Unassign instruments Unassign method with metrics.
+func (ms *metricsMiddleware) Unassign(ctx context.Context, token, groupID string, memberIDs ...string) (err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "unassign").Add(1)
+		ms.latency.With("method", "unassign").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.Unassign(ctx, token, groupID, memberIDs...)
+}

@@ -129,6 +129,14 @@ func (es eventStore) EnableGroup(ctx context.Context, token, id string) (groups.
 	return es.delete(ctx, group)
 }
 
+func (es eventStore) Assign(ctx context.Context, token, groupID, relation, memberKind string, memberIDs ...string) error {
+	return es.svc.Assign(ctx, token, groupID, relation, memberKind, memberIDs...)
+}
+
+func (es eventStore) Unassign(ctx context.Context, token, groupID string, memberIDs ...string) error {
+	return es.svc.Unassign(ctx, token, groupID, memberIDs...)
+}
+
 func (es eventStore) DisableGroup(ctx context.Context, token, id string) (groups.Group, error) {
 	group, err := es.svc.DisableGroup(ctx, token, id)
 	if err != nil {

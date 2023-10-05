@@ -12,6 +12,4 @@ type PageMeta struct {
 	Tag      string           `json:"tag,omitempty"`
 	Metadata clients.Metadata `json:"metadata,omitempty"`
 	Status   clients.Status   `json:"status,omitempty"`
-	Subject  string           `json:"subject,omitempty"`
-	Action   string           `json:"action,omitempty"`
 }

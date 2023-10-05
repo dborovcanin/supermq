@@ -74,6 +74,10 @@ type Repository interface {
 
 	// ChangeStatus changes groups status to active or inactive
 	ChangeStatus(ctx context.Context, group Group) (Group, error)
+
+	Assign(ctx context.Context, groupID, memberKind string, ids ...string) error
+
+	Unassign(ctx context.Context, groupID string, ids ...string) error
 }
 
 type Service interface {
@@ -97,4 +101,10 @@ type Service interface {
 
 	// DisableGroup logically disables the group identified with the provided ID.
 	DisableGroup(ctx context.Context, token, id string) (Group, error)
+
+	// Assign member to group
+	Assign(ctx context.Context, token, groupID, relation, memberKind string, memberIDs ...string) (err error)
+
+	// Unassign member from group
+	Unassign(ctx context.Context, token, groupID string, memberIDs ...string) (err error)
 }

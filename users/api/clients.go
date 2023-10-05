@@ -40,7 +40,7 @@ func clientsHandler(svc users.Service, r *chi.Mux, logger mflog.Logger) http.Han
 			opts...,
 		), "view_profile").ServeHTTP)
 
-		r.Get("/users/{id}", otelhttp.NewHandler(kithttp.NewServer(
+		r.Get("/{id}", otelhttp.NewHandler(kithttp.NewServer(
 			viewClientEndpoint(svc),
 			decodeViewClient,
 			api.EncodeResponse,

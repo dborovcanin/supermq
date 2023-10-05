@@ -66,7 +66,7 @@ func main() {
 		}
 	}
 
-	dbConfig := pgclient.Config{Name: defDB}
+	dbConfig := pgclient.Config{}
 	if err := dbConfig.LoadEnv(envPrefixDB); err != nil {
 		logger.Error(err.Error())
 		exitCode = 1

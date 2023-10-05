@@ -23,15 +23,13 @@ const (
 	MyKey = "mine"
 
 	groupsObjectKey = "groups"
-
-	updateRelationKey = "g_update"
-	listRelationKey   = "g_list"
-	deleteRelationKey = "g_delete"
 )
 
 const (
-	ownerRelation   = "owner"
-	channelRelation = "channel"
+	ownerRelation       = "owner"
+	channelRelation     = "channel"
+	groupRelation       = "group"
+	parentGroupRelation = "parent_group"
 
 	usersKind    = "users"
 	groupsKind   = "groups"
@@ -117,36 +115,107 @@ func (svc service) ViewGroup(ctx context.Context, token string, id string) (grou
 	return svc.groups.RetrieveByID(ctx, id)
 }
 
-func (svc service) ListGroups(ctx context.Context, token string, gm groups.Page) (groups.Page, error) {
-	id, err := svc.identify(ctx, token)
+func (svc service) ListGroups(ctx context.Context, token string, memberKind, memberID string, gm groups.Page) (groups.Page, error) {
+	var ids []string
+
+	userID, err := svc.identify(ctx, token)
+	if err != nil {
+		return groups.Page{}, err
+	}
+	allowedIDs, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+		SubjectType: userType,
+		Subject:     userID,
+		Permission:  viewPermission,
+		ObjectType:  groupType,
+	})
+
 	if err != nil {
 		return groups.Page{}, err
 	}
 
-	// If the user is admin, fetch all groups from the database.
-	if err := svc.authorizeByID(ctx, id, groupsObjectKey, listRelationKey); err == nil {
-		return svc.groups.RetrieveAll(ctx, gm)
+	switch memberKind {
+	case thingsKind:
+		cids, err := svc.auth.ListAllSubjects(ctx, &mainflux.ListSubjectsReq{
+			SubjectType: groupType,
+			Permission:  viewPermission,
+			ObjectType:  thingType,
+			Object:      memberID,
+		})
+		if err != nil {
+			return groups.Page{}, err
+		}
+		for _, cid := range cids.Policies {
+			for _, id := range allowedIDs.Policies {
+				if id == cid {
+					ids = append(ids, id)
+				}
+			}
+		}
+	default:
+		ids = allowedIDs.Policies
 	}
 
-	gm.Subject = id
-	gm.OwnerID = id
-	gm.Action = listRelationKey
-	return svc.groups.RetrieveAll(ctx, gm)
+	return svc.groups.RetrieveByIDs(ctx, gm, ids...)
 }
 
-func (svc service) ListMemberships(ctx context.Context, token, clientID string, gm groups.Page) (groups.Memberships, error) {
-	id, err := svc.identify(ctx, token)
+func (svc service) ListMemberships(ctx context.Context, token, groupID, memberKind string) (groups.Memberships, error) {
+	_, err := svc.authorize(ctx, userType, token, viewPermission, groupType, groupID)
 	if err != nil {
 		return groups.Memberships{}, err
 	}
-	// If the user is admin, fetch all members from the database.
-	if err := svc.authorizeByID(ctx, id, groupsObjectKey, listRelationKey); err == nil {
-		return svc.groups.Memberships(ctx, clientID, gm)
-	}
+	switch memberKind {
+	case thingsKind:
+		tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+			SubjectType: groupType,
+			Subject:     groupID,
+			Relation:    groupRelation,
+			ObjectType:  thingType,
+		})
+		if err != nil {
+			return groups.Memberships{}, err
+		}
 
-	gm.Subject = id
-	gm.Action = listRelationKey
-	return svc.groups.Memberships(ctx, clientID, gm)
+		members := []groups.Member{}
+
+		for _, id := range tids.Policies {
+			members = append(members, groups.Member{
+				ID:   id,
+				Type: thingType,
+			})
+		}
+		return groups.Memberships{
+			Total:   uint64(len(members)),
+			Offset:  0,
+			Limit:   uint64(len(members)),
+			Members: members,
+		}, nil
+	case usersKind:
+		uids, err := svc.auth.ListAllSubjects(ctx, &mainflux.ListSubjectsReq{
+			SubjectType: userType,
+			Object:      groupID,
+			ObjectType:  groupType,
+		})
+		if err != nil {
+			return groups.Memberships{}, err
+		}
+
+		members := []groups.Member{}
+
+		for _, id := range uids.Policies {
+			members = append(members, groups.Member{
+				ID:   id,
+				Type: userType,
+			})
+		}
+		return groups.Memberships{
+			Total:   uint64(len(members)),
+			Offset:  0,
+			Limit:   uint64(len(members)),
+			Members: members,
+		}, nil
+	default:
+		return groups.Memberships{}, fmt.Errorf("invalid member_kind")
+	}
 }
 
 func (svc service) UpdateGroup(ctx context.Context, token string, g groups.Group) (groups.Group, error) {
@@ -194,9 +263,9 @@ func (svc service) Assign(ctx context.Context, token, groupID, relation, memberK
 		return err
 	}
 
-	if err := svc.groups.Assign(ctx, groupID, memberKind, memberIDs...); err != nil {
-		return err
-	}
+	// if err := svc.groups.Assign(ctx, groupID, memberKind, memberIDs...); err != nil {
+	// 	return err
+	// }
 
 	prs := []*mainflux.AddPolicyReq{}
 	switch memberKind {
@@ -207,16 +276,6 @@ func (svc service) Assign(ctx context.Context, token, groupID, relation, memberK
 				Subject:     groupID,
 				Relation:    relation,
 				ObjectType:  thingType,
-				Object:      memberID,
-			})
-		}
-	case channelsKind:
-		for _, memberID := range memberIDs {
-			prs = append(prs, &mainflux.AddPolicyReq{
-				SubjectType: groupType,
-				Subject:     groupID,
-				Relation:    relation,
-				ObjectType:  channelType,
 				Object:      memberID,
 			})
 		}
@@ -241,15 +300,7 @@ func (svc service) Assign(ctx context.Context, token, groupID, relation, memberK
 			})
 		}
 	default:
-		for _, memberID := range memberIDs {
-			prs = append(prs, &mainflux.AddPolicyReq{
-				SubjectType: userType,
-				Subject:     memberID,
-				Relation:    relation,
-				ObjectType:  groupType,
-				Object:      groupID,
-			})
-		}
+		return fmt.Errorf("invalid member kind")
 	}
 
 	for _, pr := range prs {
@@ -261,43 +312,47 @@ func (svc service) Assign(ctx context.Context, token, groupID, relation, memberK
 }
 
 // Yet to do
-func (svc service) Unassign(ctx context.Context, token, groupID string, memberIDs ...string) error {
+func (svc service) Unassign(ctx context.Context, token, groupID, relation, memberKind string, memberIDs ...string) error {
 	_, err := svc.authorize(ctx, userType, token, editPermission, groupType, groupID)
 	if err != nil {
 		return err
 	}
 
 	prs := []*mainflux.DeletePolicyReq{}
-	for _, memberID := range memberIDs {
 
-		prs = append(prs, &mainflux.DeletePolicyReq{
-			SubjectType: userType,
-			Subject:     memberID,
-			ObjectType:  groupType,
-			Object:      groupID,
-		})
-		//  member is thing - same logic is used in previous code, so followed same, not to break api
-		prs = append(prs, &mainflux.DeletePolicyReq{
-			SubjectType: thingType,
-			Subject:     memberID,
-			ObjectType:  groupType,
-			Object:      groupID,
-		})
-		//  member is channel - same logic is used in previous code, so followed same, not to break api
-		prs = append(prs, &mainflux.DeletePolicyReq{
-			SubjectType: channelType,
-			Subject:     memberID,
-			ObjectType:  groupType,
-			Object:      groupID,
-		})
-
-		//  member is group - same logic is used in previous code, so followed same, not to break api
-		prs = append(prs, &mainflux.DeletePolicyReq{
-			SubjectType: groupType,
-			Subject:     memberID,
-			ObjectType:  groupType,
-			Object:      groupID,
-		})
+	switch memberKind {
+	case thingsKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, &mainflux.DeletePolicyReq{
+				SubjectType: groupType,
+				Subject:     groupID,
+				Relation:    relation,
+				ObjectType:  thingType,
+				Object:      memberID,
+			})
+		}
+	case groupsKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, &mainflux.DeletePolicyReq{
+				SubjectType: groupType,
+				Subject:     memberID,
+				Relation:    relation,
+				ObjectType:  groupType,
+				Object:      groupID,
+			})
+		}
+	case usersKind:
+		for _, memberID := range memberIDs {
+			prs = append(prs, &mainflux.DeletePolicyReq{
+				SubjectType: userType,
+				Subject:     memberID,
+				Relation:    relation,
+				ObjectType:  groupType,
+				Object:      groupID,
+			})
+		}
+	default:
+		return fmt.Errorf("invalid member kind")
 	}
 
 	for _, pr := range prs {
@@ -305,9 +360,9 @@ func (svc service) Unassign(ctx context.Context, token, groupID string, memberID
 			return fmt.Errorf("failed to delete policies : %w", err)
 		}
 	}
-	if err := svc.groups.Unassign(ctx, groupID, memberIDs...); err != nil {
-		return err
-	}
+	// if err := svc.groups.Unassign(ctx, groupID, memberIDs...); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 

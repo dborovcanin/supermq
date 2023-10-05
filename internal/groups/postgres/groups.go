@@ -8,27 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofrs/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
-	"github.com/mainflux/mainflux/auth"
 	"github.com/mainflux/mainflux/internal/postgres"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-)
-
-var (
-	errStringToUUID        = errors.New("error converting string to uuid")
-	errGetTotal            = errors.New("failed to get total number of groups")
-	errCreateMetadataQuery = errors.New("failed to create query for metadata")
-)
-
-const (
-	errDuplicate  = "unique_violation"
-	errInvalid    = "invalid_text_representation"
-	errTruncation = "string_data_right_truncation"
-	errFK         = "foreign_key_violation"
 )
 
 var _ mfgroups.Repository = (*groupRepository)(nil)
@@ -67,68 +51,6 @@ func (repo groupRepository) Save(ctx context.Context, g mfgroups.Group) (mfgroup
 	}
 
 	return toGroup(dbg)
-}
-
-func (repo groupRepository) Memberships(ctx context.Context, clientID string, gm mfgroups.Page) (mfgroups.Memberships, error) {
-	var q string
-	query, err := buildQuery(gm)
-	if err != nil {
-		return mfgroups.Memberships{}, err
-	}
-	if gm.ID != "" {
-		q = buildHierachy(gm)
-	}
-	if gm.ID == "" {
-		q = `SELECT g.id, g.owner_id, COALESCE(g.parent_id, '') AS parent_id, g.name, g.description,
-		g.metadata, g.created_at, g.updated_at, g.updated_by, g.status FROM groups g`
-	}
-	aq := ""
-	// If not admin, the client needs to have a g_list action on the group or they are the owner.
-	if gm.Subject != "" {
-		aq = `AND policies.object IN (SELECT object FROM policies WHERE subject = :subject AND :action=ANY(actions)) OR g.owner_id = :subject`
-	}
-	q = fmt.Sprintf(`%s INNER JOIN policies ON g.id=policies.object %s AND policies.subject = :client_id %s
-			ORDER BY g.updated_at LIMIT :limit OFFSET :offset;`, q, query, aq)
-
-	dbPage, err := toDBGroupPage(gm)
-	if err != nil {
-		return mfgroups.Memberships{}, errors.Wrap(postgres.ErrFailedToRetrieveMembership, err)
-	}
-	dbPage.ClientID = clientID
-	rows, err := repo.db.NamedQueryContext(ctx, q, dbPage)
-	if err != nil {
-		return mfgroups.Memberships{}, errors.Wrap(postgres.ErrFailedToRetrieveMembership, err)
-	}
-	defer rows.Close()
-
-	var items []mfgroups.Group
-	for rows.Next() {
-		dbg := dbGroup{}
-		if err := rows.StructScan(&dbg); err != nil {
-			return mfgroups.Memberships{}, errors.Wrap(postgres.ErrFailedToRetrieveMembership, err)
-		}
-		group, err := toGroup(dbg)
-		if err != nil {
-			return mfgroups.Memberships{}, errors.Wrap(postgres.ErrFailedToRetrieveMembership, err)
-		}
-		items = append(items, group)
-	}
-
-	cq := fmt.Sprintf(`SELECT COUNT(*) FROM groups g INNER JOIN policies
-        ON g.id=policies.object %s AND policies.subject = :client_id`, query)
-
-	total, err := postgres.Total(ctx, repo.db, cq, dbPage)
-	if err != nil {
-		return mfgroups.Memberships{}, errors.Wrap(postgres.ErrFailedToRetrieveMembership, err)
-	}
-	page := mfgroups.Memberships{
-		Groups: items,
-		PageMeta: mfgroups.PageMeta{
-			Total: total,
-		},
-	}
-
-	return page, nil
 }
 
 func (repo groupRepository) Update(ctx context.Context, g mfgroups.Group) (mfgroups.Group, error) {
@@ -271,166 +193,59 @@ func (repo groupRepository) RetrieveAll(ctx context.Context, gm mfgroups.Page) (
 	return page, nil
 }
 
-func (gr groupRepository) RetrieveByIDs(ctx context.Context, groupIDs []string, pm mfgroups.PageMeta) (mfgroups.Page, error) {
-	_, metaQuery, err := getGroupsMetadataQuery("groups", pm.Metadata)
+func (repo groupRepository) RetrieveByIDs(ctx context.Context, gm mfgroups.Page, ids ...string) (mfgroups.Page, error) {
+	var q string
+	if len(ids) <= 0 {
+
+	}
+	query, err := buildQuery(gm)
 	if err != nil {
-		return mfgroups.Page{}, errors.Wrap(auth.ErrFailedToRetrieveAll, err)
+		return mfgroups.Page{}, err
 	}
 
-	var mq string
-	if metaQuery != "" {
-		mq = fmt.Sprintf(" AND %s", metaQuery)
+	if gm.ID != "" {
+		q = buildHierachy(gm)
 	}
-
-	var idq string
-	if len(groupIDs) > 0 {
-		idq = fmt.Sprintf(" id IN ('%s') AND ", strings.Join(groupIDs, "', '"))
+	if gm.ID == "" {
+		q = `SELECT DISTINCT g.id, g.owner_id, COALESCE(g.parent_id, '') AS parent_id, g.name, g.description,
+		g.metadata, g.created_at, g.updated_at, g.updated_by, g.status FROM groups g`
 	}
+	q = fmt.Sprintf("%s %s ORDER BY g.updated_at LIMIT :limit OFFSET :offset;", q, query)
 
-	q := fmt.Sprintf(`SELECT id, owner_id, parent_id, name, description, metadata, path, nlevel(path) as level, created_at, updated_at FROM groups
-					  WHERE %s nlevel(path) <= :level %s ORDER BY path`, idq, mq)
-
-	dbPage, err := toDBGroupPage("", "", pm)
+	dbPage, err := toDBGroupPage(gm)
 	if err != nil {
-		return mfgroups.Page{}, errors.Wrap(auth.ErrFailedToRetrieveAll, err)
+		return mfgroups.Page{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)
 	}
 
-	rows, err := gr.db.NamedQueryContext(ctx, q, dbPage)
+	fmt.Println(q)
+	fmt.Println(dbPage)
+	rows, err := repo.db.NamedQueryContext(ctx, q, dbPage)
 	if err != nil {
-		return mfgroups.Page{}, errors.Wrap(auth.ErrFailedToRetrieveAll, err)
+		return mfgroups.Page{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)
 	}
 	defer rows.Close()
 
-	items, err := gr.processRows(rows)
+	items, err := repo.processRows(rows)
 	if err != nil {
-		return mfgroups.Page{}, errors.Wrap(auth.ErrFailedToRetrieveAll, err)
+		return mfgroups.Page{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)
 	}
 
-	cq := fmt.Sprintf("SELECT COUNT(*) FROM groups WHERE %s nlevel(path) <= :level %s", idq, mq)
+	cq := "SELECT COUNT(*) FROM groups g"
+	if query != "" {
+		cq = fmt.Sprintf(" %s %s", cq, query)
+	}
 
-	total, err := total(ctx, gr.db, cq, dbPage)
+	total, err := postgres.Total(ctx, repo.db, cq, dbPage)
 	if err != nil {
-		return mfgroups.Page{}, errors.Wrap(auth.ErrFailedToRetrieveAll, err)
+		return mfgroups.Page{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)
 	}
 
-	page := mfgroups.Page{
-		Groups: items,
-		PageMeta: mfgroups.PageMeta{
-			Total:  total,
-			Offset: pm.o,
-			Limit:  0,
-		},
-	}
+	page := gm
+	page.Groups = items
+	page.Total = total
 
 	return page, nil
 }
-
-func (repo groupRepository) Assign(ctx context.Context, groupID, memberKind string, ids ...string) error {
-	tx, err := repo.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return errors.Wrap(auth.ErrAssignToGroup, err)
-	}
-
-	qIns := `INSERT INTO group_relations (group_id, member_id, type, created_at, updated_at)
-			 VALUES(:group_id, :member_id, :type, :created_at, :updated_at)`
-
-	for _, id := range ids {
-		dbg, err := toDBGroupRelation(id, groupID, memberKind)
-		if err != nil {
-			return errors.Wrap(auth.ErrAssignToGroup, err)
-		}
-		created := time.Now()
-		dbg.CreatedAt = created
-		dbg.UpdatedAt = created
-
-		if _, err := tx.NamedExecContext(ctx, qIns, dbg); err != nil {
-			tx.Rollback()
-			pqErr, ok := err.(*pq.Error)
-			if ok {
-				switch pqErr.Code.Name() {
-				case errInvalid, errTruncation:
-					return errors.Wrap(errors.ErrMalformedEntity, err)
-				case errFK:
-					return errors.Wrap(errors.ErrConflict, errors.New(pqErr.Detail))
-				case errDuplicate:
-					return errors.Wrap(auth.ErrMemberAlreadyAssigned, errors.New(pqErr.Detail))
-				}
-			}
-
-			return errors.Wrap(auth.ErrAssignToGroup, err)
-		}
-	}
-
-	if err = tx.Commit(); err != nil {
-		return errors.Wrap(auth.ErrAssignToGroup, err)
-	}
-
-	return nil
-}
-
-func (repo groupRepository) Unassign(ctx context.Context, groupID string, ids ...string) error {
-	tx, err := repo.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return errors.Wrap(auth.ErrAssignToGroup, err)
-	}
-
-	qDel := `DELETE from group_relations WHERE group_id = :group_id AND member_id = :member_id`
-
-	for _, id := range ids {
-		dbg, err := toDBGroupRelation(id, groupID, "")
-		if err != nil {
-			return errors.Wrap(auth.ErrAssignToGroup, err)
-		}
-
-		if _, err := tx.NamedExecContext(ctx, qDel, dbg); err != nil {
-			tx.Rollback()
-			pqErr, ok := err.(*pq.Error)
-			if ok {
-				switch pqErr.Code.Name() {
-				case errInvalid, errTruncation:
-					return errors.Wrap(errors.ErrMalformedEntity, err)
-				case errDuplicate:
-					return errors.Wrap(errors.ErrConflict, err)
-				}
-			}
-
-			return errors.Wrap(auth.ErrAssignToGroup, err)
-		}
-	}
-
-	if err = tx.Commit(); err != nil {
-		return errors.Wrap(auth.ErrAssignToGroup, err)
-	}
-
-	return nil
-}
-
-type dbGroupRelation struct {
-	GroupID   sql.NullString `db:"group_id"`
-	MemberID  sql.NullString `db:"member_id"`
-	CreatedAt time.Time      `db:"created_at"`
-	UpdatedAt time.Time      `db:"updated_at"`
-	Type      string         `db:"type"`
-}
-
-func toDBGroupRelation(memberID, groupID, memberKind string) (dbGroupRelation, error) {
-	var grID sql.NullString
-	if groupID != "" {
-		grID = sql.NullString{String: groupID, Valid: true}
-	}
-
-	var mID sql.NullString
-	if memberID != "" {
-		mID = sql.NullString{String: memberID, Valid: true}
-	}
-
-	return dbGroupRelation{
-		GroupID:  grID,
-		MemberID: mID,
-		Type:     memberKind,
-	}, nil
-}
-
 func buildHierachy(gm mfgroups.Page) string {
 	query := ""
 	switch {
@@ -451,7 +266,7 @@ func buildHierachy(gm mfgroups.Page) string {
 	return query
 }
 
-func buildQuery(gm mfgroups.Page) (string, error) {
+func buildQuery(gm mfgroups.Page, ids ...string) (string, error) {
 	queries := []string{}
 
 	if gm.Name != "" {
@@ -465,9 +280,6 @@ func buildQuery(gm mfgroups.Page) (string, error) {
 	}
 	if gm.Tag != "" {
 		queries = append(queries, ":tag = ANY(c.tags)")
-	}
-	if gm.Subject != "" {
-		queries = append(queries, "(g.owner_id = :owner_id OR id IN (SELECT object as id FROM policies WHERE subject = :subject AND :action=ANY(actions)))")
 	}
 	if len(gm.Metadata) > 0 {
 		queries = append(queries, "'g.metadata @> :metadata'")
@@ -491,11 +303,6 @@ type dbGroup struct {
 	UpdatedAt   sql.NullTime     `db:"updated_at,omitempty"`
 	UpdatedBy   *string          `db:"updated_by,omitempty"`
 	Status      mfclients.Status `db:"status"`
-}
-
-type dbMemberType struct {
-	MemberID   string `db:"member_id"`
-	MemberType string `db:"member_type"`
 }
 
 func toDBGroup(g mfgroups.Group) (dbGroup, error) {
@@ -537,7 +344,7 @@ func toDBGroup(g mfgroups.Group) (dbGroup, error) {
 func toGroup(g dbGroup) (mfgroups.Group, error) {
 	var metadata mfclients.Metadata
 	if g.Metadata != nil {
-		if err := json.Unmarshal([]byte(g.Metadata), &metadata); err != nil {
+		if err := json.Unmarshal(g.Metadata, &metadata); err != nil {
 			return mfgroups.Group{}, errors.Wrap(errors.ErrMalformedEntity, err)
 		}
 	}
@@ -585,6 +392,7 @@ func toDBGroupPage(pm mfgroups.Page) (dbGroupPage, error) {
 	}
 	return dbGroupPage{
 		ID:       pm.ID,
+		Name:     pm.Name,
 		Metadata: data,
 		Path:     pm.Path,
 		Level:    level,
@@ -592,32 +400,31 @@ func toDBGroupPage(pm mfgroups.Page) (dbGroupPage, error) {
 		Offset:   pm.Offset,
 		Limit:    pm.Limit,
 		ParentID: pm.ID,
+		OwnerID:  pm.OwnerID,
+		Subject:  pm.Subject,
+		Action:   pm.Action,
+		Status:   pm.Status,
 	}, nil
 }
 
 type dbGroupPage struct {
-	ID       string        `db:"id"`
-	ParentID string        `db:"parent_id"`
-	OwnerID  uuid.NullUUID `db:"owner_id"`
-	Metadata dbMetadata    `db:"metadata"`
-	Path     string        `db:"path"`
-	Level    uint64        `db:"level"`
-	Total    uint64        `db:"total"`
-	Limit    uint64        `db:"limit"`
-	Offset   uint64        `db:"offset"`
+	ClientID string           `db:"client_id"`
+	ID       string           `db:"id"`
+	Name     string           `db:"name"`
+	ParentID string           `db:"parent_id"`
+	OwnerID  string           `db:"owner_id"`
+	Metadata []byte           `db:"metadata"`
+	Path     string           `db:"path"`
+	Level    uint64           `db:"level"`
+	Total    uint64           `db:"total"`
+	Limit    uint64           `db:"limit"`
+	Offset   uint64           `db:"offset"`
+	Subject  string           `db:"subject"`
+	Action   string           `db:"action"`
+	Status   mfclients.Status `db:"status"`
 }
 
-type dbMemberPage struct {
-	GroupID  string     `db:"group_id"`
-	MemberID string     `db:"member_id"`
-	Type     string     `db:"type"`
-	Metadata dbMetadata `db:"metadata"`
-	Limit    uint64     `db:"limit"`
-	Offset   uint64     `db:"offset"`
-	Size     uint64
-}
-
-func (gr groupRepository) processRows(rows *sqlx.Rows) ([]mfgroups.Group, error) {
+func (repo groupRepository) processRows(rows *sqlx.Rows) ([]mfgroups.Group, error) {
 	var items []mfgroups.Group
 	for rows.Next() {
 		dbg := dbGroup{}
@@ -631,38 +438,4 @@ func (gr groupRepository) processRows(rows *sqlx.Rows) ([]mfgroups.Group, error)
 		items = append(items, group)
 	}
 	return items, nil
-}
-
-func getGroupsMetadataQuery(db string, m mfclients.Metadata) (mb []byte, mq string, err error) {
-	if len(m) > 0 {
-		mq = `metadata @> :metadata`
-		if db != "" {
-			mq = db + "." + mq
-		}
-
-		b, err := json.Marshal(m)
-		if err != nil {
-			return nil, "", errors.Wrap(err, errCreateMetadataQuery)
-		}
-		mb = b
-	}
-	return mb, mq, nil
-}
-
-type dbMetadata map[string]interface{}
-
-func toDBGroupPage(id, path string, pm auth.PageMetadata) (dbGroupPage, error) {
-	level := auth.MaxLevel
-	if pm.Level < auth.MaxLevel {
-		level = pm.Level
-	}
-	return dbGroupPage{
-		Metadata: dbMetadata(pm.Metadata),
-		ID:       id,
-		Path:     path,
-		Level:    level,
-		Total:    pm.Total,
-		Offset:   pm.Offset,
-		Limit:    pm.Limit,
-	}, nil
 }

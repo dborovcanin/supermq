@@ -37,7 +37,7 @@ func DecodeListMembershipRequest(_ context.Context, r *http.Request) (interface{
 
 	req := listMembershipReq{
 		token:    apiutil.ExtractBearerToken(r),
-		clientID: chi.URLParam(r, "clientID"),
+		clientID: chi.URLParam(r, "groupID"),
 		Page: mfgroups.Page{
 			Level:     level,
 			ID:        parentID,

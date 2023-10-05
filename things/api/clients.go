@@ -53,12 +53,12 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 			opts...,
 		), "list_things").ServeHTTP)
 
-		r.Get("/channels/{chanID}", otelhttp.NewHandler(kithttp.NewServer(
+		r.Get("/{thingID}/channels", otelhttp.NewHandler(kithttp.NewServer(
 			listMembersEndpoint(svc),
 			decodeListMembersRequest,
 			api.EncodeResponse,
 			opts...,
-		), "list_things_by_channel").ServeHTTP)
+		), "list_channel_by_things").ServeHTTP)
 
 		r.Patch("/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
 			updateClientEndpoint(svc),

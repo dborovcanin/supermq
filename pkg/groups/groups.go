@@ -37,11 +37,18 @@ type Group struct {
 	Status      clients.Status   `json:"status"`
 }
 
+type Member struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+}
+
 // Memberships contains page related metadata as well as list of memberships that
 // belong to this page.
 type Memberships struct {
-	PageMeta
-	Groups []Group
+	Total   uint64 `json:"total"`
+	Offset  uint64 `json:"offset"`
+	Limit   uint64 `json:"limit"`
+	Members []Member
 }
 
 // Page contains page related metadata as well as list
@@ -69,15 +76,15 @@ type Repository interface {
 	// RetrieveAll retrieves all groups.
 	RetrieveAll(ctx context.Context, gm Page) (Page, error)
 
-	// Memberships retrieves everything that is assigned to a group identified by clientID.
-	Memberships(ctx context.Context, clientID string, gm Page) (Memberships, error)
+	// RetrieveByIDs retrieves group by ids and query.
+	RetrieveByIDs(ctx context.Context, gm Page, ids ...string) (Page, error)
 
 	// ChangeStatus changes groups status to active or inactive
 	ChangeStatus(ctx context.Context, group Group) (Group, error)
 
-	Assign(ctx context.Context, groupID, memberKind string, ids ...string) error
+	// Assign(ctx context.Context, groupID, memberKind string, ids ...string) error
 
-	Unassign(ctx context.Context, groupID string, ids ...string) error
+	// Unassign(ctx context.Context, groupID string, ids ...string) error
 }
 
 type Service interface {
@@ -91,10 +98,10 @@ type Service interface {
 	ViewGroup(ctx context.Context, token, id string) (Group, error)
 
 	// ListGroups retrieves
-	ListGroups(ctx context.Context, token string, gm Page) (Page, error)
+	ListGroups(ctx context.Context, token, memberKind, memberID string, gm Page) (Page, error)
 
-	// ListMemberships retrieves everything that is assigned to a group identified by clientID.
-	ListMemberships(ctx context.Context, token, clientID string, gm Page) (Memberships, error)
+	// ListMemberships retrieves everything that is assigned to a group identified by groupID.
+	ListMemberships(ctx context.Context, token, groupID, memberKind string) (Memberships, error)
 
 	// EnableGroup logically enables the group identified with the provided ID.
 	EnableGroup(ctx context.Context, token, id string) (Group, error)
@@ -106,5 +113,5 @@ type Service interface {
 	Assign(ctx context.Context, token, groupID, relation, memberKind string, memberIDs ...string) (err error)
 
 	// Unassign member from group
-	Unassign(ctx context.Context, token, groupID string, memberIDs ...string) (err error)
+	Unassign(ctx context.Context, token, groupID, relation, memberKind string, memberIDs ...string) (err error)
 }

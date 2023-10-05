@@ -136,7 +136,7 @@ func (req assignReq) validate() error {
 	}
 
 	if req.MemberKind == "" {
-		return apiutil.ErrMissingMemberType
+		return apiutil.ErrMissingMemberKind
 	}
 
 	if req.groupID == "" {
@@ -164,7 +164,7 @@ func (req unassignReq) validate() error {
 	}
 
 	if req.MemberKind == "" {
-		return apiutil.ErrMissingMemberType
+		return apiutil.ErrMissingMemberKind
 	}
 
 	if req.groupID == "" {
@@ -175,5 +175,26 @@ func (req unassignReq) validate() error {
 		return apiutil.ErrEmptyList
 	}
 
+	return nil
+}
+
+type listMembers struct {
+	token      string
+	groupID    string
+	memberKind string
+}
+
+func (req listMembers) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.memberKind == "" {
+		return apiutil.ErrMissingMemberKind
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
 	return nil
 }

@@ -15,6 +15,8 @@ import (
 	"github.com/mainflux/mainflux/pkg/groups"
 )
 
+var errParentUnAuthz = errors.New("failed to authorize parent group")
+
 // Possible token types are access and refresh tokens.
 const (
 	RefreshToken = "refresh"
@@ -88,6 +90,13 @@ func (svc service) CreateGroup(ctx context.Context, token string, g groups.Group
 	g.ID = groupID
 	g.CreatedAt = time.Now()
 
+	if g.Parent != "" {
+		_, err := svc.authorize(ctx, userType, token, editPermission, groupType, g.Parent)
+		if err != nil {
+			return groups.Group{}, errors.Wrap(errParentUnAuthz, err)
+		}
+	}
+
 	g, err = svc.groups.Save(ctx, g)
 	if err != nil {
 		return groups.Group{}, err
@@ -103,6 +112,20 @@ func (svc service) CreateGroup(ctx context.Context, token string, g groups.Group
 	if _, err := svc.auth.AddPolicy(ctx, &policy); err != nil {
 		return groups.Group{}, err
 	}
+
+	if g.Parent != "" {
+		policy = mainflux.AddPolicyReq{
+			SubjectType: groupType,
+			Subject:     g.Parent,
+			Relation:    parentGroupRelation,
+			ObjectType:  groupType,
+			Object:      g.ID,
+		}
+	}
+	if _, err := svc.auth.AddPolicy(ctx, &policy); err != nil {
+		return groups.Group{}, err
+	}
+
 	return g, nil
 }
 
@@ -381,21 +404,6 @@ func (svc service) changeGroupStatus(ctx context.Context, token string, group gr
 
 	group.UpdatedBy = id
 	return svc.groups.ChangeStatus(ctx, group)
-}
-
-func (svc service) authorizeByID(ctx context.Context, subject, object, action string) error {
-	// policy := policies.Policy{Subject: subject, Object: object, Actions: []string{action}}
-	// if err := policy.Validate(); err != nil {
-	// 	return err
-	// }
-	// if err := svc.policies.CheckAdmin(ctx, policy.Subject); err == nil {
-	// 	return nil
-	// }
-	// aReq := policies.AccessRequest{Subject: subject, Object: object, Action: action}
-	// if _, err := svc.policies.EvaluateGroupAccess(ctx, aReq); err != nil {
-	// 	return err
-	// }
-	return nil
 }
 
 func (svc service) identify(ctx context.Context, token string) (string, error) {

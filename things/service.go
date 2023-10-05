@@ -11,7 +11,6 @@ import (
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-	tpolicies "github.com/mainflux/mainflux/things/policies"
 	"github.com/mainflux/mainflux/things/postgres"
 )
 
@@ -60,7 +59,6 @@ const (
 
 type service struct {
 	auth        mainflux.AuthServiceClient
-	policies    tpolicies.Service
 	clients     postgres.Repository
 	clientCache Cache
 	idProvider  mainflux.IDProvider
@@ -68,10 +66,9 @@ type service struct {
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c postgres.Repository, grepo mfgroups.Repository, tcache Cache, idp mainflux.IDProvider) Service {
+func NewService(uauth mainflux.AuthServiceClient, c postgres.Repository, grepo mfgroups.Repository, tcache Cache, idp mainflux.IDProvider) Service {
 	return service{
 		auth:        uauth,
-		policies:    policies,
 		clients:     c,
 		grepo:       grepo,
 		clientCache: tcache,

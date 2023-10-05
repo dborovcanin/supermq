@@ -43,14 +43,14 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 		), "update_channel").ServeHTTP)
 
 		r.Get("/{groupID}/things", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListMembershipsEndpoint(svc),
+			gapi.ListMembershipsEndpoint(svc, "users"),
 			gapi.DecodeListMembershipRequest,
 			api.EncodeResponse,
 			opts...,
 		), "list_things_by_channel").ServeHTTP)
 
 		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListGroupsEndpoint(svc),
+			gapi.ListGroupsEndpoint(svc, "things"),
 			gapi.DecodeListGroupsRequest,
 			api.EncodeResponse,
 			opts...,

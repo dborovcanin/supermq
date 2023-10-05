@@ -123,9 +123,9 @@ func (req authReq) validate() error {
 	// 	return apiutil.ErrMissingPolicySub
 	// }
 
-	if req.Permission == "" {
-		return apiutil.ErrMalformedPolicyAct
-	}
+	// if req.Permission == "" {
+	// 	return apiutil.ErrMalformedPolicyAct
+	// }
 
 	return nil
 }

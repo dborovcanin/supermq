@@ -6,6 +6,7 @@ package tracing
 import (
 	"context"
 
+	"github.com/mainflux/mainflux"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/things"
 	"go.opentelemetry.io/otel/attribute"
@@ -124,4 +125,10 @@ func (tm *tracingMiddleware) Disconnect(ctx context.Context, token, thingID, cha
 	ctx, span := tm.tracer.Start(ctx, "connect", trace.WithAttributes(attribute.String("thing", thingID), attribute.String("channel", channelID)))
 	defer span.End()
 	return tm.svc.Disconnect(ctx, token, thingID, channelID, permission)
+}
+
+func (tm *tracingMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) error {
+	ctx, span := tm.tracer.Start(ctx, "connect", trace.WithAttributes(attribute.String("subject", req.Subject), attribute.String("object", req.Object)))
+	defer span.End()
+	return tm.svc.Authorize(ctx, req)
 }

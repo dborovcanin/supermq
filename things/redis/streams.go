@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/mainflux/mainflux"
 	mfredis "github.com/mainflux/mainflux/internal/clients/redis"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/things"
@@ -203,4 +204,8 @@ func (es *eventStore) Connect(ctx context.Context, token, thingID, channelID, pe
 }
 func (es *eventStore) Disconnect(ctx context.Context, token, thingID, channelID, permission string) error {
 	return es.svc.Disconnect(ctx, token, thingID, channelID, permission)
+}
+
+func (es *eventStore) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) error {
+	return es.svc.Authorize(ctx, req)
 }

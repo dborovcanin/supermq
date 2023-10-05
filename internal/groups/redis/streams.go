@@ -88,8 +88,8 @@ func (es eventStore) ViewGroup(ctx context.Context, token, id string) (groups.Gr
 	return group, nil
 }
 
-func (es eventStore) ListGroups(ctx context.Context, token string, pm groups.Page) (groups.Page, error) {
-	gp, err := es.svc.ListGroups(ctx, token, pm)
+func (es eventStore) ListGroups(ctx context.Context, token string, memberKind string, memberID string, pm groups.Page) (groups.Page, error) {
+	gp, err := es.svc.ListGroups(ctx, token, memberKind, memberID, pm)
 	if err != nil {
 		return gp, err
 	}
@@ -104,13 +104,13 @@ func (es eventStore) ListGroups(ctx context.Context, token string, pm groups.Pag
 	return gp, nil
 }
 
-func (es eventStore) ListMemberships(ctx context.Context, token, clientID string, pm groups.Page) (groups.Memberships, error) {
-	mp, err := es.svc.ListMemberships(ctx, token, clientID, pm)
+func (es eventStore) ListMemberships(ctx context.Context, token, groupID, memberKind string) (groups.Memberships, error) {
+	mp, err := es.svc.ListMemberships(ctx, token, groupID, memberKind)
 	if err != nil {
 		return mp, err
 	}
 	event := listGroupMembershipEvent{
-		pm, clientID,
+		groupID, memberKind,
 	}
 
 	if err := es.Publish(ctx, event); err != nil {
@@ -127,6 +127,14 @@ func (es eventStore) EnableGroup(ctx context.Context, token, id string) (groups.
 	}
 
 	return es.delete(ctx, group)
+}
+
+func (es eventStore) Assign(ctx context.Context, token, groupID, relation, memberKind string, memberIDs ...string) error {
+	return es.svc.Assign(ctx, token, groupID, relation, memberKind, memberIDs...)
+}
+
+func (es eventStore) Unassign(ctx context.Context, token, groupID string, relation string, memberKind string, memberIDs ...string) error {
+	return es.svc.Unassign(ctx, token, groupID, relation, memberKind, memberIDs...)
 }
 
 func (es eventStore) DisableGroup(ctx context.Context, token, id string) (groups.Group, error) {

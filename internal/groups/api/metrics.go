@@ -56,12 +56,12 @@ func (ms *metricsMiddleware) ViewGroup(ctx context.Context, token, id string) (g
 }
 
 // ListGroups instruments ListGroups method with metrics.
-func (ms *metricsMiddleware) ListGroups(ctx context.Context, token string, gp groups.Page) (cg groups.Page, err error) {
+func (ms *metricsMiddleware) ListGroups(ctx context.Context, token string, memberKind, memberID string, gp groups.Page) (cg groups.Page, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_groups").Add(1)
 		ms.latency.With("method", "list_groups").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return ms.svc.ListGroups(ctx, token, gp)
+	return ms.svc.ListGroups(ctx, token, memberKind, memberID, gp)
 }
 
 // EnableGroup instruments EnableGroup method with metrics.
@@ -83,10 +83,30 @@ func (ms *metricsMiddleware) DisableGroup(ctx context.Context, token string, id 
 }
 
 // ListMemberships instruments ListMemberships method with metrics.
-func (ms *metricsMiddleware) ListMemberships(ctx context.Context, token, clientID string, gp groups.Page) (mp groups.Memberships, err error) {
+func (ms *metricsMiddleware) ListMemberships(ctx context.Context, token, groupID, memberKind string) (mp groups.Memberships, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_memberships").Add(1)
 		ms.latency.With("method", "list_memberships").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return ms.svc.ListMemberships(ctx, token, clientID, gp)
+	return ms.svc.ListMemberships(ctx, token, groupID, memberKind)
+}
+
+// Assign instruments Assign method with metrics.
+func (ms *metricsMiddleware) Assign(ctx context.Context, token, groupID string, relation string, memberKind string, memberIDs ...string) (err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "assign").Add(1)
+		ms.latency.With("method", "assign").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.Assign(ctx, token, groupID, relation, memberKind, memberIDs...)
+}
+
+// Unassign instruments Unassign method with metrics.
+func (ms *metricsMiddleware) Unassign(ctx context.Context, token, groupID string, relation string, memberKind string, memberIDs ...string) (err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "unassign").Add(1)
+		ms.latency.With("method", "unassign").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+
+	return ms.svc.Unassign(ctx, token, groupID, relation, memberKind, memberIDs...)
 }

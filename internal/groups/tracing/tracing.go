@@ -40,19 +40,19 @@ func (tm *tracingMiddleware) ViewGroup(ctx context.Context, token string, id str
 }
 
 // ListGroups traces the "ListGroups" operation of the wrapped groups.Service.
-func (tm *tracingMiddleware) ListGroups(ctx context.Context, token string, gm groups.Page) (groups.Page, error) {
+func (tm *tracingMiddleware) ListGroups(ctx context.Context, token, memberKind, memberID string, gm groups.Page) (groups.Page, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_list_groups")
 	defer span.End()
 
-	return tm.gsvc.ListGroups(ctx, token, gm)
+	return tm.gsvc.ListGroups(ctx, token, memberKind, memberID, gm)
 }
 
 // ListMemberships traces the "ListMemberships" operation of the wrapped groups.Service.
-func (tm *tracingMiddleware) ListMemberships(ctx context.Context, token, clientID string, gm groups.Page) (groups.Memberships, error) {
-	ctx, span := tm.tracer.Start(ctx, "svc_list_memberships", trace.WithAttributes(attribute.String("clientID", clientID)))
+func (tm *tracingMiddleware) ListMemberships(ctx context.Context, token, groupID, memberKind string) (groups.Memberships, error) {
+	ctx, span := tm.tracer.Start(ctx, "svc_list_memberships", trace.WithAttributes(attribute.String("groupID", groupID)))
 	defer span.End()
 
-	return tm.gsvc.ListMemberships(ctx, token, clientID, gm)
+	return tm.gsvc.ListMemberships(ctx, token, groupID, memberKind)
 }
 
 // UpdateGroup traces the "UpdateGroup" operation of the wrapped groups.Service.
@@ -77,4 +77,20 @@ func (tm *tracingMiddleware) DisableGroup(ctx context.Context, token, id string)
 	defer span.End()
 
 	return tm.gsvc.DisableGroup(ctx, token, id)
+}
+
+// Assign traces the "Assign" operation of the wrapped groups.Service.
+func (tm *tracingMiddleware) Assign(ctx context.Context, token string, groupID string, relation string, memberKind string, memberIDs ...string) error {
+	ctx, span := tm.tracer.Start(ctx, "svc_assign", trace.WithAttributes(attribute.String("id", groupID)))
+	defer span.End()
+
+	return tm.gsvc.Assign(ctx, token, groupID, relation, memberKind, memberIDs...)
+}
+
+// Unassign traces the "Unassign" operation of the wrapped groups.Service.
+func (tm *tracingMiddleware) Unassign(ctx context.Context, token string, groupID string, relation string, memberKind string, memberIDs ...string) error {
+	ctx, span := tm.tracer.Start(ctx, "svc_unassign", trace.WithAttributes(attribute.String("id", groupID)))
+	defer span.End()
+
+	return tm.gsvc.Unassign(ctx, token, groupID, relation, memberKind, memberIDs...)
 }

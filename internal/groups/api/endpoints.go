@@ -96,13 +96,16 @@ func DisableGroupEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
-func ListGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
+func ListGroupsEndpoint(svc groups.Service, memberKind string) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listGroupsReq)
+		if memberKind != "" {
+			req.memberKind = memberKind
+		}
 		if err := req.validate(); err != nil {
 			return groupPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
-		page, err := svc.ListGroups(ctx, req.token, req.Page)
+		page, err := svc.ListGroups(ctx, req.token, req.memberKind, req.memberID, req.Page)
 		if err != nil {
 			return groupPageRes{}, err
 		}
@@ -115,31 +118,22 @@ func ListGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
-func ListMembershipsEndpoint(svc groups.Service) endpoint.Endpoint {
+func ListMembershipsEndpoint(svc groups.Service, memberKind string) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listMembershipReq)
+		if memberKind != "" {
+			req.memberKind = memberKind
+		}
 		if err := req.validate(); err != nil {
 			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
 
-		page, err := svc.ListMemberships(ctx, req.token, req.clientID, req.Page)
+		page, err := svc.ListMemberships(ctx, req.token, req.groupID, req.memberKind)
 		if err != nil {
 			return membershipPageRes{}, err
 		}
 
-		res := membershipPageRes{
-			pageRes: pageRes{
-				Total:  page.Total,
-				Offset: page.Offset,
-				Limit:  page.Limit,
-			},
-			Memberships: []viewMembershipRes{},
-		}
-		for _, g := range page.Groups {
-			res.Memberships = append(res.Memberships, viewMembershipRes{Group: g})
-		}
-
-		return res, nil
+		return page, nil
 	}
 }
 

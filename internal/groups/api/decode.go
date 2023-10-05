@@ -15,35 +15,15 @@ import (
 )
 
 func DecodeListMembershipRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	pm, err := decodePageMeta(r)
-	if err != nil {
-		return nil, err
-	}
-
-	level, err := apiutil.ReadNumQuery[uint64](r, api.LevelKey, api.DefLevel)
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	parentID, err := apiutil.ReadStringQuery(r, api.ParentKey, "")
-	if err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-
-	dir, err := apiutil.ReadNumQuery[int64](r, api.DirKey, -1)
+	memberKind, err := apiutil.ReadStringQuery(r, "member_kind", "")
 	if err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, err)
 	}
 
 	req := listMembershipReq{
-		token:    apiutil.ExtractBearerToken(r),
-		clientID: chi.URLParam(r, "groupID"),
-		Page: mfgroups.Page{
-			Level:     level,
-			ID:        parentID,
-			PageMeta:  pm,
-			Direction: dir,
-		},
+		token:      apiutil.ExtractBearerToken(r),
+		groupID:    chi.URLParam(r, "groupID"),
+		memberKind: memberKind,
 	}
 	return req, nil
 }

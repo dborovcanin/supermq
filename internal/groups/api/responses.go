@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/pkg/groups"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
 )
 
@@ -41,7 +42,7 @@ func (res viewMembershipRes) Empty() bool {
 
 type membershipPageRes struct {
 	pageRes
-	Memberships []viewMembershipRes `json:"memberships"`
+	Members []groups.Member `json:"members"`
 }
 
 func (res membershipPageRes) Code() int {

@@ -196,9 +196,9 @@ func (repo groupRepository) RetrieveAll(ctx context.Context, gm mfgroups.Page) (
 func (repo groupRepository) RetrieveByIDs(ctx context.Context, gm mfgroups.Page, ids ...string) (mfgroups.Page, error) {
 	var q string
 	if len(ids) <= 0 {
-
+		return mfgroups.Page{}, errors.ErrNotFound
 	}
-	query, err := buildQuery(gm)
+	query, err := buildQuery(gm, ids...)
 	if err != nil {
 		return mfgroups.Page{}, err
 	}
@@ -269,6 +269,7 @@ func buildHierachy(gm mfgroups.Page) string {
 func buildQuery(gm mfgroups.Page, ids ...string) (string, error) {
 	queries := []string{}
 
+	queries = append(queries, fmt.Sprintf("id in '%s' ", strings.Join(ids, "', '")))
 	if gm.Name != "" {
 		queries = append(queries, "g.name = :name")
 	}
@@ -401,8 +402,6 @@ func toDBGroupPage(pm mfgroups.Page) (dbGroupPage, error) {
 		Limit:    pm.Limit,
 		ParentID: pm.ID,
 		OwnerID:  pm.OwnerID,
-		Subject:  pm.Subject,
-		Action:   pm.Action,
 		Status:   pm.Status,
 	}, nil
 }

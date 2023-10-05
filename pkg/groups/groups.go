@@ -45,10 +45,10 @@ type Member struct {
 // Memberships contains page related metadata as well as list of memberships that
 // belong to this page.
 type Memberships struct {
-	Total   uint64 `json:"total"`
-	Offset  uint64 `json:"offset"`
-	Limit   uint64 `json:"limit"`
-	Members []Member
+	Total   uint64   `json:"total"`
+	Offset  uint64   `json:"offset"`
+	Limit   uint64   `json:"limit"`
+	Members []Member `json:"members"`
 }
 
 // Page contains page related metadata as well as list

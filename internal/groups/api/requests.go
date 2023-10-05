@@ -48,7 +48,9 @@ func (req updateGroupReq) validate() error {
 
 type listGroupsReq struct {
 	mfgroups.Page
-	token string
+	token      string
+	memberKind string
+	memberID   string
 	// - `true`  - result is JSON tree representing groups hierarchy,
 	// - `false` - result is JSON array of groups.
 	tree bool
@@ -57,6 +59,9 @@ type listGroupsReq struct {
 func (req listGroupsReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
+	}
+	if req.memberKind == "" {
+		return apiutil.ErrMissingMemberKind
 	}
 	if req.Level < mfgroups.MinLevel || req.Level > mfgroups.MaxLevel {
 		return apiutil.ErrInvalidLevel
@@ -67,18 +72,22 @@ func (req listGroupsReq) validate() error {
 
 type listMembershipReq struct {
 	mfgroups.Page
-	token    string
-	clientID string
+	token      string
+	groupID    string
+	memberKind string
 }
 
 func (req listMembershipReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
-	if req.clientID == "" {
+	if req.groupID == "" {
 		return apiutil.ErrMissingID
 	}
 
+	if req.memberKind == "" {
+		return apiutil.ErrMissingMemberKind
+	}
 	return nil
 }
 
@@ -108,6 +117,83 @@ func (req changeGroupStatusReq) validate() error {
 		return apiutil.ErrBearerToken
 	}
 	if req.id == "" {
+		return apiutil.ErrMissingID
+	}
+	return nil
+}
+
+type assignReq struct {
+	token      string
+	groupID    string
+	Relation   string   `json:"relation,omitempty"`
+	MemberKind string   `json:"member_kind,omitempty"`
+	Members    []string `json:"members"`
+}
+
+func (req assignReq) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.MemberKind == "" {
+		return apiutil.ErrMissingMemberKind
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.Members) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}
+
+type unassignReq struct {
+	token      string
+	groupID    string
+	Relation   string   `json:"relation,omitempty"`
+	MemberKind string   `json:"member_kind,omitempty"`
+	Members    []string `json:"members"`
+}
+
+func (req unassignReq) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.MemberKind == "" {
+		return apiutil.ErrMissingMemberKind
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.Members) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}
+
+type listMembers struct {
+	token      string
+	groupID    string
+	memberKind string
+}
+
+func (req listMembers) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.memberKind == "" {
+		return apiutil.ErrMissingMemberKind
+	}
+
+	if req.groupID == "" {
 		return apiutil.ErrMissingID
 	}
 	return nil

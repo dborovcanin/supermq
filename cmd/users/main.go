@@ -119,14 +119,16 @@ func main() {
 	if err := dbConfig.LoadEnv(envPrefixDB); err != nil {
 		logger.Fatal(err.Error())
 	}
-	db, err := pgclient.SetupWithConfig(envPrefixDB, *clientspg.Migration(), dbConfig)
+	cm := clientspg.Migration()
+	gm := gpostgres.Migration()
+	cm.Migrations = append(cm.Migrations, gm.Migrations...)
+	db, err := pgclient.SetupWithConfig(envPrefixDB, *cm, dbConfig)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
 		return
 	}
 	defer db.Close()
-	fmt.Println("JG", cfg.JaegerURL, cfg.InstanceID, svcName)
 
 	tp, err := jaegerclient.NewProvider(svcName, cfg.JaegerURL, cfg.InstanceID)
 	if err != nil {

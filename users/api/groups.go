@@ -46,21 +46,21 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 		), "update_group").ServeHTTP)
 
 		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListGroupsEndpoint(svc),
+			gapi.ListGroupsEndpoint(svc, "users"),
 			gapi.DecodeListGroupsRequest,
 			api.EncodeResponse,
 			opts...,
 		), "list_groups").ServeHTTP)
 
 		r.Get("/{groupID}/children", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListGroupsEndpoint(svc),
+			gapi.ListGroupsEndpoint(svc, "users"),
 			gapi.DecodeListChildrenRequest,
 			api.EncodeResponse,
 			opts...,
 		), "list_children").ServeHTTP)
 
 		r.Get("/{groupID}/parents", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListGroupsEndpoint(svc),
+			gapi.ListGroupsEndpoint(svc, "users"),
 			gapi.DecodeListParentsRequest,
 			api.EncodeResponse,
 			opts...,
@@ -79,6 +79,27 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 			api.EncodeResponse,
 			opts...,
 		), "disable_group").ServeHTTP)
+
+		r.Post("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
+			gapi.AssignMembersEndpoint(svc, "", "users"),
+			gapi.DecodeAssignMembers,
+			api.EncodeResponse,
+			opts...,
+		), "assign_members").ServeHTTP)
+
+		r.Delete("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
+			gapi.UnassignMembersEndpoint(svc, "", "users"),
+			gapi.DecodeUnassignMembers,
+			api.EncodeResponse,
+			opts...,
+		), "unassign_members").ServeHTTP)
+
+		r.Get("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
+			gapi.ListMembershipsEndpoint(svc, "users"),
+			gapi.DecodeListMembers,
+			api.EncodeResponse,
+			opts...,
+		), "assign_members").ServeHTTP)
 	})
 
 	return r

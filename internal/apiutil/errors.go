@@ -99,6 +99,9 @@ var (
 	// ErrMissingMemberType indicates missing group member type.
 	ErrMissingMemberType = errors.New("missing group member type")
 
+	// ErrMissingMemberKind indicates missing group member kind.
+	ErrMissingMemberKind = errors.New("missing group member kind")
+
 	// ErrInvalidAPIKey indicates an invalid API key type.
 	ErrInvalidAPIKey = errors.New("invalid api key type")
 

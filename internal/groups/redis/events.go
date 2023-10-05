@@ -208,55 +208,19 @@ func (lge listGroupEvent) Encode() (map[string]interface{}, error) {
 	if lge.Status.String() != "" {
 		val["status"] = lge.Status.String()
 	}
-	if lge.Action != "" {
-		val["action"] = lge.Action
-	}
-	if lge.Subject != "" {
-		val["subject"] = lge.Subject
-	}
 
 	return val, nil
 }
 
 type listGroupMembershipEvent struct {
-	groups.Page
-	channelID string
+	groupID    string
+	memberKind string
 }
 
 func (lgme listGroupMembershipEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
-		"operation":  groupListMemberships,
-		"total":      lgme.Total,
-		"offset":     lgme.Offset,
-		"limit":      lgme.Limit,
-		"channel_id": lgme.channelID,
-	}
-
-	if lgme.Name != "" {
-		val["name"] = lgme.Name
-	}
-	if lgme.OwnerID != "" {
-		val["owner_id"] = lgme.OwnerID
-	}
-	if lgme.Tag != "" {
-		val["tag"] = lgme.Tag
-	}
-	if lgme.Metadata != nil {
-		metadata, err := json.Marshal(lgme.Metadata)
-		if err != nil {
-			return map[string]interface{}{}, err
-		}
-
-		val["metadata"] = metadata
-	}
-	if lgme.Status.String() != "" {
-		val["status"] = lgme.Status.String()
-	}
-	if lgme.Action != "" {
-		val["action"] = lgme.Action
-	}
-	if lgme.Subject != "" {
-		val["subject"] = lgme.Subject
+		"group_id":    lgme.groupID,
+		"member_kind": lgme.memberKind,
 	}
 
 	return val, nil

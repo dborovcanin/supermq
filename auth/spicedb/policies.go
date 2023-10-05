@@ -107,6 +107,13 @@ func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error
 			ResourceType:       pr.ObjectType,
 			OptionalResourceId: pr.Object,
 			OptionalRelation:   pr.Relation,
+			OptionalSubjectFilter: &v1.SubjectFilter{
+				OptionalSubjectId: pr.Subject,
+				SubjectType:       pr.SubjectType,
+				OptionalRelation: &v1.SubjectFilter_RelationFilter{
+					Relation: pr.SubjectRelation,
+				},
+			},
 		},
 	}
 	_, err := pa.permissionClient.DeleteRelationships(ctx, req)

@@ -43,7 +43,7 @@ func (m *Repository) Memberships(ctx context.Context, clientID string, gm mfgrou
 	return ret.Get(0).(mfgroups.Memberships), ret.Error(1)
 }
 
-func (m *Repository) RetrieveByIDs(ctx context.Context, gm mfgroups.Page) (mfgroups.Page, error) {
+func (m *Repository) RetrieveByIDs(ctx context.Context, gm mfgroups.Page, ids ...string) (mfgroups.Page, error) {
 	ret := m.Called(ctx, gm)
 
 	return ret.Get(0).(mfgroups.Page), ret.Error(1)

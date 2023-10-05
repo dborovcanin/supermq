@@ -121,9 +121,9 @@ func (svc service) CreateGroup(ctx context.Context, token string, g groups.Group
 			ObjectType:  groupType,
 			Object:      g.ID,
 		}
-	}
-	if _, err := svc.auth.AddPolicy(ctx, &policy); err != nil {
-		return groups.Group{}, err
+		if _, err := svc.auth.AddPolicy(ctx, &policy); err != nil {
+			return groups.Group{}, err
+		}
 	}
 
 	return g, nil

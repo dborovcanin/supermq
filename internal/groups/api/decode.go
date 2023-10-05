@@ -15,7 +15,7 @@ import (
 )
 
 func DecodeListMembershipRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	memberKind, err := apiutil.ReadStringQuery(r, "member_kind", "")
+	memberKind, err := apiutil.ReadStringQuery(r, api.MemberKindKey, "")
 	if err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, err)
 	}
@@ -53,9 +53,14 @@ func DecodeListGroupsRequest(_ context.Context, r *http.Request) (interface{}, e
 		return nil, errors.Wrap(apiutil.ErrValidation, err)
 	}
 
+	memberKind, err := apiutil.ReadStringQuery(r, api.MemberKindKey, "")
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
 	req := listGroupsReq{
-		token: apiutil.ExtractBearerToken(r),
-		tree:  tree,
+		token:      apiutil.ExtractBearerToken(r),
+		tree:       tree,
+		memberKind: memberKind,
 		Page: mfgroups.Page{
 			Level:     level,
 			ID:        parentID,
@@ -188,6 +193,19 @@ func DecodeUnassignMembers(_ context.Context, r *http.Request) (interface{}, err
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func DecodeListMembers(_ context.Context, r *http.Request) (interface{}, error) {
+	memberKind, err := apiutil.ReadStringQuery(r, api.MemberKindKey, "")
+	if err != nil {
+		return nil, apiutil.ErrInvalidQueryParams
+	}
+	req := listMembers{
+		token:      apiutil.ExtractBearerToken(r),
+		groupID:    chi.URLParam(r, "groupID"),
+		memberKind: memberKind,
 	}
 	return req, nil
 }

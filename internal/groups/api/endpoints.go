@@ -143,6 +143,45 @@ func ListMembershipsEndpoint(svc groups.Service) endpoint.Endpoint {
 	}
 }
 
+func AssignMembersEndpoint(svc groups.Service, relation string, memberKind string) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(assignReq)
+		if relation != "" {
+			req.Relation = relation
+		}
+		if memberKind != "" {
+			req.MemberKind = memberKind
+		}
+		if err := req.validate(); err != nil {
+			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
+			return nil, err
+		}
+		return assignRes{}, nil
+	}
+}
+
+func UnassignMembersEndpoint(svc groups.Service, relation string, memberKind string) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(unassignReq)
+		if relation != "" {
+			req.Relation = relation
+		}
+		if memberKind != "" {
+			req.MemberKind = memberKind
+		}
+		if err := req.validate(); err != nil {
+			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+
+		if err := svc.Unassign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
+			return nil, err
+		}
+		return unassignReq{}, nil
+	}
+}
+
 func buildGroupsResponseTree(page mfgroups.Page) groupPageRes {
 	groupsMap := map[string]*mfgroups.Group{}
 	// Parents' map keeps its array of children.

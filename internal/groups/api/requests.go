@@ -116,8 +116,8 @@ func (req changeGroupStatusReq) validate() error {
 type assignReq struct {
 	token      string
 	groupID    string
-	Relation   string   `json:"relation"`
-	MemberKind string   `json:"member_kind"`
+	Relation   string   `json:"relation,omitempty"`
+	MemberKind string   `json:"member_kind,omitempty"`
 	Members    []string `json:"members"`
 }
 
@@ -142,14 +142,20 @@ func (req assignReq) validate() error {
 }
 
 type unassignReq struct {
-	token   string
-	groupID string
-	Members []string `json:"members"`
+	token      string
+	groupID    string
+	Relation   string   `json:"relation,omitempty"`
+	MemberKind string   `json:"member_kind,omitempty"`
+	Members    []string `json:"members"`
 }
 
 func (req unassignReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
+	}
+
+	if req.MemberKind == "" {
+		return apiutil.ErrMissingMemberType
 	}
 
 	if req.groupID == "" {

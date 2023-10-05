@@ -26,6 +26,7 @@ import (
 	"github.com/mainflux/mainflux/internal/env"
 	mfgroups "github.com/mainflux/mainflux/internal/groups"
 	gapi "github.com/mainflux/mainflux/internal/groups/api"
+	gpostgres "github.com/mainflux/mainflux/internal/groups/postgres"
 	gcache "github.com/mainflux/mainflux/internal/groups/redis"
 	gtracing "github.com/mainflux/mainflux/internal/groups/tracing"
 	"github.com/mainflux/mainflux/internal/postgres"
@@ -34,7 +35,6 @@ import (
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/groups"
-	gpostgres "github.com/mainflux/mainflux/pkg/groups/postgres"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/users"
 

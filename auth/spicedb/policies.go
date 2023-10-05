@@ -109,7 +109,7 @@ func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error
 			OptionalRelation:   pr.Relation,
 		},
 	}
-	r, err := pa.permissionClient.DeleteRelationships(ctx, req)
+	_, err := pa.permissionClient.DeleteRelationships(ctx, req)
 	if err != nil {
 		return errors.Wrap(errors.ErrMalformedEntity, fmt.Errorf("failed to remove the policy: %w", err))
 	}

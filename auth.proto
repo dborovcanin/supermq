@@ -9,11 +9,19 @@ option go_package = "./mainflux";
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
 
-service ThingsService {
-    rpc CanAccessByKey(AccessByKeyReq) returns (ThingID) {}
-    rpc IsChannelOwner(ChannelOwnerReq) returns (google.protobuf.Empty) {}
-    rpc CanAccessByID(AccessByIDReq) returns (google.protobuf.Empty) {}
-    rpc Identify(Token) returns (ThingID) {}
+// service ThingsService {
+//     rpc CanAccessByKey(AccessByKeyReq) returns (ThingID) {}
+//     rpc IsChannelOwner(ChannelOwnerReq) returns (google.protobuf.Empty) {}
+//     rpc CanAccessByID(AccessByIDReq) returns (google.protobuf.Empty) {}
+//     rpc Identify(Token) returns (ThingID) {}
+// }
+
+// AuthService is a service that provides authentication and authorization
+// functionalities for the things service.
+service AuthzService {
+    // Authorize checks if the subject is authorized to perform
+    // the action on the object.
+    rpc Authorize(AuthorizeReq) returns (AuthorizeRes) {}
 }
 
 service AuthService {
@@ -90,7 +98,7 @@ message AuthorizeReq {
     string namespace = 1; // Namespace = Domain
     string subject_type = 2; // Thing or User
     string subject_kind = 3; // ID or Token
-    string subject_relation = 4; // 
+    string subject_relation = 4; // Subject relation
     string subject = 5; // Subject value (id or token, depending on kind)
     string relation = 6; // Relation to filter
     string permission = 7; // Action

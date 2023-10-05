@@ -28,12 +28,14 @@ import (
 	gtracing "github.com/mainflux/mainflux/internal/groups/tracing"
 	"github.com/mainflux/mainflux/internal/postgres"
 	"github.com/mainflux/mainflux/internal/server"
+	grpcserver "github.com/mainflux/mainflux/internal/server/grpc"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
 	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/things"
 	capi "github.com/mainflux/mainflux/things/api"
+	grpcapi "github.com/mainflux/mainflux/things/api/grpc"
 	tpolicies "github.com/mainflux/mainflux/things/policies"
 	papi "github.com/mainflux/mainflux/things/policies/api"
 	ppostgres "github.com/mainflux/mainflux/things/policies/postgres"
@@ -45,6 +47,8 @@ import (
 	ctracing "github.com/mainflux/mainflux/things/tracing"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -174,11 +178,11 @@ func main() {
 		exitCode = 1
 		return
 	}
-	// registerThingsServiceServer := func(srv *grpc.Server) {
-	// 	reflection.Register(srv)
-	// 	tpolicies.RegisterAuthServiceServer(srv, grpcapi.NewServer(csvc, psvc))
-	// }
-	// gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, registerThingsServiceServer, logger)
+	regiterAuthzServer := func(srv *grpc.Server) {
+		reflection.Register(srv)
+		mainflux.RegisterAuthzServiceServer(srv, grpcapi.NewServer(csvc))
+	}
+	gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, regiterAuthzServer, logger)
 
 	// if cfg.SendTelemetry {
 	// 	chc := chclient.New(svcName, mainflux.Version, logger, cancel)
@@ -190,9 +194,9 @@ func main() {
 		return httpSvc.Start()
 	})
 
-	// g.Go(func() error {
-	// 	return gs.Start()
-	// })
+	g.Go(func() error {
+		return gs.Start()
+	})
 
 	g.Go(func() error {
 		return server.StopSignalHandler(ctx, cancel, logger, svcName, httpSvc)

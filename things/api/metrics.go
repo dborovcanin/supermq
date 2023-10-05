@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/metrics"
+	"github.com/mainflux/mainflux"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/things"
 )
@@ -130,4 +131,12 @@ func (ms *metricsMiddleware) Disconnect(ctx context.Context, token, thingID, cha
 		ms.latency.With("method", "disconnect").Observe(time.Since(begin).Seconds())
 	}(time.Now())
 	return ms.svc.Disconnect(ctx, token, thingID, channelID, permission)
+}
+
+func (ms *metricsMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (err error) {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "authorize").Add(1)
+		ms.latency.With("method", "authorize").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return ms.svc.Authorize(ctx, req)
 }

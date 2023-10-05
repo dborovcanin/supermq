@@ -102,8 +102,6 @@ func Connect(cfg Config) (*gogrpc.ClientConn, security, error) {
 		grpc.WithWriteBufferSize(5120000000),
 	)
 
-	fmt.Println("URL", cfg.URL)
-
 	conn, err := gogrpc.Dial(cfg.URL, opts...)
 	if err != nil {
 		return nil, secure, err

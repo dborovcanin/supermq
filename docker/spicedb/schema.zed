@@ -9,6 +9,8 @@ definition thing {
 	permission edit = owner + group->edit
 	permission view = edit + group->view
 	permission share = edit
+	permission publish = group
+	permission subscribe = group
 }
 
 definition role {

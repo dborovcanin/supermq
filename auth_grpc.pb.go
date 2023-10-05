@@ -23,200 +23,93 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ThingsService_CanAccessByKey_FullMethodName = "/mainflux.ThingsService/CanAccessByKey"
-	ThingsService_IsChannelOwner_FullMethodName = "/mainflux.ThingsService/IsChannelOwner"
-	ThingsService_CanAccessByID_FullMethodName  = "/mainflux.ThingsService/CanAccessByID"
-	ThingsService_Identify_FullMethodName       = "/mainflux.ThingsService/Identify"
+	AuthzService_Authorize_FullMethodName = "/mainflux.AuthzService/Authorize"
 )
 
-// ThingsServiceClient is the client API for ThingsService service.
+// AuthzServiceClient is the client API for AuthzService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type ThingsServiceClient interface {
-	CanAccessByKey(ctx context.Context, in *AccessByKeyReq, opts ...grpc.CallOption) (*ThingID, error)
-	IsChannelOwner(ctx context.Context, in *ChannelOwnerReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	CanAccessByID(ctx context.Context, in *AccessByIDReq, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Identify(ctx context.Context, in *Token, opts ...grpc.CallOption) (*ThingID, error)
+type AuthzServiceClient interface {
+	// Authorize checks if the subject is authorized to perform
+	// the action on the object.
+	Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error)
 }
 
-type thingsServiceClient struct {
+type authzServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewThingsServiceClient(cc grpc.ClientConnInterface) ThingsServiceClient {
-	return &thingsServiceClient{cc}
+func NewAuthzServiceClient(cc grpc.ClientConnInterface) AuthzServiceClient {
+	return &authzServiceClient{cc}
 }
 
-func (c *thingsServiceClient) CanAccessByKey(ctx context.Context, in *AccessByKeyReq, opts ...grpc.CallOption) (*ThingID, error) {
-	out := new(ThingID)
-	err := c.cc.Invoke(ctx, ThingsService_CanAccessByKey_FullMethodName, in, out, opts...)
+func (c *authzServiceClient) Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error) {
+	out := new(AuthorizeRes)
+	err := c.cc.Invoke(ctx, AuthzService_Authorize_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *thingsServiceClient) IsChannelOwner(ctx context.Context, in *ChannelOwnerReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ThingsService_IsChannelOwner_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *thingsServiceClient) CanAccessByID(ctx context.Context, in *AccessByIDReq, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, ThingsService_CanAccessByID_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *thingsServiceClient) Identify(ctx context.Context, in *Token, opts ...grpc.CallOption) (*ThingID, error) {
-	out := new(ThingID)
-	err := c.cc.Invoke(ctx, ThingsService_Identify_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// ThingsServiceServer is the server API for ThingsService service.
-// All implementations must embed UnimplementedThingsServiceServer
+// AuthzServiceServer is the server API for AuthzService service.
+// All implementations must embed UnimplementedAuthzServiceServer
 // for forward compatibility
-type ThingsServiceServer interface {
-	CanAccessByKey(context.Context, *AccessByKeyReq) (*ThingID, error)
-	IsChannelOwner(context.Context, *ChannelOwnerReq) (*emptypb.Empty, error)
-	CanAccessByID(context.Context, *AccessByIDReq) (*emptypb.Empty, error)
-	Identify(context.Context, *Token) (*ThingID, error)
-	mustEmbedUnimplementedThingsServiceServer()
+type AuthzServiceServer interface {
+	// Authorize checks if the subject is authorized to perform
+	// the action on the object.
+	Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error)
+	mustEmbedUnimplementedAuthzServiceServer()
 }
 
-// UnimplementedThingsServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedThingsServiceServer struct {
+// UnimplementedAuthzServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedAuthzServiceServer struct {
 }
 
-func (UnimplementedThingsServiceServer) CanAccessByKey(context.Context, *AccessByKeyReq) (*ThingID, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CanAccessByKey not implemented")
+func (UnimplementedAuthzServiceServer) Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Authorize not implemented")
 }
-func (UnimplementedThingsServiceServer) IsChannelOwner(context.Context, *ChannelOwnerReq) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsChannelOwner not implemented")
-}
-func (UnimplementedThingsServiceServer) CanAccessByID(context.Context, *AccessByIDReq) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CanAccessByID not implemented")
-}
-func (UnimplementedThingsServiceServer) Identify(context.Context, *Token) (*ThingID, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Identify not implemented")
-}
-func (UnimplementedThingsServiceServer) mustEmbedUnimplementedThingsServiceServer() {}
+func (UnimplementedAuthzServiceServer) mustEmbedUnimplementedAuthzServiceServer() {}
 
-// UnsafeThingsServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to ThingsServiceServer will
+// UnsafeAuthzServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AuthzServiceServer will
 // result in compilation errors.
-type UnsafeThingsServiceServer interface {
-	mustEmbedUnimplementedThingsServiceServer()
+type UnsafeAuthzServiceServer interface {
+	mustEmbedUnimplementedAuthzServiceServer()
 }
 
-func RegisterThingsServiceServer(s grpc.ServiceRegistrar, srv ThingsServiceServer) {
-	s.RegisterService(&ThingsService_ServiceDesc, srv)
+func RegisterAuthzServiceServer(s grpc.ServiceRegistrar, srv AuthzServiceServer) {
+	s.RegisterService(&AuthzService_ServiceDesc, srv)
 }
 
-func _ThingsService_CanAccessByKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AccessByKeyReq)
+func _AuthzService_Authorize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthorizeReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ThingsServiceServer).CanAccessByKey(ctx, in)
+		return srv.(AuthzServiceServer).Authorize(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ThingsService_CanAccessByKey_FullMethodName,
+		FullMethod: AuthzService_Authorize_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThingsServiceServer).CanAccessByKey(ctx, req.(*AccessByKeyReq))
+		return srv.(AuthzServiceServer).Authorize(ctx, req.(*AuthorizeReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ThingsService_IsChannelOwner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ChannelOwnerReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ThingsServiceServer).IsChannelOwner(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ThingsService_IsChannelOwner_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThingsServiceServer).IsChannelOwner(ctx, req.(*ChannelOwnerReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ThingsService_CanAccessByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AccessByIDReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ThingsServiceServer).CanAccessByID(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ThingsService_CanAccessByID_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThingsServiceServer).CanAccessByID(ctx, req.(*AccessByIDReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ThingsService_Identify_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Token)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ThingsServiceServer).Identify(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ThingsService_Identify_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ThingsServiceServer).Identify(ctx, req.(*Token))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// ThingsService_ServiceDesc is the grpc.ServiceDesc for ThingsService service.
+// AuthzService_ServiceDesc is the grpc.ServiceDesc for AuthzService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var ThingsService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "mainflux.ThingsService",
-	HandlerType: (*ThingsServiceServer)(nil),
+var AuthzService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "mainflux.AuthzService",
+	HandlerType: (*AuthzServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CanAccessByKey",
-			Handler:    _ThingsService_CanAccessByKey_Handler,
-		},
-		{
-			MethodName: "IsChannelOwner",
-			Handler:    _ThingsService_IsChannelOwner_Handler,
-		},
-		{
-			MethodName: "CanAccessByID",
-			Handler:    _ThingsService_CanAccessByID_Handler,
-		},
-		{
-			MethodName: "Identify",
-			Handler:    _ThingsService_Identify_Handler,
+			MethodName: "Authorize",
+			Handler:    _AuthzService_Authorize_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

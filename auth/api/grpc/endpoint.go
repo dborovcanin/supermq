@@ -119,9 +119,9 @@ func authorizeEndpoint(svc auth.Service) endpoint.Endpoint {
 			Object:      req.Object,
 		})
 		if err != nil {
-			return authorizeRes{}, err
+			return authorizeRes{authorized: false}, err
 		}
-		return authorizeRes{authorized: true}, err
+		return authorizeRes{authorized: true}, nil
 	}
 }
 

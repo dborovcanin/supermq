@@ -6,6 +6,7 @@ package things
 import (
 	"context"
 
+	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/clients"
 )
 
@@ -53,6 +54,9 @@ type Service interface {
 
 	// Disconnect removes a policy for the Things and the Channel.
 	Disconnect(ctx context.Context, token, thingID, channelID, permission string) error
+
+	// Authorize used for AuthZ gRPC server implementation and Things authorization.
+	Authorize(ctx context.Context, req *mainflux.AuthorizeReq) error
 }
 
 // Cache contains thing caching interface.

@@ -132,7 +132,6 @@ func main() {
 
 	db := connectToDB(cfg.dbConfig, logger)
 	defer db.Close()
-	fmt.Println("JURL:", cfg.jaegerURL)
 	dbTracer, dbCloser := initJaeger("auth_db", cfg.jaegerURL, logger)
 	defer dbCloser.Close()
 

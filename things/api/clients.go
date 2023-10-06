@@ -32,13 +32,6 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 			opts...,
 		), "create_thing").ServeHTTP)
 
-		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-			listClientsEndpoint(svc),
-			decodeListClients,
-			api.EncodeResponse,
-			opts...,
-		), "list_things").ServeHTTP)
-
 		r.Post("/bulk", otelhttp.NewHandler(kithttp.NewServer(
 			createClientsEndpoint(svc),
 			decodeCreateClientsReq,
@@ -52,6 +45,20 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 			api.EncodeResponse,
 			opts...,
 		), "view_thing").ServeHTTP)
+
+		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
+			listClientsEndpoint(svc),
+			decodeListClients,
+			api.EncodeResponse,
+			opts...,
+		), "list_things").ServeHTTP)
+
+		r.Get("/{thingID}/channels", otelhttp.NewHandler(kithttp.NewServer(
+			listMembersEndpoint(svc),
+			decodeListMembersRequest,
+			api.EncodeResponse,
+			opts...,
+		), "list_channel_by_things").ServeHTTP)
 
 		r.Patch("/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
 			updateClientEndpoint(svc),

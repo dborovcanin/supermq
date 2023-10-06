@@ -13,7 +13,6 @@ import (
 	"github.com/mainflux/mainflux/pkg/errors"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
-	gogrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -25,6 +24,7 @@ const (
 	withTLS
 	withmTLS
 )
+const buffSize = 10 * 1024 * 1024
 
 var (
 	errGrpcConnect = errors.New("failed to connect to grpc server")
@@ -46,7 +46,7 @@ type ClientHandler interface {
 }
 
 type Client struct {
-	*gogrpc.ClientConn
+	*grpc.ClientConn
 	secure security
 }
 
@@ -58,9 +58,9 @@ func NewClientHandler(c *Client) ClientHandler {
 }
 
 // Connect creates new gRPC client and connect to gRPC server.
-func Connect(cfg Config) (*gogrpc.ClientConn, security, error) {
-	opts := []gogrpc.DialOption{
-		gogrpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+func Connect(cfg Config) (*grpc.ClientConn, security, error) {
+	opts := []grpc.DialOption{
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 	}
 	secure := withoutTLS
 	tc := insecure.NewCredentials()
@@ -96,13 +96,13 @@ func Connect(cfg Config) (*gogrpc.ClientConn, security, error) {
 	}
 
 	opts = append(
-		opts, gogrpc.WithTransportCredentials(tc),
-		grpc.WithReadBufferSize(5120000000),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(5120000000), grpc.MaxCallSendMsgSize(5120000000)),
-		grpc.WithWriteBufferSize(5120000000),
+		opts, grpc.WithTransportCredentials(tc),
+		grpc.WithReadBufferSize(buffSize),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(buffSize/10), grpc.MaxCallSendMsgSize(buffSize/10)),
+		grpc.WithWriteBufferSize(buffSize),
 	)
 
-	conn, err := gogrpc.Dial(cfg.URL, opts...)
+	conn, err := grpc.Dial(cfg.URL, opts...)
 	if err != nil {
 		return nil, secure, err
 	}

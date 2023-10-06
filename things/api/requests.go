@@ -7,6 +7,7 @@ import (
 	"github.com/mainflux/mainflux/internal/api"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
+	"golang.org/x/exp/slices"
 )
 
 type createClientReq struct {
@@ -206,5 +207,69 @@ func (req changeClientStatusReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	return nil
+}
+
+type assignUsersGroupsRequest struct {
+	token      string
+	groupID    string
+	Relation   string   `json:"relation,omitempty"`
+	MemberKind string   `json:"member_kind,omitempty"`
+	Members    []string `json:"members"`
+}
+
+func (req assignUsersGroupsRequest) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.MemberKind == "" {
+		return apiutil.ErrMissingMemberKind
+	}
+
+	if !slices.Contains([]string{"users", "groups"}, req.MemberKind) {
+		return apiutil.ErrInvalidMemberKind
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.Members) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}
+
+type unassignUsersGroupsRequest struct {
+	token      string
+	groupID    string
+	Relation   string   `json:"relation,omitempty"`
+	MemberKind string   `json:"member_kind,omitempty"`
+	Members    []string `json:"members"`
+}
+
+func (req unassignUsersGroupsRequest) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.MemberKind == "" {
+		return apiutil.ErrMissingMemberKind
+	}
+
+	if !slices.Contains([]string{"users", "groups"}, req.MemberKind) {
+		return apiutil.ErrInvalidMemberKind
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.Members) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
 	return nil
 }

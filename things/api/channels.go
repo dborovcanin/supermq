@@ -13,10 +13,11 @@ import (
 	gapi "github.com/mainflux/mainflux/internal/groups/api"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/groups"
+	"github.com/mainflux/mainflux/things"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Handler {
+func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger logger.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
@@ -43,7 +44,7 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 		), "update_channel").ServeHTTP)
 
 		r.Get("/{groupID}/things", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListMembershipsEndpoint(svc, "users"),
+			listMembersEndpoint(tscv),
 			gapi.DecodeListMembershipRequest,
 			api.EncodeResponse,
 			opts...,
@@ -70,6 +71,13 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 			opts...,
 		), "disable_channel").ServeHTTP)
 	})
+
+	r.Get("/things/{memberID}/channels", otelhttp.NewHandler(kithttp.NewServer(
+		gapi.ListGroupsEndpoint(svc, "things"),
+		gapi.DecodeListGroupsRequest,
+		api.EncodeResponse,
+		opts...,
+	), "list_channel_by_things").ServeHTTP)
 
 	return r
 }

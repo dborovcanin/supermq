@@ -181,10 +181,10 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 	return svc.groups.RetrieveByIDs(ctx, gm, ids...)
 }
 
-func (svc service) ListMemberships(ctx context.Context, token, groupID, memberKind string) (groups.Memberships, error) {
+func (svc service) ListMembers(ctx context.Context, token, groupID, permission, memberKind string) (groups.MembersPage, error) {
 	_, err := svc.authorize(ctx, userType, token, viewPermission, groupType, groupID)
 	if err != nil {
-		return groups.Memberships{}, err
+		return groups.MembersPage{}, err
 	}
 	switch memberKind {
 	case thingsKind:
@@ -195,7 +195,7 @@ func (svc service) ListMemberships(ctx context.Context, token, groupID, memberKi
 			ObjectType:  thingType,
 		})
 		if err != nil {
-			return groups.Memberships{}, err
+			return groups.MembersPage{}, err
 		}
 
 		members := []groups.Member{}
@@ -206,7 +206,7 @@ func (svc service) ListMemberships(ctx context.Context, token, groupID, memberKi
 				Type: thingType,
 			})
 		}
-		return groups.Memberships{
+		return groups.MembersPage{
 			Total:   uint64(len(members)),
 			Offset:  0,
 			Limit:   uint64(len(members)),
@@ -215,11 +215,12 @@ func (svc service) ListMemberships(ctx context.Context, token, groupID, memberKi
 	case usersKind:
 		uids, err := svc.auth.ListAllSubjects(ctx, &mainflux.ListSubjectsReq{
 			SubjectType: userType,
+			Permission:  permission,
 			Object:      groupID,
 			ObjectType:  groupType,
 		})
 		if err != nil {
-			return groups.Memberships{}, err
+			return groups.MembersPage{}, err
 		}
 
 		members := []groups.Member{}
@@ -230,14 +231,14 @@ func (svc service) ListMemberships(ctx context.Context, token, groupID, memberKi
 				Type: userType,
 			})
 		}
-		return groups.Memberships{
+		return groups.MembersPage{
 			Total:   uint64(len(members)),
 			Offset:  0,
 			Limit:   uint64(len(members)),
 			Members: members,
 		}, nil
 	default:
-		return groups.Memberships{}, fmt.Errorf("invalid member_kind")
+		return groups.MembersPage{}, fmt.Errorf("invalid member_kind")
 	}
 }
 

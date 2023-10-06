@@ -104,13 +104,13 @@ func (es eventStore) ListGroups(ctx context.Context, token string, memberKind st
 	return gp, nil
 }
 
-func (es eventStore) ListMemberships(ctx context.Context, token, groupID, memberKind string) (groups.Memberships, error) {
-	mp, err := es.svc.ListMemberships(ctx, token, groupID, memberKind)
+func (es eventStore) ListMembers(ctx context.Context, token, groupID, permission, memberKind string) (groups.MembersPage, error) {
+	mp, err := es.svc.ListMembers(ctx, token, groupID, permission, memberKind)
 	if err != nil {
 		return mp, err
 	}
 	event := listGroupMembershipEvent{
-		groupID, memberKind,
+		groupID, permission, memberKind,
 	}
 
 	if err := es.Publish(ctx, event); err != nil {

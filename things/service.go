@@ -4,6 +4,7 @@ package things
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mainflux/mainflux"
@@ -52,6 +53,7 @@ const (
 	organizationType = "organization"
 	thingType        = "thing"
 	channelType      = "group"
+	groupType        = "group"
 
 	mainfluxObject = "mainflux"
 	anyBodySubject = "_any_body"
@@ -199,46 +201,58 @@ func (svc service) ListClients(ctx context.Context, token string, pm mfclients.P
 		return mfclients.ClientsPage{}, err
 	}
 
-	switch err {
-	// If the user is admin, fetch all things from database.
-	case nil:
-		switch {
-		// visibility = all
-		case pm.SharedBy == myKey && pm.Owner == myKey:
-			pm.SharedBy = ""
-			pm.Owner = ""
-		// visibility = shared
-		case pm.SharedBy == myKey && pm.Owner != myKey:
-			pm.SharedBy = userID
-			pm.Owner = ""
-		// visibility = mine
-		case pm.Owner == myKey && pm.SharedBy != myKey:
-			pm.Owner = userID
-			pm.SharedBy = ""
-		}
-
-	default:
-		// If the user is not admin, check 'sharedby' parameter from page metadata.
-		// If user provides 'sharedby' key, fetch things from policies. Otherwise,
-		// fetch things from the database based on thing's 'owner' field.
-		switch {
-		// visibility = all
-		case pm.SharedBy == myKey && pm.Owner == myKey:
-			pm.SharedBy = userID
-			pm.Owner = userID
-		// visibility = shared
-		case pm.SharedBy == myKey && pm.Owner != myKey:
-			pm.SharedBy = userID
-			pm.Owner = ""
-		// visibility = mine
-		case pm.Owner == myKey && pm.SharedBy != myKey:
-			pm.Owner = userID
-			pm.SharedBy = ""
-		default:
-			pm.Owner = userID
-		}
-		pm.Action = listRelationKey
+	fmt.Println(pm.Permission)
+	tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+		SubjectType: userType,
+		Subject:     userID,
+		Permission:  pm.Permission,
+		ObjectType:  thingType,
+	})
+	if err != nil {
+		return mfclients.ClientsPage{}, err
 	}
+
+	pm.IDs = tids.Policies
+	// switch err {
+	// // If the user is admin, fetch all things from database.
+	// case nil:
+	// 	switch {
+	// 	// visibility = all
+	// 	case pm.SharedBy == myKey && pm.Owner == myKey:
+	// 		pm.SharedBy = ""
+	// 		pm.Owner = ""
+	// 	// visibility = shared
+	// 	case pm.SharedBy == myKey && pm.Owner != myKey:
+	// 		pm.SharedBy = userID
+	// 		pm.Owner = ""
+	// 	// visibility = mine
+	// 	case pm.Owner == myKey && pm.SharedBy != myKey:
+	// 		pm.Owner = userID
+	// 		pm.SharedBy = ""
+	// 	}
+
+	// default:
+	// 	// If the user is not admin, check 'sharedby' parameter from page metadata.
+	// 	// If user provides 'sharedby' key, fetch things from policies. Otherwise,
+	// 	// fetch things from the database based on thing's 'owner' field.
+	// 	switch {
+	// 	// visibility = all
+	// 	case pm.SharedBy == myKey && pm.Owner == myKey:
+	// 		pm.SharedBy = userID
+	// 		pm.Owner = userID
+	// 	// visibility = shared
+	// 	case pm.SharedBy == myKey && pm.Owner != myKey:
+	// 		pm.SharedBy = userID
+	// 		pm.Owner = ""
+	// 	// visibility = mine
+	// 	case pm.Owner == myKey && pm.SharedBy != myKey:
+	// 		pm.Owner = userID
+	// 		pm.SharedBy = ""
+	// 	default:
+	// 		pm.Owner = userID
+	// 	}
+	// 	pm.Action = listRelationKey
+	// }
 
 	return svc.clients.RetrieveAll(ctx, pm)
 }
@@ -363,17 +377,30 @@ func (svc service) changeClientStatus(ctx context.Context, token string, client 
 }
 
 func (svc service) ListClientsByGroup(ctx context.Context, token, groupID string, pm mfclients.Page) (mfclients.MembersPage, error) {
-	userID, err := svc.identify(ctx, token)
+	if _, err := svc.authorize(ctx, userType, tokenKind, token, pm.Permission, groupType, groupID); err != nil {
+		return mfclients.MembersPage{}, err
+	}
+
+	tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+		SubjectType: groupType,
+		Subject:     groupID,
+		Permission:  pm.Permission,
+		ObjectType:  thingType,
+	})
+	if err != nil {
+		return mfclients.MembersPage{}, err
+
+	}
+	pm.IDs = tids.Policies
+
+	cp, err := svc.clients.RetrieveAll(ctx, pm)
 	if err != nil {
 		return mfclients.MembersPage{}, err
 	}
-	// // If the user is admin, fetch all things connected to the channel.
-	// if err := svc.checkAdmin(ctx, userID, thingsObjectKey, listRelationKey); err == nil {
-	// 	return svc.clients.Members(ctx, groupID, pm)
-	// }
-	pm.Owner = userID
-
-	return svc.clients.Members(ctx, groupID, pm)
+	return mfclients.MembersPage{
+		Page:    cp.Page,
+		Members: cp.Clients,
+	}, nil
 }
 
 func (svc service) Identify(ctx context.Context, key string) (string, error) {

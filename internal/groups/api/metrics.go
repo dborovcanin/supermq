@@ -82,13 +82,13 @@ func (ms *metricsMiddleware) DisableGroup(ctx context.Context, token string, id 
 	return ms.svc.DisableGroup(ctx, token, id)
 }
 
-// ListMemberships instruments ListMemberships method with metrics.
-func (ms *metricsMiddleware) ListMemberships(ctx context.Context, token, groupID, memberKind string) (mp groups.Memberships, err error) {
+// ListMembers instruments ListMembers method with metrics.
+func (ms *metricsMiddleware) ListMembers(ctx context.Context, token, groupID, permission, memberKind string) (mp groups.MembersPage, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "list_memberships").Add(1)
 		ms.latency.With("method", "list_memberships").Observe(time.Since(begin).Seconds())
 	}(time.Now())
-	return ms.svc.ListMemberships(ctx, token, groupID, memberKind)
+	return ms.svc.ListMembers(ctx, token, groupID, permission, memberKind)
 }
 
 // Assign instruments Assign method with metrics.

@@ -212,6 +212,31 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 				return groups.Page{}, err
 			}
 		}
+	case usersKind:
+		if memberID != "" && userID != memberID {
+			if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, ownerRelation, userType, memberID); err != nil {
+				return groups.Page{}, err
+			}
+			gids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+				SubjectType: userType,
+				Subject:     memberID,
+				Permission:  viewPermission,
+				ObjectType:  groupType,
+			})
+
+			if err != nil {
+				return groups.Page{}, err
+			}
+			for _, gid := range gids.Policies {
+				for _, id := range allowedIDs.Policies {
+					if id == gid {
+						ids = append(ids, id)
+					}
+				}
+			}
+		} else {
+			ids = allowedIDs.Policies
+		}
 	default:
 		return groups.Page{}, fmt.Errorf("invalid member kind")
 	}

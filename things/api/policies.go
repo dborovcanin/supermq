@@ -89,7 +89,7 @@ type connReq struct {
 }
 
 func (req *connReq) validate() error {
-	if req.ThingID == "" || req.ChannelID == "" || req.Permission == "" {
+	if req.ThingID == "" || req.ChannelID == "" {
 		return errors.ErrCreateEntity
 	}
 	return nil

@@ -4,6 +4,8 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -12,6 +14,7 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	gapi "github.com/mainflux/mainflux/internal/groups/api"
 	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/things"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -45,13 +48,13 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 
 		r.Get("/{groupID}/things", otelhttp.NewHandler(kithttp.NewServer(
 			listMembersEndpoint(tscv),
-			gapi.DecodeListMembershipRequest,
+			decodeListMembersRequest,
 			api.EncodeResponse,
 			opts...,
 		), "list_things_by_channel").ServeHTTP)
 
 		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListGroupsEndpoint(svc, "things"),
+			gapi.ListGroupsEndpoint(svc, "users"),
 			gapi.DecodeListGroupsRequest,
 			api.EncodeResponse,
 			opts...,
@@ -70,6 +73,20 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 			api.EncodeResponse,
 			opts...,
 		), "disable_channel").ServeHTTP)
+
+		r.Post("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
+			assignUsersGroupsEndpoint(svc),
+			decodeAssignUsersGroupsRequest,
+			api.EncodeResponse,
+			opts...,
+		), "assign_members").ServeHTTP)
+
+		r.Delete("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
+			unassignUsersGroupsEndpoint(svc),
+			decodeUnassignUsersGroupsRequest,
+			api.EncodeResponse,
+			opts...,
+		), "unassign_members").ServeHTTP)
 	})
 
 	r.Get("/things/{memberID}/channels", otelhttp.NewHandler(kithttp.NewServer(
@@ -80,4 +97,26 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 	), "list_channel_by_things").ServeHTTP)
 
 	return r
+}
+
+func decodeAssignUsersGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := assignUsersGroupsRequest{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func decodeUnassignUsersGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := unassignUsersGroupsRequest{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
 }

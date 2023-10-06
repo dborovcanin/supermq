@@ -9,7 +9,6 @@ import (
 
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/groups"
-	"github.com/mainflux/mainflux/pkg/groups"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
 )
 

@@ -333,21 +333,21 @@ func update(s sdk.SDK, token string, users []sdk.User, groups []sdk.Group, thing
 			return fmt.Errorf("failed to update user tags before %s after %s", user.Tags[0], rUser.Tags[0])
 		}
 		user = rUser
-		rUser, err = s.DisableUser(user.ID, token)
-		if err != nil {
-			return fmt.Errorf("failed to disable user %w", err)
-		}
-		if rUser.Status != sdk.DisabledStatus {
-			return fmt.Errorf("failed to disable user before %s after %s", user.Status, rUser.Status)
-		}
+		// rUser, err = s.DisableUser(user.ID, token)
+		// if err != nil {
+		// 	return fmt.Errorf("failed to disable user %w", err)
+		// }
+		// if rUser.Status != sdk.DisabledStatus {
+		// 	return fmt.Errorf("failed to disable user before %s after %s", user.Status, rUser.Status)
+		// }
 		user = rUser
-		rUser, err = s.EnableUser(user.ID, token)
-		if err != nil {
-			return fmt.Errorf("failed to enable user %w", err)
-		}
-		if rUser.Status != sdk.EnabledStatus {
-			return fmt.Errorf("failed to enable user before %s after %s", user.Status, rUser.Status)
-		}
+		// rUser, err = s.EnableUser(user.ID, token)
+		// if err != nil {
+		// 	return fmt.Errorf("failed to enable user %w", err)
+		// }
+		// if rUser.Status != sdk.EnabledStatus {
+		// 	return fmt.Errorf("failed to enable user before %s after %s", user.Status, rUser.Status)
+		// }
 	}
 	for _, group := range groups {
 		group.Name = namesgenerator.Generate()

@@ -158,9 +158,12 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 
 	switch memberKind {
 	case thingsKind:
+		if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, viewPermission, thingType, memberID); err != nil {
+			return groups.Page{}, err
+		}
 		cids, err := svc.auth.ListAllSubjects(ctx, &mainflux.ListSubjectsReq{
 			SubjectType: groupType,
-			Permission:  viewPermission,
+			Permission:  groupRelation,
 			ObjectType:  thingType,
 			Object:      memberID,
 		})
@@ -174,8 +177,33 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 				}
 			}
 		}
+	case usersKind:
+		if memberID != "" && userID != memberID {
+			if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, ownerRelation, userType, memberID); err != nil {
+				return groups.Page{}, err
+			}
+			gids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+				SubjectType: userType,
+				Subject:     memberID,
+				Permission:  viewPermission,
+				ObjectType:  groupType,
+			})
+
+			if err != nil {
+				return groups.Page{}, err
+			}
+			for _, gid := range gids.Policies {
+				for _, id := range allowedIDs.Policies {
+					if id == gid {
+						ids = append(ids, id)
+					}
+				}
+			}
+		} else {
+			ids = allowedIDs.Policies
+		}
 	default:
-		ids = allowedIDs.Policies
+		return groups.Page{}, fmt.Errorf("invalid member kind")
 	}
 
 	return svc.groups.RetrieveByIDs(ctx, gm, ids...)
@@ -419,6 +447,25 @@ func (svc service) authorize(ctx context.Context, subjectType, subject, permissi
 	req := &mainflux.AuthorizeReq{
 		SubjectType: subjectType,
 		SubjectKind: tokenKind,
+		Subject:     subject,
+		Permission:  permission,
+		Object:      object,
+		ObjectType:  objectType,
+	}
+	res, err := svc.auth.Authorize(ctx, req)
+	if err != nil {
+		return "", errors.Wrap(errors.ErrAuthorization, err)
+	}
+	if !res.GetAuthorized() {
+		return "", errors.ErrAuthorization
+	}
+	return res.GetId(), nil
+}
+
+func (svc service) authorizeKind(ctx context.Context, subjectType, subjectKind, subject, permission, objectType, object string) (string, error) {
+	req := &mainflux.AuthorizeReq{
+		SubjectType: subjectType,
+		SubjectKind: subjectKind,
 		Subject:     subject,
 		Permission:  permission,
 		Object:      object,

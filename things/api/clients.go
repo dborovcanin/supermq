@@ -298,7 +298,7 @@ func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 			Permission: p,
 			Metadata:   m,
 		},
-		groupID: chi.URLParam(r, "chanID"),
+		groupID: chi.URLParam(r, "groupID"),
 	}
 	return req, nil
 }

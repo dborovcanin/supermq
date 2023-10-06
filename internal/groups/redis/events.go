@@ -7,13 +7,8 @@ import (
 	"encoding/json"
 	"time"
 
-<<<<<<<< HEAD:users/groups/events/events.go
 	"github.com/mainflux/mainflux/pkg/events"
-	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-========
-	mfredis "github.com/mainflux/mainflux/internal/clients/redis"
 	groups "github.com/mainflux/mainflux/pkg/groups"
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/events.go
 )
 
 const (

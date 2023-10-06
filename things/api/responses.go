@@ -18,6 +18,8 @@ var (
 	_ mainflux.Response = (*clientsPageRes)(nil)
 	_ mainflux.Response = (*viewMembersRes)(nil)
 	_ mainflux.Response = (*memberPageRes)(nil)
+	_ mainflux.Response = (*assignUsersGroupsRes)(nil)
+	_ mainflux.Response = (*unassignUsersGroupsRes)(nil)
 )
 
 type pageRes struct {
@@ -149,4 +151,34 @@ func (res deleteClientRes) Headers() map[string]string {
 
 func (res deleteClientRes) Empty() bool {
 	return false
+}
+
+type assignUsersGroupsRes struct {
+}
+
+func (res assignUsersGroupsRes) Code() int {
+	return http.StatusOK
+}
+
+func (res assignUsersGroupsRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res assignUsersGroupsRes) Empty() bool {
+	return true
+}
+
+type unassignUsersGroupsRes struct {
+}
+
+func (res unassignUsersGroupsRes) Code() int {
+	return http.StatusNoContent
+}
+
+func (res unassignUsersGroupsRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res unassignUsersGroupsRes) Empty() bool {
+	return true
 }

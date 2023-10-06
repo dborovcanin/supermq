@@ -99,7 +99,11 @@ func main() {
 	if err := dbConfig.LoadEnv(envPrefixDB); err != nil {
 		logger.Fatal(err.Error())
 	}
-	db, err := pgclient.SetupWithConfig(envPrefixDB, *thingspg.Migration(), dbConfig)
+
+	tm := thingspg.Migration()
+	gm := gpostgres.Migration()
+	tm.Migrations = append(tm.Migrations, gm.Migrations...)
+	db, err := pgclient.SetupWithConfig(envPrefixDB, *tm, dbConfig)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1

@@ -154,7 +154,7 @@ func AssignMembersEndpoint(svc groups.Service, relation string, memberKind strin
 			req.MemberKind = memberKind
 		}
 		if err := req.validate(); err != nil {
-			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
 		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
 			return nil, err

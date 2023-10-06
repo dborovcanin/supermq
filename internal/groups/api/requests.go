@@ -9,6 +9,10 @@ import (
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
 )
 
+const (
+	thingsKind = "things"
+)
+
 type createGroupReq struct {
 	mfgroups.Group
 	token string
@@ -63,7 +67,7 @@ func (req listGroupsReq) validate() error {
 	if req.memberKind == "" {
 		return apiutil.ErrMissingMemberKind
 	}
-	if req.memberID == "" {
+	if req.memberKind == thingsKind && req.memberID == "" {
 		return apiutil.ErrMissingID
 	}
 	if req.Level < mfgroups.MinLevel || req.Level > mfgroups.MaxLevel {

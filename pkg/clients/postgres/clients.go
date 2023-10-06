@@ -81,7 +81,7 @@ func (repo ClientRepository) ChangeStatus(ctx context.Context, client clients.Cl
 }
 
 func (repo ClientRepository) RetrieveByID(ctx context.Context, id string) (clients.Client, error) {
-	q := `SELECT id, name, tags, COALESCE(owner_id, '') AS owner_id, identity, secret, metadata, created_at, updated_at, updated_by, status 
+	q := `SELECT id, name, tags, COALESCE(owner_id, '') AS owner_id, identity, secret, metadata, created_at, updated_at, updated_by, status
         FROM clients WHERE id = :id`
 
 	dbc := DBClient{
@@ -182,69 +182,6 @@ func (repo ClientRepository) RetrieveAll(ctx context.Context, pm clients.Page) (
 		},
 	}
 
-	return page, nil
-}
-
-func (repo ClientRepository) Members(ctx context.Context, groupID string, pm clients.Page) (clients.MembersPage, error) {
-	emq, err := pageQuery(pm)
-	if err != nil {
-		return clients.MembersPage{}, err
-	}
-
-	aq := ""
-	// If not admin, the client needs to have a g_list action on the group or they are the owner.
-	if pm.Subject != "" {
-		aq = `AND (EXISTS (SELECT 1 FROM policies p WHERE p.subject = :subject AND :action=ANY(actions)) 
-				OR EXISTS (SELECT 1 FROM groups g WHERE g.owner_id = :subject AND g.id = :group_id))
-				AND c.id != :subject`
-	}
-	q := fmt.Sprintf(`SELECT c.id, c.name, c.tags, c.metadata, c.identity, c.status,
-		c.created_at, c.updated_at FROM clients c
-		INNER JOIN policies ON c.id=policies.subject %s AND policies.object = :group_id %s
-	  	ORDER BY c.created_at LIMIT :limit OFFSET :offset;`, emq, aq)
-	dbPage, err := toDBClientsPage(pm)
-	if err != nil {
-		return clients.MembersPage{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)
-	}
-	dbPage.GroupID = groupID
-	rows, err := repo.DB.NamedQueryContext(ctx, q, dbPage)
-	if err != nil {
-		return clients.MembersPage{}, errors.Wrap(postgres.ErrFailedToRetrieveMembers, err)
-	}
-	defer rows.Close()
-
-	var items []clients.Client
-	for rows.Next() {
-		dbc := DBClient{}
-		if err := rows.StructScan(&dbc); err != nil {
-			return clients.MembersPage{}, errors.Wrap(postgres.ErrFailedToRetrieveMembers, err)
-		}
-
-		c, err := ToClient(dbc)
-		if err != nil {
-			return clients.MembersPage{}, err
-		}
-
-		items = append(items, c)
-	}
-	cq := fmt.Sprintf(`SELECT COUNT(*) FROM clients c INNER JOIN policies ON c.id=policies.subject %s AND policies.object = :group_id`, emq)
-	if pm.Subject != "" {
-		cq = fmt.Sprintf("%s AND c.id != :subject", cq)
-	}
-
-	total, err := postgres.Total(ctx, repo.DB, cq, dbPage)
-	if err != nil {
-		return clients.MembersPage{}, errors.Wrap(postgres.ErrFailedToRetrieveMembers, err)
-	}
-
-	page := clients.MembersPage{
-		Members: items,
-		Page: clients.Page{
-			Total:  total,
-			Offset: pm.Offset,
-			Limit:  pm.Limit,
-		},
-	}
 	return page, nil
 }
 
@@ -386,9 +323,6 @@ func toDBClientsPage(pm clients.Page) (dbClientsPage, error) {
 		Limit:    pm.Limit,
 		Status:   pm.Status,
 		Tag:      pm.Tag,
-		Subject:  pm.Subject,
-		Action:   pm.Action,
-		SharedBy: pm.SharedBy,
 	}, nil
 }
 
@@ -403,9 +337,6 @@ type dbClientsPage struct {
 	Tag      string         `db:"tag"`
 	Status   clients.Status `db:"status"`
 	GroupID  string         `db:"group_id"`
-	SharedBy string         `db:"shared_by"`
-	Subject  string         `db:"subject"`
-	Action   string         `db:"action"`
 }
 
 func pageQuery(pm clients.Page) (string, error) {
@@ -434,23 +365,13 @@ func pageQuery(pm clients.Page) (string, error) {
 		query = append(query, "c.status = :status")
 	}
 	// For listing clients that the specified client owns but not sharedby
-	if pm.Owner != "" && pm.SharedBy == "" {
+	if pm.Owner != "" {
 		query = append(query, "c.owner_id = :owner_id")
 	}
 
-	// For listing clients that the specified client owns and that are shared with the specified client
-	if pm.Owner != "" && pm.SharedBy != "" {
-		query = append(query, "(c.owner_id = :owner_id OR (policies.object IN (SELECT object FROM policies WHERE subject = :shared_by AND :action=ANY(actions)))) AND c.id != :shared_by")
-	}
-	// For listing clients that the specified client is shared with
-	if pm.SharedBy != "" && pm.Owner == "" {
-		query = append(query, "c.owner_id != :shared_by AND (policies.object IN (SELECT object FROM policies WHERE subject = :shared_by AND :action=ANY(actions)))")
-	}
 	if len(query) > 0 {
 		emq = fmt.Sprintf("WHERE %s", strings.Join(query, " AND "))
-		if strings.Contains(emq, "policies") {
-			emq = fmt.Sprintf("LEFT JOIN policies ON policies.subject = c.id %s", emq)
-		}
+
 	}
 	return emq, nil
 }

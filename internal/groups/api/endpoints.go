@@ -118,9 +118,9 @@ func ListGroupsEndpoint(svc groups.Service, memberKind string) endpoint.Endpoint
 	}
 }
 
-func ListMembershipsEndpoint(svc groups.Service, memberKind string) endpoint.Endpoint {
+func ListMembersEndpoint(svc groups.Service, memberKind string) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(listMembershipReq)
+		req := request.(listMembersReq)
 		if memberKind != "" {
 			req.memberKind = memberKind
 		}
@@ -128,12 +128,19 @@ func ListMembershipsEndpoint(svc groups.Service, memberKind string) endpoint.End
 			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
 
-		page, err := svc.ListMemberships(ctx, req.token, req.groupID, req.memberKind)
+		page, err := svc.ListMembers(ctx, req.token, req.groupID, req.permission, req.memberKind)
 		if err != nil {
 			return membershipPageRes{}, err
 		}
 
-		return page, nil
+		return listMembersRes{
+			pageRes: pageRes{
+				Limit:  page.Limit,
+				Offset: page.Offset,
+				Total:  page.Total,
+			},
+			Members: page.Members,
+		}, nil
 	}
 }
 
@@ -172,7 +179,7 @@ func UnassignMembersEndpoint(svc groups.Service, relation string, memberKind str
 		if err := svc.Unassign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
 			return nil, err
 		}
-		return unassignReq{}, nil
+		return unassignRes{}, nil
 	}
 }
 

@@ -219,17 +219,11 @@ func (lce listClientEvent) Encode() (map[string]interface{}, error) {
 	if lce.Tag != "" {
 		val["tag"] = lce.Tag
 	}
-	if lce.SharedBy != "" {
-		val["sharedBy"] = lce.SharedBy
+	if lce.Permission != "" {
+		val["permission"] = lce.Permission
 	}
 	if lce.Status.String() != "" {
 		val["status"] = lce.Status.String()
-	}
-	if lce.Action != "" {
-		val["action"] = lce.Action
-	}
-	if lce.Subject != "" {
-		val["subject"] = lce.Subject
 	}
 	if len(lce.IDs) > 0 {
 		ids := fmt.Sprintf("[%s]", strings.Join(lce.IDs, ","))
@@ -279,17 +273,11 @@ func (lcge listClientByGroupEvent) Encode() (map[string]interface{}, error) {
 	if lcge.Tag != "" {
 		val["tag"] = lcge.Tag
 	}
-	if lcge.SharedBy != "" {
-		val["sharedBy"] = lcge.SharedBy
+	if lcge.Permission != "" {
+		val["permission"] = lcge.Permission
 	}
 	if lcge.Status.String() != "" {
 		val["status"] = lcge.Status.String()
-	}
-	if lcge.Action != "" {
-		val["action"] = lcge.Action
-	}
-	if lcge.Subject != "" {
-		val["subject"] = lcge.Subject
 	}
 	if lcge.Identity != "" {
 		val["identity"] = lcge.Identity

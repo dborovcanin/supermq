@@ -78,14 +78,14 @@ func listClientsEndpoint(svc things.Service) endpoint.Endpoint {
 		}
 
 		pm := mfclients.Page{
-			SharedBy: req.sharedBy,
-			Status:   req.status,
-			Offset:   req.offset,
-			Limit:    req.limit,
-			Owner:    req.owner,
-			Name:     req.name,
-			Tag:      req.tag,
-			Metadata: req.metadata,
+			Status:     req.status,
+			Offset:     req.offset,
+			Limit:      req.limit,
+			Owner:      req.owner,
+			Name:       req.name,
+			Tag:        req.tag,
+			Permission: req.permission,
+			Metadata:   req.metadata,
 		}
 		page, err := svc.ListClients(ctx, req.token, pm)
 		if err != nil {

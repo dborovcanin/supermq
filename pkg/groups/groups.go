@@ -44,7 +44,7 @@ type Member struct {
 
 // Memberships contains page related metadata as well as list of memberships that
 // belong to this page.
-type Memberships struct {
+type MembersPage struct {
 	Total   uint64   `json:"total"`
 	Offset  uint64   `json:"offset"`
 	Limit   uint64   `json:"limit"`
@@ -100,8 +100,8 @@ type Service interface {
 	// ListGroups retrieves
 	ListGroups(ctx context.Context, token, memberKind, memberID string, gm Page) (Page, error)
 
-	// ListMemberships retrieves everything that is assigned to a group identified by groupID.
-	ListMemberships(ctx context.Context, token, groupID, memberKind string) (Memberships, error)
+	// ListMembers retrieves everything that is assigned to a group identified by groupID.
+	ListMembers(ctx context.Context, token, groupID, permission, memberKind string) (MembersPage, error)
 
 	// EnableGroup logically enables the group identified with the provided ID.
 	EnableGroup(ctx context.Context, token, id string) (Group, error)

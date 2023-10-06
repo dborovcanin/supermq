@@ -366,56 +366,61 @@ func decodeChangeClientStatus(_ context.Context, r *http.Request) (interface{}, 
 	return req, nil
 }
 
-// func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
-// 	s, err := apiutil.ReadStringQuery(r, api.StatusKey, api.DefClientStatus)
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	o, err := apiutil.ReadNumQuery[uint64](r, api.OffsetKey, api.DefOffset)
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	l, err := apiutil.ReadNumQuery[uint64](r, api.LimitKey, api.DefLimit)
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	m, err := apiutil.ReadMetadataQuery(r, api.MetadataKey, nil)
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	n, err := apiutil.ReadStringQuery(r, api.NameKey, "")
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	i, err := apiutil.ReadStringQuery(r, api.IdentityKey, "")
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	t, err := apiutil.ReadStringQuery(r, api.TagKey, "")
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	oid, err := apiutil.ReadStringQuery(r, api.OwnerKey, "")
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	st, err := mfclients.ToStatus(s)
-// 	if err != nil {
-// 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-// 	}
-// 	req := listMembersReq{
-// 		token: apiutil.ExtractBearerToken(r),
-// 		Page: mfclients.Page{
-// 			Status:   st,
-// 			Offset:   o,
-// 			Limit:    l,
-// 			Metadata: m,
-// 			Identity: i,
-// 			Name:     n,
-// 			Tag:      t,
-// 			Owner:    oid,
-// 		},
-// 		groupID: chi.URLParam(r, "groupID"),
-// 	}
-// 	return req, nil
-// }
+func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	s, err := apiutil.ReadStringQuery(r, api.StatusKey, api.DefClientStatus)
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	o, err := apiutil.ReadNumQuery[uint64](r, api.OffsetKey, api.DefOffset)
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	l, err := apiutil.ReadNumQuery[uint64](r, api.LimitKey, api.DefLimit)
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	m, err := apiutil.ReadMetadataQuery(r, api.MetadataKey, nil)
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	n, err := apiutil.ReadStringQuery(r, api.NameKey, "")
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	i, err := apiutil.ReadStringQuery(r, api.IdentityKey, "")
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	t, err := apiutil.ReadStringQuery(r, api.TagKey, "")
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	oid, err := apiutil.ReadStringQuery(r, api.OwnerKey, "")
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	st, err := mfclients.ToStatus(s)
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	p, err := apiutil.ReadStringQuery(r, api.PermissionKey, api.DefPermission)
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
+	req := listMembersReq{
+		token: apiutil.ExtractBearerToken(r),
+		Page: mfclients.Page{
+			Status:     st,
+			Offset:     o,
+			Limit:      l,
+			Metadata:   m,
+			Identity:   i,
+			Name:       n,
+			Tag:        t,
+			Owner:      oid,
+			Permission: p,
+		},
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	return req, nil
+}

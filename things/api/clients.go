@@ -32,6 +32,13 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 			opts...,
 		), "create_thing").ServeHTTP)
 
+		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
+			listClientsEndpoint(svc),
+			decodeListClients,
+			api.EncodeResponse,
+			opts...,
+		), "list_things").ServeHTTP)
+
 		r.Post("/bulk", otelhttp.NewHandler(kithttp.NewServer(
 			createClientsEndpoint(svc),
 			decodeCreateClientsReq,
@@ -45,20 +52,6 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 			api.EncodeResponse,
 			opts...,
 		), "view_thing").ServeHTTP)
-
-		r.Get("/things", otelhttp.NewHandler(kithttp.NewServer(
-			listClientsEndpoint(svc),
-			decodeListClients,
-			api.EncodeResponse,
-			opts...,
-		), "list_things").ServeHTTP)
-
-		r.Get("/{thingID}/channels", otelhttp.NewHandler(kithttp.NewServer(
-			listMembersEndpoint(svc),
-			decodeListMembersRequest,
-			api.EncodeResponse,
-			opts...,
-		), "list_channel_by_things").ServeHTTP)
 
 		r.Patch("/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
 			updateClientEndpoint(svc),
@@ -117,7 +110,7 @@ func decodeViewClient(_ context.Context, r *http.Request) (interface{}, error) {
 }
 
 func decodeListClients(_ context.Context, r *http.Request) (interface{}, error) {
-	var sharedID, ownerID string
+	var ownerID string
 	s, err := apiutil.ReadStringQuery(r, api.StatusKey, api.DefClientStatus)
 	if err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, err)
@@ -146,18 +139,10 @@ func decodeListClients(_ context.Context, r *http.Request) (interface{}, error) 
 	if err != nil {
 		return nil, err
 	}
-	visibility, err := apiutil.ReadStringQuery(r, api.VisibilityKey, "")
+
+	p, err := apiutil.ReadStringQuery(r, api.PermissionKey, api.DefPermission)
 	if err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, err)
-	}
-	switch visibility {
-	case api.MyVisibility:
-		ownerID = api.MyVisibility
-	case api.SharedVisibility:
-		sharedID = api.MyVisibility
-	case api.AllVisibility:
-		sharedID = api.MyVisibility
-		ownerID = api.MyVisibility
 	}
 	if oid != "" {
 		ownerID = oid
@@ -167,15 +152,15 @@ func decodeListClients(_ context.Context, r *http.Request) (interface{}, error) 
 		return nil, errors.Wrap(apiutil.ErrValidation, err)
 	}
 	req := listClientsReq{
-		token:    apiutil.ExtractBearerToken(r),
-		status:   st,
-		offset:   o,
-		limit:    l,
-		metadata: m,
-		name:     n,
-		tag:      t,
-		sharedBy: sharedID,
-		owner:    ownerID,
+		token:      apiutil.ExtractBearerToken(r),
+		status:     st,
+		offset:     o,
+		limit:      l,
+		metadata:   m,
+		name:       n,
+		tag:        t,
+		permission: p,
+		owner:      ownerID,
 	}
 	return req, nil
 }
@@ -300,13 +285,18 @@ func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 	if err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, err)
 	}
+	p, err := apiutil.ReadStringQuery(r, api.PermissionKey, api.DefPermission)
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
 	req := listMembersReq{
 		token: apiutil.ExtractBearerToken(r),
 		Page: mfclients.Page{
-			Status:   st,
-			Offset:   o,
-			Limit:    l,
-			Metadata: m,
+			Status:     st,
+			Offset:     o,
+			Limit:      l,
+			Permission: p,
+			Metadata:   m,
 		},
 		groupID: chi.URLParam(r, "chanID"),
 	}

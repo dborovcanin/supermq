@@ -6,16 +6,9 @@ package events
 import (
 	"context"
 
-<<<<<<<< HEAD:users/groups/events/streams.go
 	"github.com/mainflux/mainflux/pkg/events"
 	"github.com/mainflux/mainflux/pkg/events/redis"
-	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-	"github.com/mainflux/mainflux/users/groups"
-========
-	"github.com/go-redis/redis/v8"
-	mfredis "github.com/mainflux/mainflux/internal/clients/redis"
 	"github.com/mainflux/mainflux/pkg/groups"
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 )
 
 const streamID = "mainflux.users"
@@ -41,11 +34,7 @@ func NewEventStoreMiddleware(ctx context.Context, svc groups.Service, url string
 	}, nil
 }
 
-<<<<<<<< HEAD:users/groups/events/streams.go
-func (es *eventStore) CreateGroup(ctx context.Context, token string, group mfgroups.Group) (mfgroups.Group, error) {
-========
 func (es eventStore) CreateGroup(ctx context.Context, token string, group groups.Group) (groups.Group, error) {
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 	group, err := es.svc.CreateGroup(ctx, token, group)
 	if err != nil {
 		return group, err
@@ -62,11 +51,7 @@ func (es eventStore) CreateGroup(ctx context.Context, token string, group groups
 	return group, nil
 }
 
-<<<<<<<< HEAD:users/groups/events/streams.go
-func (es *eventStore) UpdateGroup(ctx context.Context, token string, group mfgroups.Group) (mfgroups.Group, error) {
-========
 func (es eventStore) UpdateGroup(ctx context.Context, token string, group groups.Group) (groups.Group, error) {
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 	group, err := es.svc.UpdateGroup(ctx, token, group)
 	if err != nil {
 		return group, err
@@ -83,11 +68,7 @@ func (es eventStore) UpdateGroup(ctx context.Context, token string, group groups
 	return group, nil
 }
 
-<<<<<<<< HEAD:users/groups/events/streams.go
-func (es *eventStore) ViewGroup(ctx context.Context, token, id string) (mfgroups.Group, error) {
-========
 func (es eventStore) ViewGroup(ctx context.Context, token, id string) (groups.Group, error) {
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 	group, err := es.svc.ViewGroup(ctx, token, id)
 	if err != nil {
 		return group, err
@@ -103,13 +84,8 @@ func (es eventStore) ViewGroup(ctx context.Context, token, id string) (groups.Gr
 	return group, nil
 }
 
-<<<<<<<< HEAD:users/groups/events/streams.go
-func (es *eventStore) ListGroups(ctx context.Context, token string, pm mfgroups.GroupsPage) (mfgroups.GroupsPage, error) {
-	gp, err := es.svc.ListGroups(ctx, token, pm)
-========
 func (es eventStore) ListGroups(ctx context.Context, token string, memberKind string, memberID string, pm groups.Page) (groups.Page, error) {
 	gp, err := es.svc.ListGroups(ctx, token, memberKind, memberID, pm)
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 	if err != nil {
 		return gp, err
 	}
@@ -124,13 +100,8 @@ func (es eventStore) ListGroups(ctx context.Context, token string, memberKind st
 	return gp, nil
 }
 
-<<<<<<<< HEAD:users/groups/events/streams.go
-func (es *eventStore) ListMemberships(ctx context.Context, token, clientID string, pm mfgroups.GroupsPage) (mfgroups.MembershipsPage, error) {
-	mp, err := es.svc.ListMemberships(ctx, token, clientID, pm)
-========
 func (es eventStore) ListMembers(ctx context.Context, token, groupID, permission, memberKind string) (groups.MembersPage, error) {
 	mp, err := es.svc.ListMembers(ctx, token, groupID, permission, memberKind)
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 	if err != nil {
 		return mp, err
 	}
@@ -145,11 +116,7 @@ func (es eventStore) ListMembers(ctx context.Context, token, groupID, permission
 	return mp, nil
 }
 
-<<<<<<<< HEAD:users/groups/events/streams.go
-func (es *eventStore) EnableGroup(ctx context.Context, token, id string) (mfgroups.Group, error) {
-========
 func (es eventStore) EnableGroup(ctx context.Context, token, id string) (groups.Group, error) {
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 	group, err := es.svc.EnableGroup(ctx, token, id)
 	if err != nil {
 		return group, err
@@ -158,9 +125,6 @@ func (es eventStore) EnableGroup(ctx context.Context, token, id string) (groups.
 	return es.delete(ctx, group)
 }
 
-<<<<<<<< HEAD:users/groups/events/streams.go
-func (es *eventStore) DisableGroup(ctx context.Context, token, id string) (mfgroups.Group, error) {
-========
 func (es eventStore) Assign(ctx context.Context, token, groupID, relation, memberKind string, memberIDs ...string) error {
 	return es.svc.Assign(ctx, token, groupID, relation, memberKind, memberIDs...)
 }
@@ -170,7 +134,6 @@ func (es eventStore) Unassign(ctx context.Context, token, groupID string, relati
 }
 
 func (es eventStore) DisableGroup(ctx context.Context, token, id string) (groups.Group, error) {
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 	group, err := es.svc.DisableGroup(ctx, token, id)
 	if err != nil {
 		return group, err
@@ -179,11 +142,7 @@ func (es eventStore) DisableGroup(ctx context.Context, token, id string) (groups
 	return es.delete(ctx, group)
 }
 
-<<<<<<<< HEAD:users/groups/events/streams.go
-func (es *eventStore) delete(ctx context.Context, group mfgroups.Group) (mfgroups.Group, error) {
-========
 func (es eventStore) delete(ctx context.Context, group groups.Group) (groups.Group, error) {
->>>>>>>> 9492132bb (Return Auth service):internal/groups/redis/streams.go
 	event := removeGroupEvent{
 		id:        group.ID,
 		updatedAt: group.UpdatedAt,

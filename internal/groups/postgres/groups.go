@@ -269,7 +269,7 @@ func buildHierachy(gm mfgroups.Page) string {
 func buildQuery(gm mfgroups.Page, ids ...string) (string, error) {
 	queries := []string{}
 
-	queries = append(queries, fmt.Sprintf("id in ('%s') ", strings.Join(ids, "', '")))
+	queries = append(queries, fmt.Sprintf(" id in ('%s') ", strings.Join(ids, "', '")))
 	if gm.Name != "" {
 		queries = append(queries, "g.name = :name")
 	}

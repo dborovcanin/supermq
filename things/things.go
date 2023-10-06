@@ -56,7 +56,7 @@ type Service interface {
 	Disconnect(ctx context.Context, token, thingID, channelID, permission string) error
 
 	// Authorize used for AuthZ gRPC server implementation and Things authorization.
-	Authorize(ctx context.Context, req *mainflux.AuthorizeReq) error
+	Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (string, error)
 }
 
 // Cache contains thing caching interface.

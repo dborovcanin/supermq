@@ -133,7 +133,7 @@ func (ms *metricsMiddleware) Disconnect(ctx context.Context, token, thingID, cha
 	return ms.svc.Disconnect(ctx, token, thingID, channelID, permission)
 }
 
-func (ms *metricsMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (err error) {
+func (ms *metricsMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (id string, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "authorize").Add(1)
 		ms.latency.With("method", "authorize").Observe(time.Since(begin).Seconds())

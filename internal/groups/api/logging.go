@@ -109,9 +109,9 @@ func (lm *loggingMiddleware) DisableGroup(ctx context.Context, token, id string)
 	return lm.svc.DisableGroup(ctx, token, id)
 }
 
-// ListMemberships logs the list_memberships request. It logs the clientID and token and the time it took to complete the request.
+// ListMembers logs the list_members request. It logs the groupID and token and the time it took to complete the request.
 // If the request fails, it logs the error.
-func (lm *loggingMiddleware) ListMemberships(ctx context.Context, token, groupID, memberKind string) (mp mfgroups.Memberships, err error) {
+func (lm *loggingMiddleware) ListMembers(ctx context.Context, token, groupID, permission, memberKind string) (mp mfgroups.MembersPage, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method list_memberships for group with id %s using token %s took %s to complete", groupID, token, time.Since(begin))
 		if err != nil {
@@ -120,7 +120,7 @@ func (lm *loggingMiddleware) ListMemberships(ctx context.Context, token, groupID
 		}
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
-	return lm.svc.ListMemberships(ctx, token, groupID, memberKind)
+	return lm.svc.ListMembers(ctx, token, groupID, permission, memberKind)
 }
 
 func (lm *loggingMiddleware) Assign(ctx context.Context, token, groupID string, relation string, memberKind string, memberIDs ...string) (err error) {

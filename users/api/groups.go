@@ -13,12 +13,13 @@ import (
 	gapi "github.com/mainflux/mainflux/internal/groups/api"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/groups"
+	"github.com/mainflux/mainflux/users"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // MakeHandler returns a HTTP handler for Groups API endpoints.
-func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Handler {
+func groupsHandler(svc groups.Service, csvc users.Service, r *chi.Mux, logger logger.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
@@ -82,24 +83,24 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 
 		r.Post("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
 			gapi.AssignMembersEndpoint(svc, "", "users"),
-			gapi.DecodeAssignMembers,
+			gapi.DecodeAssignMembersRequest,
 			api.EncodeResponse,
 			opts...,
 		), "assign_members").ServeHTTP)
 
 		r.Delete("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
 			gapi.UnassignMembersEndpoint(svc, "", "users"),
-			gapi.DecodeUnassignMembers,
+			gapi.DecodeUnassignMembersRequest,
 			api.EncodeResponse,
 			opts...,
 		), "unassign_members").ServeHTTP)
 
 		r.Get("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListMembershipsEndpoint(svc, "users"),
-			gapi.DecodeListMembers,
+			listMembersEndpoint(csvc),
+			decodeListMembersRequest,
 			api.EncodeResponse,
 			opts...,
-		), "assign_members").ServeHTTP)
+		), "list_members").ServeHTTP)
 	})
 
 	return r

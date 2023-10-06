@@ -63,6 +63,9 @@ func (req listGroupsReq) validate() error {
 	if req.memberKind == "" {
 		return apiutil.ErrMissingMemberKind
 	}
+	if req.memberID == "" {
+		return apiutil.ErrMissingID
+	}
 	if req.Level < mfgroups.MinLevel || req.Level > mfgroups.MaxLevel {
 		return apiutil.ErrInvalidLevel
 	}
@@ -178,13 +181,14 @@ func (req unassignReq) validate() error {
 	return nil
 }
 
-type listMembers struct {
+type listMembersReq struct {
 	token      string
 	groupID    string
+	permission string
 	memberKind string
 }
 
-func (req listMembers) validate() error {
+func (req listMembersReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}

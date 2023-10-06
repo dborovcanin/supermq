@@ -51,6 +51,9 @@ var (
 	// ErrInvalidDirection indicates an invalid list direction.
 	ErrInvalidDirection = errors.New("invalid list direction provided")
 
+	// ErrInvalidMemberKind indicates an invalid member kind.
+	ErrInvalidMemberKind = errors.New("invalid member kind")
+
 	// ErrEmptyList indicates that entity data is empty.
 	ErrEmptyList = errors.New("empty list provided")
 

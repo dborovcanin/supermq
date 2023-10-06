@@ -98,17 +98,19 @@ func (svc *adapterService) Subscribe(ctx context.Context, thingKey, chanID, subt
 		return ErrUnauthorizedAccess
 	}
 
-	_, err := svc.authorize(ctx, thingKey, chanID, "subscribe")
+	thingID, err := svc.authorize(ctx, thingKey, chanID, "subscribe")
 	if err != nil {
 		return ErrUnauthorizedAccess
 	}
+
+	c.id = thingID
 
 	subject := fmt.Sprintf("%s.%s", chansPrefix, chanID)
 	if subtopic != "" {
 		subject = fmt.Sprintf("%s.%s", subject, subtopic)
 	}
 
-	if err := svc.pubsub.Subscribe(ctx, thingKey, subject, c); err != nil {
+	if err := svc.pubsub.Subscribe(ctx, thingID, subject, c); err != nil {
 		return errors.Wrap(ErrFailedSubscription, err)
 	}
 

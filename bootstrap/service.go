@@ -240,9 +240,9 @@ func (bs bootstrapService) UpdateConnections(ctx context.Context, token, id stri
 	}
 
 	for _, c := range connect {
-		conIDs := mfsdk.ConnectionIDs{
-			ChannelIDs: []string{c},
-			ThingIDs:   []string{id},
+		conIDs := mfsdk.Connection{
+			ChannelID: c,
+			ThingID:   id,
 		}
 		if err := bs.sdk.Connect(conIDs, token); err != nil {
 			return ErrThings
@@ -309,9 +309,9 @@ func (bs bootstrapService) ChangeState(ctx context.Context, token, id string, st
 	switch state {
 	case Active:
 		for _, c := range cfg.Channels {
-			conIDs := mfsdk.ConnectionIDs{
-				ChannelIDs: []string{c.ID},
-				ThingIDs:   []string{cfg.ThingID},
+			conIDs := mfsdk.Connection{
+				ChannelID: c.ID,
+				ThingID:   cfg.ThingID,
 			}
 			if err := bs.sdk.Connect(conIDs, token); err != nil {
 				return ErrThings

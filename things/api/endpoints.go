@@ -10,6 +10,7 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
+	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/things"
 )
 
@@ -236,4 +237,30 @@ func buildMembersResponse(cp mfclients.MembersPage) memberPageRes {
 		res.Members = append(res.Members, viewMembersRes{Client: c})
 	}
 	return res
+}
+
+func assignUsersGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(assignUsersGroupsRequest)
+		if err := req.validate(); err != nil {
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
+			return nil, err
+		}
+		return assignUsersGroupsRes{}, nil
+	}
+}
+
+func unassignUsersGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(unassignUsersGroupsRequest)
+		if err := req.validate(); err != nil {
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Unassign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
+			return nil, err
+		}
+		return unassignUsersGroupsRes{}, nil
+	}
 }

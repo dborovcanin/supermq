@@ -33,23 +33,7 @@ func (m *Repository) ChangeStatus(ctx context.Context, group mfgroups.Group) (mf
 	return ret.Get(0).(mfgroups.Group), ret.Error(1)
 }
 
-func (m *Repository) Memberships(ctx context.Context, clientID string, gm mfgroups.Page) (mfgroups.Memberships, error) {
-	ret := m.Called(ctx, clientID, gm)
-
-	if clientID == WrongID {
-		return mfgroups.Memberships{}, errors.ErrNotFound
-	}
-
-	return ret.Get(0).(mfgroups.Memberships), ret.Error(1)
-}
-
 func (m *Repository) RetrieveByIDs(ctx context.Context, gm mfgroups.Page, ids ...string) (mfgroups.Page, error) {
-	ret := m.Called(ctx, gm)
-
-	return ret.Get(0).(mfgroups.Page), ret.Error(1)
-}
-
-func (m *Repository) MembershipsByGroupIDs(ctx context.Context, gm mfgroups.Page) (mfgroups.Page, error) {
 	ret := m.Called(ctx, gm)
 
 	return ret.Get(0).(mfgroups.Page), ret.Error(1)

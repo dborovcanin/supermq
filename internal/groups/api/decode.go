@@ -14,6 +14,11 @@ import (
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
 )
 
+const (
+	defRelation   = "viewer"
+	defPermission = "view"
+)
+
 func DecodeListMembershipRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	memberKind, err := apiutil.ReadStringQuery(r, api.MemberKindKey, "")
 	if err != nil {
@@ -61,6 +66,7 @@ func DecodeListGroupsRequest(_ context.Context, r *http.Request) (interface{}, e
 		token:      apiutil.ExtractBearerToken(r),
 		tree:       tree,
 		memberKind: memberKind,
+		memberID:   chi.URLParam(r, "memberID"),
 		Page: mfgroups.Page{
 			Level:     level,
 			ID:        parentID,
@@ -202,9 +208,14 @@ func DecodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 	if err != nil {
 		return nil, apiutil.ErrInvalidQueryParams
 	}
+	permission, err := apiutil.ReadStringQuery(r, api.PermissionKey, defPermission)
+	if err != nil {
+		return nil, apiutil.ErrInvalidQueryParams
+	}
 	req := listMembersReq{
 		token:      apiutil.ExtractBearerToken(r),
 		groupID:    chi.URLParam(r, "groupID"),
+		permission: permission,
 		memberKind: memberKind,
 	}
 	return req, nil

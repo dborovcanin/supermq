@@ -28,10 +28,10 @@ import (
 )
 
 const (
-	svcName       = "postgres-reader"
-	envPrefixDB   = "MF_POSTGRES_"
-	envPrefixHTTP = "MF_POSTGRES_READER_HTTP_"
-	// defDB          = "messages"
+	svcName        = "postgres-reader"
+	envPrefixDB    = "MF_POSTGRES_"
+	envPrefixHTTP  = "MF_POSTGRES_READER_HTTP_"
+	defDB          = "mainflux"
 	defSvcHTTPPort = "9009"
 )
 

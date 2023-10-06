@@ -41,6 +41,7 @@ const (
 	VisibilityKey    = "visibility"
 	SharedByKey      = "shared_by"
 	TokenKey         = "token"
+	DefPermission    = "view"
 	DefTotal         = uint64(100)
 	DefOffset        = 0
 	DefLimit         = 10

@@ -214,12 +214,14 @@ func (lge listGroupEvent) Encode() (map[string]interface{}, error) {
 
 type listGroupMembershipEvent struct {
 	groupID    string
+	permission string
 	memberKind string
 }
 
 func (lgme listGroupMembershipEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
 		"group_id":    lgme.groupID,
+		"permission":  lgme.permission,
 		"member_kind": lgme.memberKind,
 	}
 

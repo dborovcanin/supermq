@@ -118,25 +118,6 @@ func ListGroupsEndpoint(svc groups.Service, memberKind string) endpoint.Endpoint
 	}
 }
 
-func ListMembershipsEndpoint(svc groups.Service, memberKind string) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(listMembershipReq)
-		if memberKind != "" {
-			req.memberKind = memberKind
-		}
-		if err := req.validate(); err != nil {
-			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
-		}
-
-		page, err := svc.ListMemberships(ctx, req.token, req.groupID, req.memberKind)
-		if err != nil {
-			return membershipPageRes{}, err
-		}
-
-		return page, nil
-	}
-}
-
 func ListMembersEndpoint(svc groups.Service, memberKind string) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listMembersReq)
@@ -147,7 +128,7 @@ func ListMembersEndpoint(svc groups.Service, memberKind string) endpoint.Endpoin
 			return membershipPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
 
-		page, err := svc.ListMemberships(ctx, req.token, req.groupID, req.memberKind)
+		page, err := svc.ListMembers(ctx, req.token, req.groupID, req.permission, req.memberKind)
 		if err != nil {
 			return membershipPageRes{}, err
 		}

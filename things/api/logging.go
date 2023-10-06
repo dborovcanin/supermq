@@ -181,7 +181,7 @@ func (lm *loggingMiddleware) Disconnect(ctx context.Context, token, thingID, cha
 	return lm.svc.Disconnect(ctx, token, thingID, channelID, permission)
 }
 
-func (lm *loggingMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (err error) {
+func (lm *loggingMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (id string, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method authorize for thing key %s and channnel %s took %s to complete", req.Subject, req.Object, time.Since(begin))
 		if err != nil {

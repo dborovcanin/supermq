@@ -206,6 +206,6 @@ func (es *eventStore) Disconnect(ctx context.Context, token, thingID, channelID,
 	return es.svc.Disconnect(ctx, token, thingID, channelID, permission)
 }
 
-func (es *eventStore) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) error {
+func (es *eventStore) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (string, error) {
 	return es.svc.Authorize(ctx, req)
 }

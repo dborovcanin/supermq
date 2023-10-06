@@ -12,7 +12,6 @@ import (
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-	tpolicies "github.com/mainflux/mainflux/things/policies"
 	"github.com/mainflux/mainflux/things/postgres"
 )
 
@@ -62,7 +61,6 @@ const (
 
 type service struct {
 	auth        mainflux.AuthServiceClient
-	policies    tpolicies.Service
 	clients     postgres.Repository
 	clientCache Cache
 	idProvider  mainflux.IDProvider
@@ -70,10 +68,9 @@ type service struct {
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c postgres.Repository, grepo mfgroups.Repository, tcache Cache, idp mainflux.IDProvider) Service {
+func NewService(uauth mainflux.AuthServiceClient, c postgres.Repository, grepo mfgroups.Repository, tcache Cache, idp mainflux.IDProvider) Service {
 	return service{
 		auth:        uauth,
-		policies:    policies,
 		clients:     c,
 		grepo:       grepo,
 		clientCache: tcache,
@@ -81,26 +78,27 @@ func NewService(uauth mainflux.AuthServiceClient, policies tpolicies.Service, c 
 	}
 }
 
-func (svc service) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) error {
-	cli, err := svc.clients.RetrieveBySecret(ctx, req.Subject)
+func (svc service) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (string, error) {
+	thingID, err := svc.Identify(ctx, req.Subject)
 	if err != nil {
-		return errors.ErrAuthentication
+		return "", errors.ErrAuthentication
 	}
 	r := &mainflux.AuthorizeReq{
 		SubjectType: "group",
 		Subject:     req.Object,
 		ObjectType:  "thing",
-		Object:      cli.ID,
+		Object:      thingID,
 		Permission:  "publish",
 	}
 	resp, err := svc.auth.Authorize(ctx, r)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if !resp.GetAuthorized() {
-		return errors.ErrAuthorization
+		return "", errors.ErrAuthorization
 	}
-	return nil
+
+	return thingID, nil
 }
 
 func (svc service) Connect(ctx context.Context, token, thingID, channelID, permission string) error {

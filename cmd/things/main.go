@@ -36,11 +36,6 @@ import (
 	"github.com/mainflux/mainflux/things"
 	capi "github.com/mainflux/mainflux/things/api"
 	grpcapi "github.com/mainflux/mainflux/things/api/grpc"
-	tpolicies "github.com/mainflux/mainflux/things/policies"
-	papi "github.com/mainflux/mainflux/things/policies/api"
-	ppostgres "github.com/mainflux/mainflux/things/policies/postgres"
-	pcache "github.com/mainflux/mainflux/things/policies/redis"
-	ppracing "github.com/mainflux/mainflux/things/policies/tracing"
 	thingspg "github.com/mainflux/mainflux/things/postgres"
 	thcache "github.com/mainflux/mainflux/things/redis"
 	localusers "github.com/mainflux/mainflux/things/standalone"
@@ -161,7 +156,7 @@ func main() {
 		logger.Info("Successfully connected to auth grpc server " + authHandler.Secure())
 	}
 
-	csvc, gsvc, _ := newService(ctx, db, dbConfig, auth, cacheclient, esclient, cfg.CacheKeyDuration, tracer, logger)
+	csvc, gsvc := newService(ctx, db, dbConfig, auth, cacheclient, esclient, cfg.CacheKeyDuration, tracer, logger)
 
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
@@ -207,11 +202,10 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth mainflux.AuthServiceClient, cacheClient *redis.Client, esClient *redis.Client, keyDuration string, tracer trace.Tracer, logger mflog.Logger) (things.Service, groups.Service, tpolicies.Service) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth mainflux.AuthServiceClient, cacheClient *redis.Client, esClient *redis.Client, keyDuration string, tracer trace.Tracer, logger mflog.Logger) (things.Service, groups.Service) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	cRepo := thingspg.NewRepository(database)
 	gRepo := gpostgres.New(database)
-	pRepo := ppostgres.NewRepository(database)
 
 	idp := uuid.New()
 
@@ -220,16 +214,13 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 		logger.Error(fmt.Sprintf("failed to parse cache key duration: %s", err.Error()))
 	}
 
-	policyCache := pcache.NewCache(cacheClient, kDuration)
 	thingCache := thcache.NewCache(cacheClient, kDuration)
 
-	psvc := tpolicies.NewService(auth, pRepo, policyCache, idp)
-	csvc := things.NewService(auth, psvc, cRepo, gRepo, thingCache, idp)
+	csvc := things.NewService(auth, cRepo, gRepo, thingCache, idp)
 	gsvc := mfgroups.NewService(gRepo, idp, auth)
 
 	csvc = thcache.NewEventStoreMiddleware(ctx, csvc, esClient)
 	gsvc = ghcache.NewEventStoreMiddleware(ctx, gsvc, esClient)
-	psvc = pcache.NewEventStoreMiddleware(ctx, psvc, esClient)
 
 	csvc = ctracing.New(csvc, tracer)
 	csvc = capi.LoggingMiddleware(csvc, logger)
@@ -240,10 +231,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 	gsvc = gapi.LoggingMiddleware(gsvc, logger)
 	counter, latency = internal.MakeMetrics(fmt.Sprintf("%s_groups", svcName), "api")
 	gsvc = gapi.MetricsMiddleware(gsvc, counter, latency)
-	psvc = ppracing.New(psvc, tracer)
-	psvc = papi.LoggingMiddleware(psvc, logger)
 	counter, latency = internal.MakeMetrics(fmt.Sprintf("%s_policies", svcName), "api")
-	psvc = papi.MetricsMiddleware(psvc, counter, latency)
 
-	return csvc, gsvc, psvc
+	return csvc, gsvc
 }

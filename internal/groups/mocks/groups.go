@@ -39,6 +39,18 @@ func (m *Repository) RetrieveByIDs(ctx context.Context, gm mfgroups.Page, ids ..
 	return ret.Get(0).(mfgroups.Page), ret.Error(1)
 }
 
+func (m *Repository) RetrieveByIDs(ctx context.Context, gm mfgroups.Page, ids ...string) (mfgroups.Page, error) {
+	ret := m.Called(ctx, gm)
+
+	return ret.Get(0).(mfgroups.Page), ret.Error(1)
+}
+
+func (m *Repository) MembershipsByGroupIDs(ctx context.Context, gm mfgroups.Page) (mfgroups.Page, error) {
+	ret := m.Called(ctx, gm)
+
+	return ret.Get(0).(mfgroups.Page), ret.Error(1)
+}
+
 func (m *Repository) RetrieveAll(ctx context.Context, gm mfgroups.Page) (mfgroups.Page, error) {
 	ret := m.Called(ctx, gm)
 

@@ -127,7 +127,7 @@ func (tm *tracingMiddleware) Disconnect(ctx context.Context, token, thingID, cha
 	return tm.svc.Disconnect(ctx, token, thingID, channelID, permission)
 }
 
-func (tm *tracingMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) error {
+func (tm *tracingMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (string, error) {
 	ctx, span := tm.tracer.Start(ctx, "connect", trace.WithAttributes(attribute.String("subject", req.Subject), attribute.String("object", req.Object)))
 	defer span.End()
 	return tm.svc.Authorize(ctx, req)

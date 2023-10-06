@@ -14,6 +14,11 @@ import (
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
 )
 
+const (
+	defRelation   = "viewer"
+	defPermission = "view"
+)
+
 func DecodeListMembershipRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	memberKind, err := apiutil.ReadStringQuery(r, api.MemberKindKey, "")
 	if err != nil {
@@ -61,6 +66,7 @@ func DecodeListGroupsRequest(_ context.Context, r *http.Request) (interface{}, e
 		token:      apiutil.ExtractBearerToken(r),
 		tree:       tree,
 		memberKind: memberKind,
+		memberID:   chi.URLParam(r, "memberID"),
 		Page: mfgroups.Page{
 			Level:     level,
 			ID:        parentID,
@@ -175,7 +181,7 @@ func DecodeChangeGroupStatus(_ context.Context, r *http.Request) (interface{}, e
 	return req, nil
 }
 
-func DecodeAssignMembers(_ context.Context, r *http.Request) (interface{}, error) {
+func DecodeAssignMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	req := assignReq{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
@@ -186,8 +192,8 @@ func DecodeAssignMembers(_ context.Context, r *http.Request) (interface{}, error
 	return req, nil
 }
 
-func DecodeUnassignMembers(_ context.Context, r *http.Request) (interface{}, error) {
-	req := assignReq{
+func DecodeUnassignMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := unassignReq{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
 	}
@@ -197,14 +203,19 @@ func DecodeUnassignMembers(_ context.Context, r *http.Request) (interface{}, err
 	return req, nil
 }
 
-func DecodeListMembers(_ context.Context, r *http.Request) (interface{}, error) {
+func DecodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	memberKind, err := apiutil.ReadStringQuery(r, api.MemberKindKey, "")
 	if err != nil {
 		return nil, apiutil.ErrInvalidQueryParams
 	}
-	req := listMembers{
+	permission, err := apiutil.ReadStringQuery(r, api.PermissionKey, defPermission)
+	if err != nil {
+		return nil, apiutil.ErrInvalidQueryParams
+	}
+	req := listMembersReq{
 		token:      apiutil.ExtractBearerToken(r),
 		groupID:    chi.URLParam(r, "groupID"),
+		permission: permission,
 		memberKind: memberKind,
 	}
 	return req, nil

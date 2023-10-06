@@ -17,7 +17,7 @@ import (
 // MakeHandler returns a HTTP handler for Things and Groups API endpoints.
 func MakeHandler(tsvc things.Service, grps groups.Service, mux *chi.Mux, logger mflog.Logger, instanceID string) http.Handler {
 	clientsHandler(tsvc, mux, logger)
-	groupsHandler(grps, mux, logger)
+	groupsHandler(grps, tsvc, mux, logger)
 	policiesHandler(tsvc, mux, logger)
 
 	mux.Get("/health", mainflux.Health("things", instanceID))

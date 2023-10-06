@@ -47,12 +47,12 @@ func (tm *tracingMiddleware) ListGroups(ctx context.Context, token, memberKind, 
 	return tm.gsvc.ListGroups(ctx, token, memberKind, memberID, gm)
 }
 
-// ListMemberships traces the "ListMemberships" operation of the wrapped groups.Service.
-func (tm *tracingMiddleware) ListMemberships(ctx context.Context, token, groupID, memberKind string) (groups.Memberships, error) {
-	ctx, span := tm.tracer.Start(ctx, "svc_list_memberships", trace.WithAttributes(attribute.String("groupID", groupID)))
+// ListMembers traces the "ListMembers" operation of the wrapped groups.Service.
+func (tm *tracingMiddleware) ListMembers(ctx context.Context, token, groupID, permission, memberKind string) (groups.MembersPage, error) {
+	ctx, span := tm.tracer.Start(ctx, "svc_list_members", trace.WithAttributes(attribute.String("groupID", groupID)))
 	defer span.End()
 
-	return tm.gsvc.ListMemberships(ctx, token, groupID, memberKind)
+	return tm.gsvc.ListMembers(ctx, token, groupID, permission, memberKind)
 }
 
 // UpdateGroup traces the "UpdateGroup" operation of the wrapped groups.Service.

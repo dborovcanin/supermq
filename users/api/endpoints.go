@@ -72,7 +72,6 @@ func listClientsEndpoint(svc users.Service) endpoint.Endpoint {
 		}
 
 		pm := mfclients.Page{
-			SharedBy: req.sharedBy,
 			Status:   req.status,
 			Offset:   req.offset,
 			Limit:    req.limit,

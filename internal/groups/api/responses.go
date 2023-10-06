@@ -9,6 +9,7 @@ import (
 
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/groups"
+	"github.com/mainflux/mainflux/pkg/groups"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
 )
 
@@ -182,4 +183,21 @@ func (res unassignRes) Headers() map[string]string {
 
 func (res unassignRes) Empty() bool {
 	return true
+}
+
+type listMembersRes struct {
+	pageRes
+	Members []mfgroups.Member `json:"members"`
+}
+
+func (res listMembersRes) Code() int {
+	return http.StatusOK
+}
+
+func (res listMembersRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res listMembersRes) Empty() bool {
+	return false
 }

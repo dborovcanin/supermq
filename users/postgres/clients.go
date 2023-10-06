@@ -5,6 +5,8 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 
 	"github.com/mainflux/mainflux/internal/postgres"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
@@ -24,6 +26,8 @@ type Repository interface {
 	// Save persists the client account. A non-nil error is returned to indicate
 	// operation failure.
 	Save(ctx context.Context, client mfclients.Client) (mfclients.Client, error)
+
+	IsOwner(ctx context.Context, clientID string, ownerID string) error
 }
 
 // NewRepository instantiates a PostgreSQL
@@ -61,4 +65,24 @@ func (repo clientRepo) Save(ctx context.Context, c mfclients.Client) (mfclients.
 	}
 
 	return client, nil
+}
+
+func (repo clientRepo) IsOwner(ctx context.Context, clientID, ownerID string) error {
+	q := fmt.Sprintf(`SELECT * FROM clients WHERE id = '%s' AND owner_id = '%s'`, clientID, ownerID)
+
+	rows, err := repo.ClientRepository.DB.QueryContext(ctx, q)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return errors.ErrAuthorization
+		}
+		return errors.Wrap(errors.ErrAuthorization, err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return errors.ErrAuthorization
+	}
+	if err := rows.Err(); err != nil {
+		return errors.Wrap(errors.ErrAuthorization, err)
+	}
+	return nil
 }

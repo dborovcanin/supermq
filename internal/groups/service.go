@@ -163,7 +163,7 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 		}
 		cids, err := svc.auth.ListAllSubjects(ctx, &mainflux.ListSubjectsReq{
 			SubjectType: groupType,
-			Relation:    groupRelation,
+			Permission:  groupRelation,
 			ObjectType:  thingType,
 			Object:      memberID,
 		})

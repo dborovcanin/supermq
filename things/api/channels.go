@@ -51,7 +51,7 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 		), "list_things_by_channel").ServeHTTP)
 
 		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.ListGroupsEndpoint(svc, "things"),
+			gapi.ListGroupsEndpoint(svc, "channels"),
 			gapi.DecodeListGroupsRequest,
 			api.EncodeResponse,
 			opts...,

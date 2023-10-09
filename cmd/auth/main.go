@@ -349,7 +349,7 @@ func startGRPCServer(svc auth.Service, port string, certFile string, keyFile str
 		server = grpc.NewServer()
 	}
 
-	mainflux.RegisterAuthServiceServer(server, grpcapi.NewServer(svc))
+	mainflux.RegisterUsersAuthServiceServer(server, grpcapi.NewServer(svc))
 	logger.Info(fmt.Sprintf("Authentication gRPC service started, exposed port %s", port))
 	errs <- server.Serve(listener)
 }

@@ -39,13 +39,13 @@ var _ Service = (*adapterService)(nil)
 
 // Observers is a map of maps,.
 type adapterService struct {
-	auth    mainflux.AuthzServiceClient
+	auth    mainflux.ThingsAuthServiceClient
 	pubsub  messaging.PubSub
 	obsLock sync.Mutex
 }
 
 // New instantiates the CoAP adapter implementation.
-func New(auth mainflux.AuthzServiceClient, pubsub messaging.PubSub) Service {
+func New(auth mainflux.ThingsAuthServiceClient, pubsub messaging.PubSub) Service {
 	as := &adapterService{
 		auth:    auth,
 		pubsub:  pubsub,

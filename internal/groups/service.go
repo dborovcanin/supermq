@@ -58,12 +58,12 @@ const (
 
 type service struct {
 	groups     groups.Repository
-	auth       mainflux.AuthServiceClient
+	auth       mainflux.UsersAuthServiceClient
 	idProvider mainflux.IDProvider
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(g groups.Repository, idp mainflux.IDProvider, auth mainflux.AuthServiceClient) groups.Service {
+func NewService(g groups.Repository, idp mainflux.IDProvider, auth mainflux.UsersAuthServiceClient) groups.Service {
 	return service{
 		groups:     g,
 		idProvider: idp,

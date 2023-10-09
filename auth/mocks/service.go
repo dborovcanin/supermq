@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var _ mainflux.AuthServiceClient = (*Service)(nil)
+var _ mainflux.UsersAuthServiceClient = (*Service)(nil)
 
 type Service struct {
 	mock.Mock

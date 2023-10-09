@@ -15,7 +15,7 @@ import (
 
 const svcName = "mainflux.AuthzService"
 
-var _ mainflux.AuthzServiceClient = (*grpcClient)(nil)
+var _ mainflux.ThingsAuthServiceClient = (*grpcClient)(nil)
 
 type grpcClient struct {
 	timeout   time.Duration
@@ -23,7 +23,7 @@ type grpcClient struct {
 }
 
 // NewClient returns new gRPC client instance.
-func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthzServiceClient {
+func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.ThingsAuthServiceClient {
 	return &grpcClient{
 		authorize: kitgrpc.NewClient(
 			conn,

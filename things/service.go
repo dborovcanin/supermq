@@ -59,7 +59,7 @@ const (
 )
 
 type service struct {
-	auth        mainflux.AuthServiceClient
+	auth        mainflux.UsersAuthServiceClient
 	clients     postgres.Repository
 	clientCache Cache
 	idProvider  mainflux.IDProvider
@@ -67,7 +67,7 @@ type service struct {
 }
 
 // NewService returns a new Clients service implementation.
-func NewService(uauth mainflux.AuthServiceClient, c postgres.Repository, grepo mfgroups.Repository, tcache Cache, idp mainflux.IDProvider) Service {
+func NewService(uauth mainflux.UsersAuthServiceClient, c postgres.Repository, grepo mfgroups.Repository, tcache Cache, idp mainflux.IDProvider) Service {
 	return service{
 		auth:        uauth,
 		clients:     c,

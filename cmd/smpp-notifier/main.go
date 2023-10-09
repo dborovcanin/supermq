@@ -157,7 +157,7 @@ func main() {
 	}
 }
 
-func newService(db *sqlx.DB, tracer trace.Tracer, auth mainflux.AuthServiceClient, c config, sc mfsmpp.Config, logger mflog.Logger) notifiers.Service {
+func newService(db *sqlx.DB, tracer trace.Tracer, auth mainflux.UsersAuthServiceClient, c config, sc mfsmpp.Config, logger mflog.Logger) notifiers.Service {
 	database := notifierpg.NewDatabase(db, tracer)
 	repo := tracing.New(tracer, notifierpg.New(database))
 	idp := ulid.New()

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -87,6 +88,20 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 			api.EncodeResponse,
 			opts...,
 		), "unassign_members").ServeHTTP)
+
+		r.Post("/{groupID}/things/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
+			connectChannelThingEndpoint(svc),
+			decodeConnectChannelThingRequest,
+			api.EncodeResponse,
+			opts...,
+		), "connect_channel_thing").ServeHTTP)
+
+		r.Delete("/{groupID}/things/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
+			disconnectChannelThingEndpoint(svc),
+			decodeDisconnectChannelThingRequest,
+			api.EncodeResponse,
+			opts...,
+		), "disconnect_channel_thing").ServeHTTP)
 	})
 
 	r.Get("/things/{memberID}/channels", otelhttp.NewHandler(kithttp.NewServer(
@@ -95,6 +110,20 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 		api.EncodeResponse,
 		opts...,
 	), "list_channel_by_things").ServeHTTP)
+
+	r.Post("/connect", otelhttp.NewHandler(kithttp.NewServer(
+		connectEndpoint(svc),
+		decodeConnectRequest,
+		api.EncodeResponse,
+		opts...,
+	), "connect").ServeHTTP)
+
+	r.Post("/disconnect", otelhttp.NewHandler(kithttp.NewServer(
+		disconnectEndpoint(svc),
+		decodeDisconnectRequest,
+		api.EncodeResponse,
+		opts...,
+	), "disconnect").ServeHTTP)
 
 	return r
 }
@@ -117,6 +146,52 @@ func decodeUnassignUsersGroupsRequest(_ context.Context, r *http.Request) (inter
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func decodeConnectChannelThingRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := connectChannelThingRequest{
+		token:     apiutil.ExtractBearerToken(r),
+		ThingID:   chi.URLParam(r, "thingID"),
+		ChannelID: chi.URLParam(r, "groupID"),
+	}
+	return req, nil
+}
+
+func decodeDisconnectChannelThingRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := disconnectChannelThingRequest{
+		token:     apiutil.ExtractBearerToken(r),
+		ThingID:   chi.URLParam(r, "thingID"),
+		ChannelID: chi.URLParam(r, "groupID"),
+	}
+	return req, nil
+}
+
+func decodeConnectRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
+	req := connectChannelThingRequest{
+		token: apiutil.ExtractBearerToken(r),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
+	}
+	return req, nil
+}
+
+func decodeDisconnectRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
+	req := disconnectChannelThingRequest{
+		token: apiutil.ExtractBearerToken(r),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
 	}
 	return req, nil
 }

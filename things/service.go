@@ -336,6 +336,7 @@ func (svc service) ListClientsByGroup(ctx context.Context, token, groupID string
 	}
 
 	pm.IDs = tids.Policies
+
 	cp, err := svc.clients.RetrieveAllByIDs(ctx, pm)
 	if err != nil {
 		return mfclients.MembersPage{}, err

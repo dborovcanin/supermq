@@ -264,3 +264,57 @@ func unassignUsersGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 		return unassignUsersGroupsRes{}, nil
 	}
 }
+
+func connectChannelThingEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(connectChannelThingRequest)
+		if err := req.validate(); err != nil {
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Assign(ctx, req.token, req.ChannelID, "group", "things", req.ThingID); err != nil {
+			return nil, err
+		}
+		return connectChannelThingRes{}, nil
+	}
+}
+
+func disconnectChannelThingEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(disconnectChannelThingRequest)
+		if err := req.validate(); err != nil {
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Unassign(ctx, req.token, req.ChannelID, "group", "things", req.ThingID); err != nil {
+			return nil, err
+		}
+		return disconnectChannelThingRes{}, nil
+	}
+}
+
+func connectEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(connectChannelThingRequest)
+		if err := req.validate(); err != nil {
+			return connectChannelThingRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Assign(ctx, req.token, req.ChannelID, "group", "things", req.ThingID); err != nil {
+			return connectChannelThingRes{}, err
+		}
+
+		return connectChannelThingRes{}, nil
+	}
+}
+
+func disconnectEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(disconnectChannelThingRequest)
+		if err := req.validate(); err != nil {
+			return disconnectChannelThingRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Unassign(ctx, req.token, req.ChannelID, "group", "things", req.ThingID); err != nil {
+			return disconnectChannelThingRes{}, err
+		}
+
+		return disconnectChannelThingRes{}, nil
+	}
+}

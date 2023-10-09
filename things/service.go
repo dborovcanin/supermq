@@ -4,7 +4,6 @@ package things
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/mainflux/mainflux"
@@ -201,7 +200,6 @@ func (svc service) ListClients(ctx context.Context, token string, pm mfclients.P
 		return mfclients.ClientsPage{}, err
 	}
 
-	fmt.Println(pm.Permission)
 	tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
 		SubjectType: userType,
 		Subject:     userID,
@@ -254,7 +252,7 @@ func (svc service) ListClients(ctx context.Context, token string, pm mfclients.P
 	// 	pm.Action = listRelationKey
 	// }
 
-	return svc.clients.RetrieveAll(ctx, pm)
+	return svc.clients.RetrieveAllByIDs(ctx, pm)
 }
 
 func (svc service) UpdateClient(ctx context.Context, token string, cli mfclients.Client) (mfclients.Client, error) {
@@ -384,7 +382,7 @@ func (svc service) ListClientsByGroup(ctx context.Context, token, groupID string
 	tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
 		SubjectType: groupType,
 		Subject:     groupID,
-		Permission:  pm.Permission,
+		Permission:  groupRelation,
 		ObjectType:  thingType,
 	})
 	if err != nil {
@@ -393,7 +391,7 @@ func (svc service) ListClientsByGroup(ctx context.Context, token, groupID string
 	}
 	pm.IDs = tids.Policies
 
-	cp, err := svc.clients.RetrieveAll(ctx, pm)
+	cp, err := svc.clients.RetrieveAllByIDs(ctx, pm)
 	if err != nil {
 		return mfclients.MembersPage{}, err
 	}

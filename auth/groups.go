@@ -20,7 +20,7 @@ var (
 	// ErrUnassignFromGroup indicates failure to unassign member from a group.
 	ErrUnassignFromGroup = errors.New("failed to unassign member from a group")
 
-	// ErrMissingParent indicates that parent can't be found
+	// ErrMissingParent indicates that parent can't be found.
 	ErrMissingParent = errors.New("failed to retrieve parent")
 
 	// ErrGroupNotEmpty indicates group is not empty, can't be deleted.

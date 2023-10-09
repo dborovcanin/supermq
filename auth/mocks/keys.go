@@ -1,56 +1,32 @@
-// Copyright (c) Mainflux
-// SPDX-License-Identifier: Apache-2.0
-
 package mocks
 
 import (
-	"context"
-	"sync"
+	context "context"
 
-	"github.com/mainflux/mainflux/auth"
-	"github.com/mainflux/mainflux/pkg/errors"
+	auth "github.com/mainflux/mainflux/auth"
+	"github.com/stretchr/testify/mock"
 )
 
-var _ auth.KeyRepository = (*keyRepositoryMock)(nil)
+var _ auth.KeyRepository = (*Keys)(nil)
 
-type keyRepositoryMock struct {
-	mu   sync.Mutex
-	keys map[string]auth.Key
+type Keys struct {
+	mock.Mock
 }
 
-// NewKeyRepository creates in-memory user repository
-func NewKeyRepository() auth.KeyRepository {
-	return &keyRepositoryMock{
-		keys: make(map[string]auth.Key),
-	}
+func (m *Keys) Save(ctx context.Context, key auth.Key) (string, error) {
+	ret := m.Called(ctx, key)
+
+	return ret.String(0), ret.Error(1)
 }
 
-func (krm *keyRepositoryMock) Save(ctx context.Context, key auth.Key) (string, error) {
-	krm.mu.Lock()
-	defer krm.mu.Unlock()
+func (m *Keys) Retrieve(ctx context.Context, issuer, id string) (auth.Key, error) {
+	ret := m.Called(ctx, issuer, id)
 
-	if _, ok := krm.keys[key.ID]; ok {
-		return "", errors.ErrConflict
-	}
-
-	krm.keys[key.ID] = key
-	return key.ID, nil
+	return ret.Get(0).(auth.Key), ret.Error(1)
 }
-func (krm *keyRepositoryMock) Retrieve(ctx context.Context, issuerID, id string) (auth.Key, error) {
-	krm.mu.Lock()
-	defer krm.mu.Unlock()
 
-	if key, ok := krm.keys[id]; ok && key.IssuerID == issuerID {
-		return key, nil
-	}
+func (m *Keys) Remove(ctx context.Context, issuer, id string) error {
+	ret := m.Called(ctx, issuer, id)
 
-	return auth.Key{}, errors.ErrNotFound
-}
-func (krm *keyRepositoryMock) Remove(ctx context.Context, issuerID, id string) error {
-	krm.mu.Lock()
-	defer krm.mu.Unlock()
-	if key, ok := krm.keys[id]; ok && key.IssuerID == issuerID {
-		delete(krm.keys, id)
-	}
-	return nil
+	return ret.Error(0)
 }

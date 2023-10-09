@@ -21,16 +21,16 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	secret        = "secret"
-	contentType   = "application/json"
-	id            = "123e4567-e89b-12d3-a456-000000000001"
-	email         = "user@example.com"
-	loginDuration = 30 * time.Minute
+	secret          = "secret"
+	contentType     = "application/json"
+	id              = "123e4567-e89b-12d3-a456-000000000001"
+	email           = "user@example.com"
+	loginDuration   = 30 * time.Minute
+	refreshDuration = 24 * time.Hour
 )
 
 type issueRequest struct {
@@ -64,21 +64,19 @@ func (tr testRequest) make() (*http.Response, error) {
 }
 
 func newService() auth.Service {
-	repo := mocks.NewKeyRepository()
-	groupRepo := mocks.NewGroupRepository()
+	krepo := new(mocks.Keys)
+	grepo := new(mocks.Repository)
+	prepo := new(mocks.PolicyAgent)
 	idProvider := uuid.NewMock()
-	t := jwt.New(secret)
 
-	mockAuthzDB := map[string][]mocks.MockSubjectSet{}
-	mockAuthzDB[id] = append(mockAuthzDB[id], mocks.MockSubjectSet{Object: "authorities", Relation: "member"})
-	ketoMock := mocks.NewKetoMock(mockAuthzDB)
+	t := jwt.New([]byte(secret))
 
-	return auth.New(repo, groupRepo, idProvider, t, ketoMock, loginDuration)
+	return auth.New(krepo, grepo, idProvider, t, prepo, loginDuration, refreshDuration)
 }
 
 func newServer(svc auth.Service) *httptest.Server {
 	logger := logger.NewMock()
-	mux := httpapi.MakeHandler(svc, mocktracer.New(), logger)
+	mux := httpapi.MakeHandler(svc, logger)
 	return httptest.NewServer(mux)
 }
 
@@ -89,16 +87,16 @@ func toJSON(data interface{}) string {
 
 func TestIssue(t *testing.T) {
 	svc := newService()
-	_, loginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), IssuerID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	ts := newServer(svc)
 	defer ts.Close()
 	client := ts.Client()
 
-	lk := issueRequest{Type: auth.AccessKey}
-	ak := issueRequest{Type: auth.APIKey, Duration: time.Hour}
-	rk := issueRequest{Type: auth.RecoveryKey}
+	lk := issueRequest{Type: uint32(auth.AccessKey)}
+	ak := issueRequest{Type: uint32(auth.APIKey), Duration: time.Hour}
+	rk := issueRequest{Type: uint32(auth.RecoveryKey)}
 
 	cases := []struct {
 		desc   string
@@ -118,28 +116,28 @@ func TestIssue(t *testing.T) {
 			desc:   "issue API key",
 			req:    toJSON(ak),
 			ct:     contentType,
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusCreated,
 		},
 		{
 			desc:   "issue recovery key",
 			req:    toJSON(rk),
 			ct:     contentType,
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusCreated,
 		},
 		{
 			desc:   "issue login key wrong content type",
 			req:    toJSON(lk),
 			ct:     "",
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusUnsupportedMediaType,
 		},
 		{
 			desc:   "issue recovery key wrong content type",
 			req:    toJSON(rk),
 			ct:     "",
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusUnsupportedMediaType,
 		},
 		{
@@ -160,21 +158,21 @@ func TestIssue(t *testing.T) {
 			desc:   "issue key with invalid request",
 			req:    "{",
 			ct:     contentType,
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusBadRequest,
 		},
 		{
 			desc:   "issue key with invalid JSON",
 			req:    "{invalid}",
 			ct:     contentType,
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusBadRequest,
 		},
 		{
 			desc:   "issue key with invalid JSON content",
 			req:    `{"Type":{"key":"value"}}`,
 			ct:     contentType,
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusBadRequest,
 		},
 	}
@@ -196,11 +194,11 @@ func TestIssue(t *testing.T) {
 
 func TestRetrieve(t *testing.T) {
 	svc := newService()
-	_, loginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), IssuerID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), IssuerID: id, Subject: email}
+	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), SubjectID: id, Subject: email}
 
-	k, _, err := svc.Issue(context.Background(), loginSecret, key)
+	k, err := svc.Issue(context.Background(), token.Value, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	ts := newServer(svc)
@@ -215,19 +213,19 @@ func TestRetrieve(t *testing.T) {
 	}{
 		{
 			desc:   "retrieve an existing key",
-			id:     k.ID,
-			token:  loginSecret,
+			id:     k.Value,
+			token:  token.Value,
 			status: http.StatusOK,
 		},
 		{
 			desc:   "retrieve a non-existing key",
 			id:     "non-existing",
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusNotFound,
 		},
 		{
 			desc:   "retrieve a key with an invalid token",
-			id:     k.ID,
+			id:     k.Value,
 			token:  "wrong",
 			status: http.StatusUnauthorized,
 		},
@@ -248,11 +246,11 @@ func TestRetrieve(t *testing.T) {
 
 func TestRevoke(t *testing.T) {
 	svc := newService()
-	_, loginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), IssuerID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), IssuerID: id, Subject: email}
+	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), SubjectID: id, Subject: email}
 
-	k, _, err := svc.Issue(context.Background(), loginSecret, key)
+	k, err := svc.Issue(context.Background(), token.Value, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	ts := newServer(svc)
@@ -267,19 +265,19 @@ func TestRevoke(t *testing.T) {
 	}{
 		{
 			desc:   "revoke an existing key",
-			id:     k.ID,
-			token:  loginSecret,
+			id:     k.Value,
+			token:  token.Value,
 			status: http.StatusNoContent,
 		},
 		{
 			desc:   "revoke a non-existing key",
 			id:     "non-existing",
-			token:  loginSecret,
+			token:  token.Value,
 			status: http.StatusNoContent,
 		},
 		{
 			desc:   "revoke key with invalid token",
-			id:     k.ID,
+			id:     k.Value,
 			token:  "wrong",
 			status: http.StatusUnauthorized},
 	}

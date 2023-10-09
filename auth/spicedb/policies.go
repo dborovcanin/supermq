@@ -123,7 +123,7 @@ func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error
 	return nil
 }
 
-// RetrieveObjects - Listing of things
+// RetrieveObjects - Listing of things.
 func (pa policyAgent) RetrieveObjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) ([]auth.PolicyRes, string, error) {
 	resourceReq := &v1.LookupResourcesRequest{
 		ResourceObjectType: pr.ObjectType,

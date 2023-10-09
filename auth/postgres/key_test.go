@@ -46,7 +46,7 @@ func TestKeySave(t *testing.T) {
 				IssuedAt:  time.Now(),
 				ExpiresAt: expTime,
 				ID:        id,
-				IssuerID:  id,
+				SubjectID: id,
 			},
 			err: nil,
 		},
@@ -57,7 +57,7 @@ func TestKeySave(t *testing.T) {
 				IssuedAt:  time.Now(),
 				ExpiresAt: expTime,
 				ID:        id,
-				IssuerID:  id,
+				SubjectID: id,
 			},
 			err: errors.ErrConflict,
 		},
@@ -81,7 +81,7 @@ func TestKeyRetrieve(t *testing.T) {
 		IssuedAt:  time.Now(),
 		ExpiresAt: expTime,
 		ID:        id,
-		IssuerID:  id,
+		SubjectID: id,
 	}
 	_, err = repo.Save(context.Background(), key)
 	assert.Nil(t, err, fmt.Sprintf("Storing Key expected to succeed: %s", err))
@@ -94,7 +94,7 @@ func TestKeyRetrieve(t *testing.T) {
 		{
 			desc:  "retrieve an existing key",
 			id:    key.ID,
-			owner: key.IssuerID,
+			owner: key.SubjectID,
 			err:   nil,
 		},
 		{
@@ -106,7 +106,7 @@ func TestKeyRetrieve(t *testing.T) {
 		{
 			desc:  "retrieve non-existent key",
 			id:    "",
-			owner: key.IssuerID,
+			owner: key.SubjectID,
 			err:   errors.ErrNotFound,
 		},
 	}
@@ -129,7 +129,7 @@ func TestKeyRemove(t *testing.T) {
 		IssuedAt:  time.Now(),
 		ExpiresAt: expTime,
 		ID:        id,
-		IssuerID:  id,
+		SubjectID: id,
 	}
 	_, err = repo.Save(opentracing.ContextWithSpan(context.Background(), opentracing.StartSpan("")), key)
 	assert.Nil(t, err, fmt.Sprintf("Storing Key expected to succeed: %s", err))
@@ -142,13 +142,13 @@ func TestKeyRemove(t *testing.T) {
 		{
 			desc:  "remove an existing key",
 			id:    key.ID,
-			owner: key.IssuerID,
+			owner: key.SubjectID,
 			err:   nil,
 		},
 		{
 			desc:  "remove key that does not exist",
 			id:    key.ID,
-			owner: key.IssuerID,
+			owner: key.SubjectID,
 			err:   nil,
 		},
 	}

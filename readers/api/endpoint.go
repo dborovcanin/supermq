@@ -13,7 +13,7 @@ import (
 	"github.com/mainflux/mainflux/readers"
 )
 
-func listMessagesEndpoint(svc readers.MessageRepository, ac mainflux.AuthServiceClient) endpoint.Endpoint {
+func listMessagesEndpoint(svc readers.MessageRepository, ac mainflux.UsersAuthServiceClient) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listMessagesReq)
 

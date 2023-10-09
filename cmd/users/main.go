@@ -193,7 +193,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, auth mainflux.AuthServiceClient, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (users.Service, groups.Service, error) {
+func newService(ctx context.Context, auth mainflux.UsersAuthServiceClient, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (users.Service, groups.Service, error) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	cRepo := clientspg.NewRepository(database)
 	gRepo := gpostgres.New(database)

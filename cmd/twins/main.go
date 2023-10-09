@@ -119,7 +119,7 @@ func main() {
 	}()
 	tracer := tp.Tracer(svcName)
 
-	var auth mainflux.AuthServiceClient
+	var auth mainflux.UsersAuthServiceClient
 	switch cfg.StandaloneID != "" && cfg.StandaloneToken != "" {
 	case true:
 		auth = localusers.NewAuthService(cfg.StandaloneID, cfg.StandaloneToken)
@@ -171,7 +171,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, id string, ps messaging.PubSub, cfg config, users mainflux.AuthServiceClient, tracer trace.Tracer, db *mongo.Database, cacheclient *redis.Client, logger mflog.Logger) (twins.Service, error) {
+func newService(ctx context.Context, id string, ps messaging.PubSub, cfg config, users mainflux.UsersAuthServiceClient, tracer trace.Tracer, db *mongo.Database, cacheclient *redis.Client, logger mflog.Logger) (twins.Service, error) {
 	twinRepo := twmongodb.NewTwinRepository(db)
 	twinRepo = tracing.TwinRepositoryMiddleware(tracer, twinRepo)
 

@@ -17,10 +17,10 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-var _ mainflux.AuthServiceServer = (*grpcServer)(nil)
+var _ mainflux.UsersAuthServiceServer = (*grpcServer)(nil)
 
 type grpcServer struct {
-	mainflux.UnimplementedAuthServiceServer
+	mainflux.UnimplementedUsersAuthServiceServer
 	issue           kitgrpc.Handler
 	login           kitgrpc.Handler
 	refresh         kitgrpc.Handler
@@ -39,7 +39,7 @@ type grpcServer struct {
 }
 
 // NewServer returns new AuthServiceServer instance.
-func NewServer(svc auth.Service) mainflux.AuthServiceServer {
+func NewServer(svc auth.Service) mainflux.UsersAuthServiceServer {
 	return &grpcServer{
 		issue: kitgrpc.NewServer(
 			(issueEndpoint(svc)),

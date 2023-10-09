@@ -45,14 +45,14 @@ type Service interface {
 }
 
 type certsService struct {
-	auth      mainflux.AuthServiceClient
+	auth      mainflux.UsersAuthServiceClient
 	certsRepo Repository
 	sdk       mfsdk.SDK
 	pki       pki.Agent
 }
 
 // New returns new Certs service.
-func New(auth mainflux.AuthServiceClient, certs Repository, sdk mfsdk.SDK, pki pki.Agent) Service {
+func New(auth mainflux.UsersAuthServiceClient, certs Repository, sdk mfsdk.SDK, pki pki.Agent) Service {
 	return &certsService{
 		certsRepo: certs,
 		sdk:       sdk,

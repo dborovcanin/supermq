@@ -9,8 +9,8 @@ import (
 	"github.com/mainflux/mainflux"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/users/clients"
-	cmocks "github.com/mainflux/mainflux/users/clients/mocks"
+	"github.com/mainflux/mainflux/users"
+	cmocks "github.com/mainflux/mainflux/users/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +21,7 @@ func GenerateUUID(t *testing.T, idProvider mainflux.IDProvider) string {
 	return ulid
 }
 
-func GenerateValidToken(t *testing.T, clientID string, svc clients.Service, cRepo *cmocks.Repository, phasher clients.Hasher) string {
+func GenerateValidToken(t *testing.T, clientID string, svc users.Service, cRepo *cmocks.Repository, phasher users.Hasher) string {
 	client := mfclients.Client{
 		ID:   clientID,
 		Name: "validtoken",

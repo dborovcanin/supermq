@@ -8,15 +8,14 @@ import (
 	"fmt"
 	"testing"
 
+	gpostgres "github.com/mainflux/mainflux/internal/groups/postgres"
 	"github.com/mainflux/mainflux/internal/testsutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
 	mfgroups "github.com/mainflux/mainflux/pkg/groups"
-	gpostgres "github.com/mainflux/mainflux/pkg/groups/postgres"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	cpostgres "github.com/mainflux/mainflux/users/clients/postgres"
-	"github.com/mainflux/mainflux/users/policies"
 	ppostgres "github.com/mainflux/mainflux/users/policies/postgres"
+	cpostgres "github.com/mainflux/mainflux/users/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -112,7 +112,6 @@ type PolicyAgent interface {
 	DeletePolicies(ctx context.Context, pr []PolicyReq) error
 
 	// RetrieveObjects
-	// RetrieveObjects(ctx context.Context, pr PolicyReq, nextPageToken string, limit int32) ([]*acl.RelationTuple, string, error)
 	RetrieveObjects(ctx context.Context, pr PolicyReq, nextPageToken string, limit int32) ([]PolicyRes, string, error)
 
 	// RetrieveAllObjects
@@ -122,11 +121,9 @@ type PolicyAgent interface {
 	RetrieveAllObjectsCount(ctx context.Context, pr PolicyReq) (int, error)
 
 	// RetrieveSubjects
-	// RetrieveSubjects(ctx context.Context, pr PolicyReq, nextPageToken string, limit int32) ([]*acl.RelationTuple, string, error)
 	RetrieveSubjects(ctx context.Context, pr PolicyReq, nextPageToken string, limit int32) ([]PolicyRes, string, error)
 
 	// RetrieveAllSubjects
-	// RetrieveAllSubjects(ctx context.Context, pr PolicyReq) ([]*acl.RelationTuple, error)
 	RetrieveAllSubjects(ctx context.Context, pr PolicyReq) ([]PolicyRes, error)
 
 	// RetrieveAllSubjectsCount

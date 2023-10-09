@@ -11,14 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mainflux/mainflux"
+	authmocks "github.com/mainflux/mainflux/auth/mocks"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/pkg/transformers/senml"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/readers"
 	"github.com/mainflux/mainflux/readers/api"
 	"github.com/mainflux/mainflux/readers/mocks"
-	authmocks "github.com/mainflux/mainflux/users/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,8 +47,10 @@ var (
 	adminRelationKeys = []string{"c_update", "c_list", "c_delete", "c_share"}
 )
 
-func newServer(repo readers.MessageRepository, ac mainflux.AuthServiceClient) *httptest.Server {
-	mux := api.MakeHandler(repo, ac, svcName, instanceID)
+func newServer(repo readers.MessageRepository) *httptest.Server {
+	auth := new(authmocks.Service)
+
+	mux := api.MakeHandler(repo, auth, svcName, instanceID)
 	return httptest.NewServer(mux)
 }
 
@@ -129,13 +130,8 @@ func TestReadAll(t *testing.T) {
 		messages = append(messages, msg)
 	}
 
-	mockAuthzDB := map[string][]authmocks.SubjectSet{}
-	mockAuthzDB["token"] = append(mockAuthzDB[email], authmocks.SubjectSet{Subject: "token", Relation: adminRelationKeys})
-
-	usrSvc := authmocks.NewAuthService(map[string]string{userToken: email}, mockAuthzDB)
-
 	repo := mocks.NewMessageRepository(chanID, fromSenml(messages))
-	ts := newServer(repo, usrSvc)
+	ts := newServer(repo)
 	defer ts.Close()
 
 	cases := []struct {

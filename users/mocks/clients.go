@@ -136,6 +136,22 @@ func (m *Repository) UpdateOwner(ctx context.Context, client mfclients.Client) (
 	return ret.Get(0).(mfclients.Client), ret.Error(1)
 }
 
-func (*Repository) RetrieveBySecret(ctx context.Context, key string) (mfclients.Client, error) {
-	return mfclients.Client{}, nil
+func (m *Repository) RetrieveBySecret(ctx context.Context, key string) (mfclients.Client, error) {
+	ret := m.Called(ctx, key)
+
+	if key == "" {
+		return mfclients.Client{}, errors.ErrMalformedEntity
+	}
+
+	return ret.Get(0).(mfclients.Client), ret.Error(1)
+}
+
+func (m *Repository) IsOwner(ctx context.Context, clientID string, ownerID string) error {
+	ret := m.Called(ctx, clientID, ownerID)
+
+	if clientID == WrongID {
+		return errors.ErrNotFound
+	}
+
+	return ret.Error(0)
 }

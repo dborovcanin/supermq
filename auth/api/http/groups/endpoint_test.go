@@ -21,16 +21,16 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	contentType   = "application/json"
-	email         = "user@example.com"
-	secret        = "secret"
-	id            = "testID"
-	loginDuration = 30 * time.Minute
+	contentType     = "application/json"
+	email           = "user@example.com"
+	secret          = "secret"
+	id              = "testID"
+	loginDuration   = 30 * time.Minute
+	refreshDuration = 24 * time.Hour
 )
 
 type testRequest struct {
@@ -57,17 +57,19 @@ func (tr testRequest) make() (*http.Response, error) {
 }
 
 func newService() auth.Service {
-	keys := mocks.NewKeyRepository()
-	groups := mocks.NewGroupRepository()
+	krepo := new(mocks.Keys)
+	grepo := new(mocks.Repository)
+	prepo := new(mocks.PolicyAgent)
 	idProvider := uuid.NewMock()
-	t := jwt.New(secret)
-	policies := mocks.NewKetoMock(map[string][]mocks.MockSubjectSet{})
-	return auth.New(keys, groups, idProvider, t, policies, loginDuration)
+
+	t := jwt.New([]byte(secret))
+
+	return auth.New(krepo, grepo, idProvider, t, prepo, loginDuration, refreshDuration)
 }
 
 func newServer(svc auth.Service) *httptest.Server {
 	logger := logger.NewMock()
-	mux := httpapi.MakeHandler(svc, mocktracer.New(), logger)
+	mux := httpapi.MakeHandler(svc, logger)
 	return httptest.NewServer(mux)
 }
 
@@ -81,18 +83,18 @@ func TestShareGroupAccess(t *testing.T) {
 	ts := newServer(svc)
 	defer ts.Close()
 
-	_, secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), IssuerID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	key := auth.Key{
-		ID:       "id",
-		Type:     auth.APIKey,
-		IssuerID: id,
-		Subject:  email,
-		IssuedAt: time.Now(),
+		ID:        "id",
+		Type:      auth.APIKey,
+		SubjectID: id,
+		Subject:   email,
+		IssuedAt:  time.Now(),
 	}
 
-	_, apiToken, err := svc.Issue(context.Background(), secret, key)
+	apiToken, err := svc.Issue(context.Background(), token.Value, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
 
 	type shareGroupAccessReq struct {
@@ -100,8 +102,8 @@ func TestShareGroupAccess(t *testing.T) {
 		userGroupID  string
 		ThingGroupID string `json:"thing_group_id"`
 	}
-	data := shareGroupAccessReq{token: apiToken, userGroupID: "ug", ThingGroupID: "tg"}
-	invalidData := shareGroupAccessReq{token: apiToken, userGroupID: "ug", ThingGroupID: ""}
+	data := shareGroupAccessReq{token: apiToken.Value, userGroupID: "ug", ThingGroupID: "tg"}
+	invalidData := shareGroupAccessReq{token: apiToken.Value, userGroupID: "ug", ThingGroupID: ""}
 
 	cases := []struct {
 		desc        string
@@ -115,7 +117,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share a user group with thing group",
 			req:         toJSON(data),
 			contentType: contentType,
-			auth:        apiToken,
+			auth:        apiToken.Value,
 			userGroupID: "ug",
 			status:      http.StatusOK,
 		},
@@ -123,7 +125,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share a user group with invalid thing group",
 			req:         toJSON(invalidData),
 			contentType: contentType,
-			auth:        apiToken,
+			auth:        apiToken.Value,
 			userGroupID: "ug",
 			status:      http.StatusBadRequest,
 		},
@@ -131,7 +133,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share an invalid user group with thing group",
 			req:         toJSON(data),
 			contentType: contentType,
-			auth:        apiToken,
+			auth:        apiToken.Value,
 			userGroupID: "",
 			status:      http.StatusBadRequest,
 		},
@@ -139,7 +141,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share an invalid user group with invalid thing group",
 			req:         toJSON(invalidData),
 			contentType: contentType,
-			auth:        apiToken,
+			auth:        apiToken.Value,
 			userGroupID: "",
 			status:      http.StatusBadRequest,
 		},
@@ -147,7 +149,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share a user group with thing group with invalid content type",
 			req:         toJSON(data),
 			contentType: "",
-			auth:        apiToken,
+			auth:        apiToken.Value,
 			userGroupID: "ug",
 			status:      http.StatusUnsupportedMediaType,
 		},

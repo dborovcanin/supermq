@@ -21,18 +21,18 @@ import (
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	"github.com/opentracing/opentracing-go/mocktracer"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	secret        = "secret"
-	contentType   = "application/json"
-	id            = uuid.Prefix + "-000000000001"
-	email         = "user@example.com"
-	unauthzID     = uuid.Prefix + "-000000000002"
-	unauthzEmail  = "unauthz@example.com"
-	loginDuration = 30 * time.Minute
+	secret          = "secret"
+	contentType     = "application/json"
+	id              = uuid.Prefix + "-000000000001"
+	email           = "user@example.com"
+	unauthzID       = uuid.Prefix + "-000000000002"
+	unauthzEmail    = "unauthz@example.com"
+	loginDuration   = 30 * time.Minute
+	refreshDuration = 24 * time.Hour
 )
 
 type testRequest struct {
@@ -61,22 +61,19 @@ func (tr testRequest) make() (*http.Response, error) {
 }
 
 func newService() auth.Service {
-	repo := mocks.NewKeyRepository()
-	groupRepo := mocks.NewGroupRepository()
+	krepo := new(mocks.Keys)
+	grepo := new(mocks.Repository)
+	prepo := new(mocks.PolicyAgent)
 	idProvider := uuid.NewMock()
-	t := jwt.New(secret)
 
-	mockAuthzDB := map[string][]mocks.MockSubjectSet{}
-	mockAuthzDB[id] = append(mockAuthzDB[id], mocks.MockSubjectSet{Object: "authorities", Relation: "member"})
-	mockAuthzDB[unauthzID] = append(mockAuthzDB[unauthzID], mocks.MockSubjectSet{Object: "users", Relation: "member"})
-	ketoMock := mocks.NewKetoMock(mockAuthzDB)
+	t := jwt.New([]byte(secret))
 
-	return auth.New(repo, groupRepo, idProvider, t, ketoMock, loginDuration)
+	return auth.New(krepo, grepo, idProvider, t, prepo, loginDuration, refreshDuration)
 }
 
 func newServer(svc auth.Service) *httptest.Server {
 	logger := logger.NewMock()
-	mux := httpapi.MakeHandler(svc, mocktracer.New(), logger)
+	mux := httpapi.MakeHandler(svc, logger)
 	return httptest.NewServer(mux)
 }
 
@@ -93,10 +90,10 @@ type addPolicyRequest struct {
 
 func TestAddPolicies(t *testing.T) {
 	svc := newService()
-	_, loginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), IssuerID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
 	assert.Nil(t, err, fmt.Sprintf("Issuing user key expected to succeed: %s", err))
 
-	_, userLoginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), IssuerID: unauthzID, Subject: unauthzEmail})
+	userLoginToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: unauthzID, Subject: unauthzEmail})
 	assert.Nil(t, err, fmt.Sprintf("Issuing unauthorized user's key expected to succeed: %s", err))
 
 	ts := newServer(svc)
@@ -118,21 +115,21 @@ func TestAddPolicies(t *testing.T) {
 	}{
 		{
 			desc:   "Add policies with authorized access",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusCreated,
 			req:    toJSON(valid),
 		},
 		{
 			desc:   "Add multiple policies to multiple user",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusCreated,
 			req:    toJSON(multipleValid),
 		},
 		{
 			desc:   "Add policies with unauthorized access",
-			token:  userLoginSecret,
+			token:  userLoginToken.Value,
 			ct:     contentType,
 			status: http.StatusForbidden,
 			req:    toJSON(valid),
@@ -153,42 +150,42 @@ func TestAddPolicies(t *testing.T) {
 		},
 		{
 			desc:   "Add policies with invalid content type",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     "text/html",
 			status: http.StatusUnsupportedMediaType,
 			req:    toJSON(valid),
 		},
 		{
 			desc:   "Add policies with empty content type",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     "",
 			status: http.StatusUnsupportedMediaType,
 			req:    toJSON(valid),
 		},
 		{
 			desc:   "Add policies with invalid object field in request body",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidObject),
 		},
 		{
 			desc:   "Add policies with invalid policies field in request body",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidPolicies),
 		},
 		{
 			desc:   "Add policies with invalid subjects field in request body",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidSubjects),
 		},
 		{
 			desc:   "Add policies with empty request body",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    "",
@@ -213,10 +210,10 @@ func TestAddPolicies(t *testing.T) {
 
 func TestDeletePolicies(t *testing.T) {
 	svc := newService()
-	_, loginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), IssuerID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
 	assert.Nil(t, err, fmt.Sprintf("Issuing user key expected to succeed: %s", err))
 
-	_, userLoginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), IssuerID: unauthzID, Subject: unauthzEmail})
+	userLoginToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: unauthzID, Subject: unauthzEmail})
 	assert.Nil(t, err, fmt.Sprintf("Issuing unauthorized user's key expected to succeed: %s", err))
 
 	ts := newServer(svc)
@@ -224,7 +221,7 @@ func TestDeletePolicies(t *testing.T) {
 	client := ts.Client()
 
 	policies := addPolicyRequest{Object: "obj", Policies: []string{"read", "write", "delete"}, SubjectIDs: []string{"user1", "user2", "user3"}}
-	err = svc.AddPolicies(context.Background(), loginSecret, policies.Object, policies.SubjectIDs, policies.Policies)
+	err = svc.AddPolicies(context.Background(), token.Value, policies.Object, policies.SubjectIDs, policies.Policies)
 	assert.Nil(t, err, fmt.Sprintf("Adding policies expected to succeed: %s", err))
 
 	validSingleDeleteReq := addPolicyRequest{Object: "obj", Policies: []string{"read"}, SubjectIDs: []string{"user1"}}
@@ -242,7 +239,7 @@ func TestDeletePolicies(t *testing.T) {
 	}{
 		{
 			desc:   "Delete policies with unauthorized access",
-			token:  userLoginSecret,
+			token:  userLoginToken.Value,
 			ct:     contentType,
 			status: http.StatusForbidden,
 			req:    toJSON(validMultipleDeleteReq),
@@ -263,56 +260,56 @@ func TestDeletePolicies(t *testing.T) {
 		},
 		{
 			desc:   "Delete policies with authorized access",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusNoContent,
 			req:    toJSON(validSingleDeleteReq),
 		},
 		{
 			desc:   "Delete multiple policies to multiple user",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusNoContent,
 			req:    toJSON(validMultipleDeleteReq),
 		},
 		{
 			desc:   "Delete policies with invalid content type",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     "text/html",
 			status: http.StatusUnsupportedMediaType,
 			req:    toJSON(validMultipleDeleteReq),
 		},
 		{
 			desc:   "Delete policies with empty content type",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     "",
 			status: http.StatusUnsupportedMediaType,
 			req:    toJSON(validMultipleDeleteReq),
 		},
 		{
 			desc:   "Delete policies with invalid object field in request body",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidObject),
 		},
 		{
 			desc:   "Delete policies with invalid policies field in request body",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidPolicies),
 		},
 		{
 			desc:   "Delete policies with invalid subjects field in request body",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidSubjects),
 		},
 		{
 			desc:   "Delete policies with empty request body",
-			token:  loginSecret,
+			token:  token.Value,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    "",

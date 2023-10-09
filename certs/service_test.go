@@ -90,7 +90,7 @@ func newThingsService(auth mainflux.AuthServiceClient) things.Service {
 		}
 	}
 
-	return bsmocks.NewThingsService(ths, auth)
+	return things.NewService(ths, auth)
 }
 
 func TestIssueCert(t *testing.T) {

@@ -23,14 +23,14 @@ func key() auth.Key {
 		ID:        "id",
 		Type:      auth.AccessKey,
 		Subject:   "user@email.com",
-		IssuerID:  "",
+		SubjectID: "",
 		IssuedAt:  time.Now().UTC().Add(-10 * time.Second).Round(time.Second),
 		ExpiresAt: exp,
 	}
 }
 
 func TestIssue(t *testing.T) {
-	tokenizer := jwt.New(secret)
+	tokenizer := jwt.New([]byte(secret))
 
 	cases := []struct {
 		desc string
@@ -51,7 +51,7 @@ func TestIssue(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	tokenizer := jwt.New(secret)
+	tokenizer := jwt.New([]byte(secret))
 
 	token, err := tokenizer.Issue(key())
 	require.Nil(t, err, fmt.Sprintf("issuing key expected to succeed: %s", err))

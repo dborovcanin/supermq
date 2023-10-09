@@ -20,6 +20,8 @@ var (
 	_ mainflux.Response = (*memberPageRes)(nil)
 	_ mainflux.Response = (*assignUsersGroupsRes)(nil)
 	_ mainflux.Response = (*unassignUsersGroupsRes)(nil)
+	_ mainflux.Response = (*connectChannelThingRes)(nil)
+	_ mainflux.Response = (*disconnectChannelThingRes)(nil)
 )
 
 type pageRes struct {
@@ -180,5 +182,35 @@ func (res unassignUsersGroupsRes) Headers() map[string]string {
 }
 
 func (res unassignUsersGroupsRes) Empty() bool {
+	return true
+}
+
+type connectChannelThingRes struct {
+}
+
+func (res connectChannelThingRes) Code() int {
+	return http.StatusOK
+}
+
+func (res connectChannelThingRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res connectChannelThingRes) Empty() bool {
+	return true
+}
+
+type disconnectChannelThingRes struct {
+}
+
+func (res disconnectChannelThingRes) Code() int {
+	return http.StatusNoContent
+}
+
+func (res disconnectChannelThingRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res disconnectChannelThingRes) Empty() bool {
 	return true
 }

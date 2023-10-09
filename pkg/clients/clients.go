@@ -77,6 +77,9 @@ type Repository interface {
 	// RetrieveAll retrieves all clients.
 	RetrieveAll(ctx context.Context, pm Page) (ClientsPage, error)
 
+	// RetrieveAllByIDs retrieves for given client IDs .
+	RetrieveAllByIDs(ctx context.Context, pm Page) (ClientsPage, error)
+
 	// Update updates the client name and metadata.
 	Update(ctx context.Context, client Client) (Client, error)
 

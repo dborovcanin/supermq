@@ -185,6 +185,61 @@ func (repo ClientRepository) RetrieveAll(ctx context.Context, pm clients.Page) (
 	return page, nil
 }
 
+func (repo ClientRepository) RetrieveAllByIDs(ctx context.Context, pm clients.Page) (clients.ClientsPage, error) {
+	if len(pm.IDs) <= 0 {
+		return clients.ClientsPage{}, errors.ErrNotFound
+	}
+	query, err := pageQuery(pm)
+	if err != nil {
+		return clients.ClientsPage{}, errors.Wrap(errors.ErrViewEntity, err)
+	}
+
+	q := fmt.Sprintf(`SELECT c.id, c.name, c.tags, c.identity, c.metadata, COALESCE(c.owner_id, '') AS owner_id, c.status,
+					c.created_at, c.updated_at, COALESCE(c.updated_by, '') AS updated_by FROM clients c %s ORDER BY c.created_at LIMIT :limit OFFSET :offset;`, query)
+
+	dbPage, err := toDBClientsPage(pm)
+	if err != nil {
+		return clients.ClientsPage{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)
+	}
+	rows, err := repo.DB.NamedQueryContext(ctx, q, dbPage)
+	if err != nil {
+		return clients.ClientsPage{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)
+	}
+	defer rows.Close()
+
+	var items []clients.Client
+	for rows.Next() {
+		dbc := DBClient{}
+		if err := rows.StructScan(&dbc); err != nil {
+			return clients.ClientsPage{}, errors.Wrap(errors.ErrViewEntity, err)
+		}
+
+		c, err := ToClient(dbc)
+		if err != nil {
+			return clients.ClientsPage{}, err
+		}
+
+		items = append(items, c)
+	}
+	cq := fmt.Sprintf(`SELECT COUNT(*) FROM clients c %s;`, query)
+
+	total, err := postgres.Total(ctx, repo.DB, cq, dbPage)
+	if err != nil {
+		return clients.ClientsPage{}, errors.Wrap(errors.ErrViewEntity, err)
+	}
+
+	page := clients.ClientsPage{
+		Clients: items,
+		Page: clients.Page{
+			Total:  total,
+			Offset: pm.Offset,
+			Limit:  pm.Limit,
+		},
+	}
+
+	return page, nil
+}
+
 // generic update function.
 func (repo ClientRepository) update(ctx context.Context, client clients.Client, query string) (clients.Client, error) {
 	dbc, err := ToDBClient(client)

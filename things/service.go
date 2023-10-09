@@ -100,41 +100,6 @@ func (svc service) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (s
 	return thingID, nil
 }
 
-func (svc service) Connect(ctx context.Context, token, thingID, channelID, permission string) error {
-	_, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, thingID)
-	if err != nil {
-		return errors.Wrap(errors.ErrAuthorization, err)
-	}
-	req := &mainflux.AddPolicyReq{
-		SubjectType: channelType,
-		Subject:     channelID,
-		Relation:    groupRelation,
-		ObjectType:  thingType,
-		Object:      thingID,
-	}
-
-	_, err = svc.auth.AddPolicy(ctx, req)
-	return err
-}
-
-func (svc service) Disconnect(ctx context.Context, token, thingID, channelID, permission string) error {
-	_, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, thingID)
-	if err != nil {
-		return errors.Wrap(errors.ErrAuthorization, err)
-	}
-	req := &mainflux.DeletePolicyReq{
-		SubjectType: channelType,
-		Subject:     channelID,
-		Relation:    groupRelation,
-		ObjectType:  thingType,
-		Object:      thingID,
-	}
-
-	_, err = svc.auth.DeletePolicy(ctx, req)
-	return err
-
-}
-
 func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclients.Client) ([]mfclients.Client, error) {
 	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
 	if err != nil {

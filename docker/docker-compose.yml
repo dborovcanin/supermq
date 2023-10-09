@@ -402,8 +402,6 @@ services:
       MF_SEND_TELEMETRY: ${MF_SEND_TELEMETRY}
     networks:
       - mainflux-base-net
-    ports:
-     - 1883:1883
     volumes:
       # Things gRPC mTLS client certificates
       - type: bind

@@ -7,6 +7,7 @@ import (
 	"github.com/mainflux/mainflux/internal/api"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"golang.org/x/exp/slices"
 )
 
@@ -271,5 +272,33 @@ func (req unassignUsersGroupsRequest) validate() error {
 		return apiutil.ErrEmptyList
 	}
 
+	return nil
+}
+
+type connectChannelThingRequest struct {
+	token      string
+	ThingID    string `json:"thing_id,omitempty"`
+	ChannelID  string `json:"channel_id,omitempty"`
+	Permission string `json:"permission,omitempty"`
+}
+
+func (req *connectChannelThingRequest) validate() error {
+	if req.ThingID == "" || req.ChannelID == "" {
+		return errors.ErrCreateEntity
+	}
+	return nil
+}
+
+type disconnectChannelThingRequest struct {
+	token      string
+	ThingID    string `json:"thing_id,omitempty"`
+	ChannelID  string `json:"channel_id,omitempty"`
+	Permission string `json:"permission,omitempty"`
+}
+
+func (req *disconnectChannelThingRequest) validate() error {
+	if req.ThingID == "" || req.ChannelID == "" {
+		return errors.ErrCreateEntity
+	}
 	return nil
 }

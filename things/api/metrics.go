@@ -118,21 +118,6 @@ func (ms *metricsMiddleware) Identify(ctx context.Context, key string) (string, 
 	return ms.svc.Identify(ctx, key)
 }
 
-func (ms *metricsMiddleware) Connect(ctx context.Context, token, thingID, channelID, permission string) error {
-	defer func(begin time.Time) {
-		ms.counter.With("method", "connect").Add(1)
-		ms.latency.With("method", "connect").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return ms.svc.Connect(ctx, token, thingID, channelID, permission)
-}
-func (ms *metricsMiddleware) Disconnect(ctx context.Context, token, thingID, channelID, permission string) error {
-	defer func(begin time.Time) {
-		ms.counter.With("method", "disconnect").Add(1)
-		ms.latency.With("method", "disconnect").Observe(time.Since(begin).Seconds())
-	}(time.Now())
-	return ms.svc.Disconnect(ctx, token, thingID, channelID, permission)
-}
-
 func (ms *metricsMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (id string, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "authorize").Add(1)

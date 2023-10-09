@@ -180,8 +180,7 @@ func (svc service) ViewProfile(ctx context.Context, token string) (mfclients.Cli
 }
 
 func (svc service) ListClients(ctx context.Context, token string, pm mfclients.Page) (mfclients.ClientsPage, error) {
-	// id, err := svc.Identify(ctx, token)
-	_, err := svc.Identify(ctx, token)
+	id, err := svc.Identify(ctx, token)
 	if err != nil {
 		return mfclients.ClientsPage{}, err
 	}
@@ -224,6 +223,7 @@ func (svc service) ListClients(ctx context.Context, token string, pm mfclients.P
 	// 	}
 	// 	pm.Action = listRelationKey
 	// }
+	pm.Owner = id
 
 	clients, err := svc.clients.RetrieveAll(ctx, pm)
 	if err != nil {
@@ -432,9 +432,14 @@ func (svc service) DisableClient(ctx context.Context, token, id string) (mfclien
 }
 
 func (svc service) changeClientStatus(ctx context.Context, token string, client mfclients.Client) (mfclients.Client, error) {
-	id, err := svc.authorize(ctx, userType, tokenKind, token, deletePermission, userType, client.ID)
+	tokenUserID, err := svc.Identify(ctx, token)
 	if err != nil {
 		return mfclients.Client{}, err
+	}
+	if tokenUserID != client.ID {
+		if err := svc.isOwner(ctx, client.ID, tokenUserID); err != nil {
+			return mfclients.Client{}, err
+		}
 	}
 	dbClient, err := svc.clients.RetrieveByID(ctx, client.ID)
 	if err != nil {
@@ -443,7 +448,7 @@ func (svc service) changeClientStatus(ctx context.Context, token string, client 
 	if dbClient.Status == client.Status {
 		return mfclients.Client{}, mfclients.ErrStatusAlreadyAssigned
 	}
-	client.UpdatedBy = id
+	client.UpdatedBy = tokenUserID
 	return svc.clients.ChangeStatus(ctx, client)
 }
 

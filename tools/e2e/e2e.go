@@ -393,13 +393,10 @@ func update(s sdk.SDK, token string, users []sdk.User, groups []sdk.Group, thing
 			return fmt.Errorf("failed to update thing metadata before %s after %s", thing.Metadata["Update"], rThing.Metadata["Update"])
 		}
 		thing = rThing
-		// rThing, err = s.UpdateThingSecret(thing.ID, thing.Credentials.Secret, token)
-		// if err != nil {
-		// 	return fmt.Errorf("failed to update thing secret %w", err)
-		// }
-		// if rThing.Credentials.Secret != thing.Credentials.Secret {
-		// 	return fmt.Errorf("failed to update thing secret before %s after %s", thing.Credentials.Secret, rThing.Credentials.Secret)
-		// }
+		rThing, err = s.UpdateThingSecret(thing.ID, thing.Credentials.Secret, token)
+		if err != nil {
+			return fmt.Errorf("failed to update thing secret %w", err)
+		}
 		thing = rThing
 		thing.Tags = []string{namesgenerator.Generate()}
 		rThing, err = s.UpdateThingTags(thing, token)

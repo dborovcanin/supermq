@@ -292,7 +292,7 @@ func (svc service) UpdateClientTags(ctx context.Context, token string, cli mfcli
 }
 
 func (svc service) UpdateClientSecret(ctx context.Context, token, id, key string) (mfclients.Client, error) {
-	userID, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, userType, id)
+	userID, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, id)
 	if err != nil {
 		return mfclients.Client{}, err
 	}

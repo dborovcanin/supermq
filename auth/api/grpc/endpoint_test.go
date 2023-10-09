@@ -57,7 +57,7 @@ func newService() auth.Service {
 func startGRPCServer(svc auth.Service, port int) {
 	listener, _ := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	server := grpc.NewServer()
-	mainflux.RegisterAuthServiceServer(server, grpcapi.NewServer(svc))
+	mainflux.RegisterUsersAuthServiceServer(server, grpcapi.NewServer(svc))
 	go func() {
 		if err := server.Serve(listener); err != nil {
 			panic(fmt.Sprintf("failed to serve: %s", err))

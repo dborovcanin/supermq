@@ -23,93 +23,93 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	AuthzService_Authorize_FullMethodName = "/mainflux.AuthzService/Authorize"
+	ThingsAuthService_Authorize_FullMethodName = "/mainflux.ThingsAuthService/Authorize"
 )
 
-// AuthzServiceClient is the client API for AuthzService service.
+// ThingsAuthServiceClient is the client API for ThingsAuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type AuthzServiceClient interface {
+type ThingsAuthServiceClient interface {
 	// Authorize checks if the subject is authorized to perform
 	// the action on the object.
 	Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error)
 }
 
-type authzServiceClient struct {
+type thingsAuthServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewAuthzServiceClient(cc grpc.ClientConnInterface) AuthzServiceClient {
-	return &authzServiceClient{cc}
+func NewThingsAuthServiceClient(cc grpc.ClientConnInterface) ThingsAuthServiceClient {
+	return &thingsAuthServiceClient{cc}
 }
 
-func (c *authzServiceClient) Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error) {
+func (c *thingsAuthServiceClient) Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error) {
 	out := new(AuthorizeRes)
-	err := c.cc.Invoke(ctx, AuthzService_Authorize_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, ThingsAuthService_Authorize_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// AuthzServiceServer is the server API for AuthzService service.
-// All implementations must embed UnimplementedAuthzServiceServer
+// ThingsAuthServiceServer is the server API for ThingsAuthService service.
+// All implementations must embed UnimplementedThingsAuthServiceServer
 // for forward compatibility
-type AuthzServiceServer interface {
+type ThingsAuthServiceServer interface {
 	// Authorize checks if the subject is authorized to perform
 	// the action on the object.
 	Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error)
-	mustEmbedUnimplementedAuthzServiceServer()
+	mustEmbedUnimplementedThingsAuthServiceServer()
 }
 
-// UnimplementedAuthzServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedAuthzServiceServer struct {
+// UnimplementedThingsAuthServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedThingsAuthServiceServer struct {
 }
 
-func (UnimplementedAuthzServiceServer) Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error) {
+func (UnimplementedThingsAuthServiceServer) Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authorize not implemented")
 }
-func (UnimplementedAuthzServiceServer) mustEmbedUnimplementedAuthzServiceServer() {}
+func (UnimplementedThingsAuthServiceServer) mustEmbedUnimplementedThingsAuthServiceServer() {}
 
-// UnsafeAuthzServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to AuthzServiceServer will
+// UnsafeThingsAuthServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ThingsAuthServiceServer will
 // result in compilation errors.
-type UnsafeAuthzServiceServer interface {
-	mustEmbedUnimplementedAuthzServiceServer()
+type UnsafeThingsAuthServiceServer interface {
+	mustEmbedUnimplementedThingsAuthServiceServer()
 }
 
-func RegisterAuthzServiceServer(s grpc.ServiceRegistrar, srv AuthzServiceServer) {
-	s.RegisterService(&AuthzService_ServiceDesc, srv)
+func RegisterThingsAuthServiceServer(s grpc.ServiceRegistrar, srv ThingsAuthServiceServer) {
+	s.RegisterService(&ThingsAuthService_ServiceDesc, srv)
 }
 
-func _AuthzService_Authorize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ThingsAuthService_Authorize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AuthorizeReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthzServiceServer).Authorize(ctx, in)
+		return srv.(ThingsAuthServiceServer).Authorize(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthzService_Authorize_FullMethodName,
+		FullMethod: ThingsAuthService_Authorize_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthzServiceServer).Authorize(ctx, req.(*AuthorizeReq))
+		return srv.(ThingsAuthServiceServer).Authorize(ctx, req.(*AuthorizeReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// AuthzService_ServiceDesc is the grpc.ServiceDesc for AuthzService service.
+// ThingsAuthService_ServiceDesc is the grpc.ServiceDesc for ThingsAuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var AuthzService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "mainflux.AuthzService",
-	HandlerType: (*AuthzServiceServer)(nil),
+var ThingsAuthService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "mainflux.ThingsAuthService",
+	HandlerType: (*ThingsAuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Authorize",
-			Handler:    _AuthzService_Authorize_Handler,
+			Handler:    _ThingsAuthService_Authorize_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -117,27 +117,27 @@ var AuthzService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	AuthService_Issue_FullMethodName           = "/mainflux.AuthService/Issue"
-	AuthService_Login_FullMethodName           = "/mainflux.AuthService/Login"
-	AuthService_Refresh_FullMethodName         = "/mainflux.AuthService/Refresh"
-	AuthService_Identify_FullMethodName        = "/mainflux.AuthService/Identify"
-	AuthService_Authorize_FullMethodName       = "/mainflux.AuthService/Authorize"
-	AuthService_AddPolicy_FullMethodName       = "/mainflux.AuthService/AddPolicy"
-	AuthService_DeletePolicy_FullMethodName    = "/mainflux.AuthService/DeletePolicy"
-	AuthService_ListObjects_FullMethodName     = "/mainflux.AuthService/ListObjects"
-	AuthService_ListAllObjects_FullMethodName  = "/mainflux.AuthService/ListAllObjects"
-	AuthService_CountObjects_FullMethodName    = "/mainflux.AuthService/CountObjects"
-	AuthService_ListSubjects_FullMethodName    = "/mainflux.AuthService/ListSubjects"
-	AuthService_ListAllSubjects_FullMethodName = "/mainflux.AuthService/ListAllSubjects"
-	AuthService_CountSubjects_FullMethodName   = "/mainflux.AuthService/CountSubjects"
-	AuthService_Assign_FullMethodName          = "/mainflux.AuthService/Assign"
-	AuthService_Members_FullMethodName         = "/mainflux.AuthService/Members"
+	UsersAuthService_Issue_FullMethodName           = "/mainflux.UsersAuthService/Issue"
+	UsersAuthService_Login_FullMethodName           = "/mainflux.UsersAuthService/Login"
+	UsersAuthService_Refresh_FullMethodName         = "/mainflux.UsersAuthService/Refresh"
+	UsersAuthService_Identify_FullMethodName        = "/mainflux.UsersAuthService/Identify"
+	UsersAuthService_Authorize_FullMethodName       = "/mainflux.UsersAuthService/Authorize"
+	UsersAuthService_AddPolicy_FullMethodName       = "/mainflux.UsersAuthService/AddPolicy"
+	UsersAuthService_DeletePolicy_FullMethodName    = "/mainflux.UsersAuthService/DeletePolicy"
+	UsersAuthService_ListObjects_FullMethodName     = "/mainflux.UsersAuthService/ListObjects"
+	UsersAuthService_ListAllObjects_FullMethodName  = "/mainflux.UsersAuthService/ListAllObjects"
+	UsersAuthService_CountObjects_FullMethodName    = "/mainflux.UsersAuthService/CountObjects"
+	UsersAuthService_ListSubjects_FullMethodName    = "/mainflux.UsersAuthService/ListSubjects"
+	UsersAuthService_ListAllSubjects_FullMethodName = "/mainflux.UsersAuthService/ListAllSubjects"
+	UsersAuthService_CountSubjects_FullMethodName   = "/mainflux.UsersAuthService/CountSubjects"
+	UsersAuthService_Assign_FullMethodName          = "/mainflux.UsersAuthService/Assign"
+	UsersAuthService_Members_FullMethodName         = "/mainflux.UsersAuthService/Members"
 )
 
-// AuthServiceClient is the client API for AuthService service.
+// UsersAuthServiceClient is the client API for UsersAuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type AuthServiceClient interface {
+type UsersAuthServiceClient interface {
 	Issue(ctx context.Context, in *IssueReq, opts ...grpc.CallOption) (*Token, error)
 	Login(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*Token, error)
 	Refresh(ctx context.Context, in *RefreshReq, opts ...grpc.CallOption) (*Token, error)
@@ -155,153 +155,153 @@ type AuthServiceClient interface {
 	Members(ctx context.Context, in *MembersReq, opts ...grpc.CallOption) (*MembersRes, error)
 }
 
-type authServiceClient struct {
+type usersAuthServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
-	return &authServiceClient{cc}
+func NewUsersAuthServiceClient(cc grpc.ClientConnInterface) UsersAuthServiceClient {
+	return &usersAuthServiceClient{cc}
 }
 
-func (c *authServiceClient) Issue(ctx context.Context, in *IssueReq, opts ...grpc.CallOption) (*Token, error) {
+func (c *usersAuthServiceClient) Issue(ctx context.Context, in *IssueReq, opts ...grpc.CallOption) (*Token, error) {
 	out := new(Token)
-	err := c.cc.Invoke(ctx, AuthService_Issue_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_Issue_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) Login(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*Token, error) {
+func (c *usersAuthServiceClient) Login(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*Token, error) {
 	out := new(Token)
-	err := c.cc.Invoke(ctx, AuthService_Login_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_Login_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) Refresh(ctx context.Context, in *RefreshReq, opts ...grpc.CallOption) (*Token, error) {
+func (c *usersAuthServiceClient) Refresh(ctx context.Context, in *RefreshReq, opts ...grpc.CallOption) (*Token, error) {
 	out := new(Token)
-	err := c.cc.Invoke(ctx, AuthService_Refresh_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_Refresh_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) Identify(ctx context.Context, in *Token, opts ...grpc.CallOption) (*UserIdentity, error) {
+func (c *usersAuthServiceClient) Identify(ctx context.Context, in *Token, opts ...grpc.CallOption) (*UserIdentity, error) {
 	out := new(UserIdentity)
-	err := c.cc.Invoke(ctx, AuthService_Identify_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_Identify_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error) {
+func (c *usersAuthServiceClient) Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error) {
 	out := new(AuthorizeRes)
-	err := c.cc.Invoke(ctx, AuthService_Authorize_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_Authorize_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) AddPolicy(ctx context.Context, in *AddPolicyReq, opts ...grpc.CallOption) (*AddPolicyRes, error) {
+func (c *usersAuthServiceClient) AddPolicy(ctx context.Context, in *AddPolicyReq, opts ...grpc.CallOption) (*AddPolicyRes, error) {
 	out := new(AddPolicyRes)
-	err := c.cc.Invoke(ctx, AuthService_AddPolicy_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_AddPolicy_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) DeletePolicy(ctx context.Context, in *DeletePolicyReq, opts ...grpc.CallOption) (*DeletePolicyRes, error) {
+func (c *usersAuthServiceClient) DeletePolicy(ctx context.Context, in *DeletePolicyReq, opts ...grpc.CallOption) (*DeletePolicyRes, error) {
 	out := new(DeletePolicyRes)
-	err := c.cc.Invoke(ctx, AuthService_DeletePolicy_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_DeletePolicy_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) ListObjects(ctx context.Context, in *ListObjectsReq, opts ...grpc.CallOption) (*ListObjectsRes, error) {
+func (c *usersAuthServiceClient) ListObjects(ctx context.Context, in *ListObjectsReq, opts ...grpc.CallOption) (*ListObjectsRes, error) {
 	out := new(ListObjectsRes)
-	err := c.cc.Invoke(ctx, AuthService_ListObjects_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_ListObjects_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) ListAllObjects(ctx context.Context, in *ListObjectsReq, opts ...grpc.CallOption) (*ListObjectsRes, error) {
+func (c *usersAuthServiceClient) ListAllObjects(ctx context.Context, in *ListObjectsReq, opts ...grpc.CallOption) (*ListObjectsRes, error) {
 	out := new(ListObjectsRes)
-	err := c.cc.Invoke(ctx, AuthService_ListAllObjects_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_ListAllObjects_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) CountObjects(ctx context.Context, in *CountObjectsReq, opts ...grpc.CallOption) (*CountObjectsRes, error) {
+func (c *usersAuthServiceClient) CountObjects(ctx context.Context, in *CountObjectsReq, opts ...grpc.CallOption) (*CountObjectsRes, error) {
 	out := new(CountObjectsRes)
-	err := c.cc.Invoke(ctx, AuthService_CountObjects_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_CountObjects_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) ListSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error) {
+func (c *usersAuthServiceClient) ListSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error) {
 	out := new(ListSubjectsRes)
-	err := c.cc.Invoke(ctx, AuthService_ListSubjects_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_ListSubjects_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) ListAllSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error) {
+func (c *usersAuthServiceClient) ListAllSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error) {
 	out := new(ListSubjectsRes)
-	err := c.cc.Invoke(ctx, AuthService_ListAllSubjects_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_ListAllSubjects_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) CountSubjects(ctx context.Context, in *CountSubjectsReq, opts ...grpc.CallOption) (*CountSubjectsRes, error) {
+func (c *usersAuthServiceClient) CountSubjects(ctx context.Context, in *CountSubjectsReq, opts ...grpc.CallOption) (*CountSubjectsRes, error) {
 	out := new(CountSubjectsRes)
-	err := c.cc.Invoke(ctx, AuthService_CountSubjects_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_CountSubjects_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) Assign(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *usersAuthServiceClient) Assign(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, AuthService_Assign_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_Assign_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *authServiceClient) Members(ctx context.Context, in *MembersReq, opts ...grpc.CallOption) (*MembersRes, error) {
+func (c *usersAuthServiceClient) Members(ctx context.Context, in *MembersReq, opts ...grpc.CallOption) (*MembersRes, error) {
 	out := new(MembersRes)
-	err := c.cc.Invoke(ctx, AuthService_Members_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, UsersAuthService_Members_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// AuthServiceServer is the server API for AuthService service.
-// All implementations must embed UnimplementedAuthServiceServer
+// UsersAuthServiceServer is the server API for UsersAuthService service.
+// All implementations must embed UnimplementedUsersAuthServiceServer
 // for forward compatibility
-type AuthServiceServer interface {
+type UsersAuthServiceServer interface {
 	Issue(context.Context, *IssueReq) (*Token, error)
 	Login(context.Context, *LoginReq) (*Token, error)
 	Refresh(context.Context, *RefreshReq) (*Token, error)
@@ -317,407 +317,407 @@ type AuthServiceServer interface {
 	CountSubjects(context.Context, *CountSubjectsReq) (*CountSubjectsRes, error)
 	Assign(context.Context, *Assignment) (*emptypb.Empty, error)
 	Members(context.Context, *MembersReq) (*MembersRes, error)
-	mustEmbedUnimplementedAuthServiceServer()
+	mustEmbedUnimplementedUsersAuthServiceServer()
 }
 
-// UnimplementedAuthServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedAuthServiceServer struct {
+// UnimplementedUsersAuthServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedUsersAuthServiceServer struct {
 }
 
-func (UnimplementedAuthServiceServer) Issue(context.Context, *IssueReq) (*Token, error) {
+func (UnimplementedUsersAuthServiceServer) Issue(context.Context, *IssueReq) (*Token, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Issue not implemented")
 }
-func (UnimplementedAuthServiceServer) Login(context.Context, *LoginReq) (*Token, error) {
+func (UnimplementedUsersAuthServiceServer) Login(context.Context, *LoginReq) (*Token, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedAuthServiceServer) Refresh(context.Context, *RefreshReq) (*Token, error) {
+func (UnimplementedUsersAuthServiceServer) Refresh(context.Context, *RefreshReq) (*Token, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Refresh not implemented")
 }
-func (UnimplementedAuthServiceServer) Identify(context.Context, *Token) (*UserIdentity, error) {
+func (UnimplementedUsersAuthServiceServer) Identify(context.Context, *Token) (*UserIdentity, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Identify not implemented")
 }
-func (UnimplementedAuthServiceServer) Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error) {
+func (UnimplementedUsersAuthServiceServer) Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authorize not implemented")
 }
-func (UnimplementedAuthServiceServer) AddPolicy(context.Context, *AddPolicyReq) (*AddPolicyRes, error) {
+func (UnimplementedUsersAuthServiceServer) AddPolicy(context.Context, *AddPolicyReq) (*AddPolicyRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddPolicy not implemented")
 }
-func (UnimplementedAuthServiceServer) DeletePolicy(context.Context, *DeletePolicyReq) (*DeletePolicyRes, error) {
+func (UnimplementedUsersAuthServiceServer) DeletePolicy(context.Context, *DeletePolicyReq) (*DeletePolicyRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePolicy not implemented")
 }
-func (UnimplementedAuthServiceServer) ListObjects(context.Context, *ListObjectsReq) (*ListObjectsRes, error) {
+func (UnimplementedUsersAuthServiceServer) ListObjects(context.Context, *ListObjectsReq) (*ListObjectsRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListObjects not implemented")
 }
-func (UnimplementedAuthServiceServer) ListAllObjects(context.Context, *ListObjectsReq) (*ListObjectsRes, error) {
+func (UnimplementedUsersAuthServiceServer) ListAllObjects(context.Context, *ListObjectsReq) (*ListObjectsRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAllObjects not implemented")
 }
-func (UnimplementedAuthServiceServer) CountObjects(context.Context, *CountObjectsReq) (*CountObjectsRes, error) {
+func (UnimplementedUsersAuthServiceServer) CountObjects(context.Context, *CountObjectsReq) (*CountObjectsRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CountObjects not implemented")
 }
-func (UnimplementedAuthServiceServer) ListSubjects(context.Context, *ListSubjectsReq) (*ListSubjectsRes, error) {
+func (UnimplementedUsersAuthServiceServer) ListSubjects(context.Context, *ListSubjectsReq) (*ListSubjectsRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSubjects not implemented")
 }
-func (UnimplementedAuthServiceServer) ListAllSubjects(context.Context, *ListSubjectsReq) (*ListSubjectsRes, error) {
+func (UnimplementedUsersAuthServiceServer) ListAllSubjects(context.Context, *ListSubjectsReq) (*ListSubjectsRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAllSubjects not implemented")
 }
-func (UnimplementedAuthServiceServer) CountSubjects(context.Context, *CountSubjectsReq) (*CountSubjectsRes, error) {
+func (UnimplementedUsersAuthServiceServer) CountSubjects(context.Context, *CountSubjectsReq) (*CountSubjectsRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CountSubjects not implemented")
 }
-func (UnimplementedAuthServiceServer) Assign(context.Context, *Assignment) (*emptypb.Empty, error) {
+func (UnimplementedUsersAuthServiceServer) Assign(context.Context, *Assignment) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Assign not implemented")
 }
-func (UnimplementedAuthServiceServer) Members(context.Context, *MembersReq) (*MembersRes, error) {
+func (UnimplementedUsersAuthServiceServer) Members(context.Context, *MembersReq) (*MembersRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Members not implemented")
 }
-func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
+func (UnimplementedUsersAuthServiceServer) mustEmbedUnimplementedUsersAuthServiceServer() {}
 
-// UnsafeAuthServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to AuthServiceServer will
+// UnsafeUsersAuthServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UsersAuthServiceServer will
 // result in compilation errors.
-type UnsafeAuthServiceServer interface {
-	mustEmbedUnimplementedAuthServiceServer()
+type UnsafeUsersAuthServiceServer interface {
+	mustEmbedUnimplementedUsersAuthServiceServer()
 }
 
-func RegisterAuthServiceServer(s grpc.ServiceRegistrar, srv AuthServiceServer) {
-	s.RegisterService(&AuthService_ServiceDesc, srv)
+func RegisterUsersAuthServiceServer(s grpc.ServiceRegistrar, srv UsersAuthServiceServer) {
+	s.RegisterService(&UsersAuthService_ServiceDesc, srv)
 }
 
-func _AuthService_Issue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_Issue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(IssueReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).Issue(ctx, in)
+		return srv.(UsersAuthServiceServer).Issue(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_Issue_FullMethodName,
+		FullMethod: UsersAuthService_Issue_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Issue(ctx, req.(*IssueReq))
+		return srv.(UsersAuthServiceServer).Issue(ctx, req.(*IssueReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LoginReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).Login(ctx, in)
+		return srv.(UsersAuthServiceServer).Login(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_Login_FullMethodName,
+		FullMethod: UsersAuthService_Login_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Login(ctx, req.(*LoginReq))
+		return srv.(UsersAuthServiceServer).Login(ctx, req.(*LoginReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_Refresh_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_Refresh_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RefreshReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).Refresh(ctx, in)
+		return srv.(UsersAuthServiceServer).Refresh(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_Refresh_FullMethodName,
+		FullMethod: UsersAuthService_Refresh_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Refresh(ctx, req.(*RefreshReq))
+		return srv.(UsersAuthServiceServer).Refresh(ctx, req.(*RefreshReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_Identify_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_Identify_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Token)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).Identify(ctx, in)
+		return srv.(UsersAuthServiceServer).Identify(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_Identify_FullMethodName,
+		FullMethod: UsersAuthService_Identify_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Identify(ctx, req.(*Token))
+		return srv.(UsersAuthServiceServer).Identify(ctx, req.(*Token))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_Authorize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_Authorize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AuthorizeReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).Authorize(ctx, in)
+		return srv.(UsersAuthServiceServer).Authorize(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_Authorize_FullMethodName,
+		FullMethod: UsersAuthService_Authorize_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Authorize(ctx, req.(*AuthorizeReq))
+		return srv.(UsersAuthServiceServer).Authorize(ctx, req.(*AuthorizeReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_AddPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_AddPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AddPolicyReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).AddPolicy(ctx, in)
+		return srv.(UsersAuthServiceServer).AddPolicy(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_AddPolicy_FullMethodName,
+		FullMethod: UsersAuthService_AddPolicy_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).AddPolicy(ctx, req.(*AddPolicyReq))
+		return srv.(UsersAuthServiceServer).AddPolicy(ctx, req.(*AddPolicyReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_DeletePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_DeletePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeletePolicyReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).DeletePolicy(ctx, in)
+		return srv.(UsersAuthServiceServer).DeletePolicy(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_DeletePolicy_FullMethodName,
+		FullMethod: UsersAuthService_DeletePolicy_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).DeletePolicy(ctx, req.(*DeletePolicyReq))
+		return srv.(UsersAuthServiceServer).DeletePolicy(ctx, req.(*DeletePolicyReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_ListObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_ListObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListObjectsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).ListObjects(ctx, in)
+		return srv.(UsersAuthServiceServer).ListObjects(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_ListObjects_FullMethodName,
+		FullMethod: UsersAuthService_ListObjects_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ListObjects(ctx, req.(*ListObjectsReq))
+		return srv.(UsersAuthServiceServer).ListObjects(ctx, req.(*ListObjectsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_ListAllObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_ListAllObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListObjectsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).ListAllObjects(ctx, in)
+		return srv.(UsersAuthServiceServer).ListAllObjects(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_ListAllObjects_FullMethodName,
+		FullMethod: UsersAuthService_ListAllObjects_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ListAllObjects(ctx, req.(*ListObjectsReq))
+		return srv.(UsersAuthServiceServer).ListAllObjects(ctx, req.(*ListObjectsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_CountObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_CountObjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CountObjectsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).CountObjects(ctx, in)
+		return srv.(UsersAuthServiceServer).CountObjects(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_CountObjects_FullMethodName,
+		FullMethod: UsersAuthService_CountObjects_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).CountObjects(ctx, req.(*CountObjectsReq))
+		return srv.(UsersAuthServiceServer).CountObjects(ctx, req.(*CountObjectsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_ListSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_ListSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSubjectsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).ListSubjects(ctx, in)
+		return srv.(UsersAuthServiceServer).ListSubjects(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_ListSubjects_FullMethodName,
+		FullMethod: UsersAuthService_ListSubjects_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ListSubjects(ctx, req.(*ListSubjectsReq))
+		return srv.(UsersAuthServiceServer).ListSubjects(ctx, req.(*ListSubjectsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_ListAllSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_ListAllSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListSubjectsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).ListAllSubjects(ctx, in)
+		return srv.(UsersAuthServiceServer).ListAllSubjects(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_ListAllSubjects_FullMethodName,
+		FullMethod: UsersAuthService_ListAllSubjects_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ListAllSubjects(ctx, req.(*ListSubjectsReq))
+		return srv.(UsersAuthServiceServer).ListAllSubjects(ctx, req.(*ListSubjectsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_CountSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_CountSubjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CountSubjectsReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).CountSubjects(ctx, in)
+		return srv.(UsersAuthServiceServer).CountSubjects(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_CountSubjects_FullMethodName,
+		FullMethod: UsersAuthService_CountSubjects_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).CountSubjects(ctx, req.(*CountSubjectsReq))
+		return srv.(UsersAuthServiceServer).CountSubjects(ctx, req.(*CountSubjectsReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_Assign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_Assign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Assignment)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).Assign(ctx, in)
+		return srv.(UsersAuthServiceServer).Assign(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_Assign_FullMethodName,
+		FullMethod: UsersAuthService_Assign_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Assign(ctx, req.(*Assignment))
+		return srv.(UsersAuthServiceServer).Assign(ctx, req.(*Assignment))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_Members_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _UsersAuthService_Members_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MembersReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).Members(ctx, in)
+		return srv.(UsersAuthServiceServer).Members(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_Members_FullMethodName,
+		FullMethod: UsersAuthService_Members_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Members(ctx, req.(*MembersReq))
+		return srv.(UsersAuthServiceServer).Members(ctx, req.(*MembersReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
+// UsersAuthService_ServiceDesc is the grpc.ServiceDesc for UsersAuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var AuthService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "mainflux.AuthService",
-	HandlerType: (*AuthServiceServer)(nil),
+var UsersAuthService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "mainflux.UsersAuthService",
+	HandlerType: (*UsersAuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Issue",
-			Handler:    _AuthService_Issue_Handler,
+			Handler:    _UsersAuthService_Issue_Handler,
 		},
 		{
 			MethodName: "Login",
-			Handler:    _AuthService_Login_Handler,
+			Handler:    _UsersAuthService_Login_Handler,
 		},
 		{
 			MethodName: "Refresh",
-			Handler:    _AuthService_Refresh_Handler,
+			Handler:    _UsersAuthService_Refresh_Handler,
 		},
 		{
 			MethodName: "Identify",
-			Handler:    _AuthService_Identify_Handler,
+			Handler:    _UsersAuthService_Identify_Handler,
 		},
 		{
 			MethodName: "Authorize",
-			Handler:    _AuthService_Authorize_Handler,
+			Handler:    _UsersAuthService_Authorize_Handler,
 		},
 		{
 			MethodName: "AddPolicy",
-			Handler:    _AuthService_AddPolicy_Handler,
+			Handler:    _UsersAuthService_AddPolicy_Handler,
 		},
 		{
 			MethodName: "DeletePolicy",
-			Handler:    _AuthService_DeletePolicy_Handler,
+			Handler:    _UsersAuthService_DeletePolicy_Handler,
 		},
 		{
 			MethodName: "ListObjects",
-			Handler:    _AuthService_ListObjects_Handler,
+			Handler:    _UsersAuthService_ListObjects_Handler,
 		},
 		{
 			MethodName: "ListAllObjects",
-			Handler:    _AuthService_ListAllObjects_Handler,
+			Handler:    _UsersAuthService_ListAllObjects_Handler,
 		},
 		{
 			MethodName: "CountObjects",
-			Handler:    _AuthService_CountObjects_Handler,
+			Handler:    _UsersAuthService_CountObjects_Handler,
 		},
 		{
 			MethodName: "ListSubjects",
-			Handler:    _AuthService_ListSubjects_Handler,
+			Handler:    _UsersAuthService_ListSubjects_Handler,
 		},
 		{
 			MethodName: "ListAllSubjects",
-			Handler:    _AuthService_ListAllSubjects_Handler,
+			Handler:    _UsersAuthService_ListAllSubjects_Handler,
 		},
 		{
 			MethodName: "CountSubjects",
-			Handler:    _AuthService_CountSubjects_Handler,
+			Handler:    _UsersAuthService_CountSubjects_Handler,
 		},
 		{
 			MethodName: "Assign",
-			Handler:    _AuthService_Assign_Handler,
+			Handler:    _UsersAuthService_Assign_Handler,
 		},
 		{
 			MethodName: "Members",
-			Handler:    _AuthService_Members_Handler,
+			Handler:    _UsersAuthService_Members_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

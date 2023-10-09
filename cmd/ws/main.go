@@ -130,7 +130,7 @@ func main() {
 	}
 }
 
-func newService(tc mainflux.AuthzServiceClient, nps messaging.PubSub, logger mflog.Logger, tracer trace.Tracer) adapter.Service {
+func newService(tc mainflux.ThingsAuthServiceClient, nps messaging.PubSub, logger mflog.Logger, tracer trace.Tracer) adapter.Service {
 	svc := adapter.New(tc, nps)
 	svc = tracing.New(tracer, svc)
 	svc = api.LoggingMiddleware(svc, logger)

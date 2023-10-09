@@ -17,7 +17,7 @@ import (
 
 const svcName = "mainflux.AuthService"
 
-var _ mainflux.AuthServiceClient = (*grpcClient)(nil)
+var _ mainflux.UsersAuthServiceClient = (*grpcClient)(nil)
 
 type grpcClient struct {
 	issue           endpoint.Endpoint
@@ -39,7 +39,7 @@ type grpcClient struct {
 }
 
 // NewClient returns new gRPC client instance.
-func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthServiceClient {
+func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.UsersAuthServiceClient {
 	return &grpcClient{
 		issue: kitgrpc.NewClient(
 			conn,

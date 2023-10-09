@@ -111,12 +111,12 @@ func Test(conf Config) {
 	}
 	color.Success.Printf("created channels of ids:\n%s\n", magenta(getIDS(channels)))
 
-	// time.Sleep(5 * time.Second)
+	time.Sleep(5 * time.Second)
 	// List users, groups, things and channels
-	// if err := read(s, conf, token, users, groups, things, channels); err != nil {
-	// 	errExit(fmt.Errorf("unable to read users, groups, things and channels: %w", err))
-	// }
-	// color.Success.Println("viewed users, groups, things and channels")
+	if err := read(s, conf, token, users, groups, things, channels); err != nil {
+		errExit(fmt.Errorf("unable to read users, groups, things and channels: %w", err))
+	}
+	color.Success.Println("viewed users, groups, things and channels")
 
 	time.Sleep(5 * time.Second)
 
@@ -333,21 +333,21 @@ func update(s sdk.SDK, token string, users []sdk.User, groups []sdk.Group, thing
 			return fmt.Errorf("failed to update user tags before %s after %s", user.Tags[0], rUser.Tags[0])
 		}
 		user = rUser
-		// rUser, err = s.DisableUser(user.ID, token)
-		// if err != nil {
-		// 	return fmt.Errorf("failed to disable user %w", err)
-		// }
-		// if rUser.Status != sdk.DisabledStatus {
-		// 	return fmt.Errorf("failed to disable user before %s after %s", user.Status, rUser.Status)
-		// }
+		rUser, err = s.DisableUser(user.ID, token)
+		if err != nil {
+			return fmt.Errorf("failed to disable user %w", err)
+		}
+		if rUser.Status != sdk.DisabledStatus {
+			return fmt.Errorf("failed to disable user before %s after %s", user.Status, rUser.Status)
+		}
 		user = rUser
-		// rUser, err = s.EnableUser(user.ID, token)
-		// if err != nil {
-		// 	return fmt.Errorf("failed to enable user %w", err)
-		// }
-		// if rUser.Status != sdk.EnabledStatus {
-		// 	return fmt.Errorf("failed to enable user before %s after %s", user.Status, rUser.Status)
-		// }
+		rUser, err = s.EnableUser(user.ID, token)
+		if err != nil {
+			return fmt.Errorf("failed to enable user %w", err)
+		}
+		if rUser.Status != sdk.EnabledStatus {
+			return fmt.Errorf("failed to enable user before %s after %s", user.Status, rUser.Status)
+		}
 	}
 	for _, group := range groups {
 		group.Name = namesgenerator.Generate()

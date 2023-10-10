@@ -55,11 +55,12 @@ type MembersPage struct {
 // of Groups that belong to the page.
 type Page struct {
 	PageMeta
-	Path      string
-	Level     uint64
-	ID        string
-	Direction int64 // ancestors (-1) or descendants (+1)
-	Groups    []Group
+	Path       string
+	Level      uint64
+	ID         string
+	Permission string
+	Direction  int64 // ancestors (-1) or descendants (+1)
+	Groups     []Group
 }
 
 // Repository specifies a group persistence API.

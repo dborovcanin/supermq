@@ -62,16 +62,22 @@ func DecodeListGroupsRequest(_ context.Context, r *http.Request) (interface{}, e
 	if err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, err)
 	}
+
+	permission, err := apiutil.ReadStringQuery(r, api.PermissionKey, api.DefPermission)
+	if err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, err)
+	}
 	req := listGroupsReq{
 		token:      apiutil.ExtractBearerToken(r),
 		tree:       tree,
 		memberKind: memberKind,
 		memberID:   chi.URLParam(r, "memberID"),
 		Page: mfgroups.Page{
-			Level:     level,
-			ID:        parentID,
-			PageMeta:  pm,
-			Direction: dir,
+			Level:      level,
+			ID:         parentID,
+			Permission: permission,
+			PageMeta:   pm,
+			Direction:  dir,
 		},
 	}
 	return req, nil

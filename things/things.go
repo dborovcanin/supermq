@@ -46,6 +46,12 @@ type Service interface {
 	// DisableClient logically disables the client identified with the provided ID
 	DisableClient(ctx context.Context, token, id string) (clients.Client, error)
 
+	// Share add share policy to thing id with given relation for given user ids
+	Share(ctx context.Context, token, id string, relation string, userids ...string) error
+
+	// Unshare remove share policy to thing id with given relation for given user ids
+	Unshare(ctx context.Context, token, id string, relation string, userids ...string) error
+
 	// Identify returns thing ID for given thing key.
 	Identify(ctx context.Context, key string) (string, error)
 

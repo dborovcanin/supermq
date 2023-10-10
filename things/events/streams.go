@@ -198,3 +198,11 @@ func (es *eventStore) Identify(ctx context.Context, key string) (string, error) 
 func (es *eventStore) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (string, error) {
 	return es.svc.Authorize(ctx, req)
 }
+
+func (es *eventStore) Share(ctx context.Context, token, id string, relation string, userids ...string) error {
+	return es.svc.Share(ctx, token, id, relation, userids...)
+}
+
+func (es *eventStore) Unshare(ctx context.Context, token, id string, relation string, userids ...string) error {
+	return es.svc.Unshare(ctx, token, id, relation, userids...)
+}

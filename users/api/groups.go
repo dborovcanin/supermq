@@ -4,22 +4,25 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/mainflux/mainflux/internal/api"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	gapi "github.com/mainflux/mainflux/internal/groups/api"
 	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/groups"
-	"github.com/mainflux/mainflux/users"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // MakeHandler returns a HTTP handler for Groups API endpoints.
-func groupsHandler(svc groups.Service, csvc users.Service, r *chi.Mux, logger logger.Logger) http.Handler {
+func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
@@ -81,6 +84,8 @@ func groupsHandler(svc groups.Service, csvc users.Service, r *chi.Mux, logger lo
 			opts...,
 		), "disable_group").ServeHTTP)
 
+		// Instead of this endpoint /{groupID}/members separately, we can simply use /{groupID}/users
+		// because this group is intended exclusively for users. No other entity could not be added
 		r.Post("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
 			gapi.AssignMembersEndpoint(svc, "", "users"),
 			gapi.DecodeAssignMembersRequest,
@@ -88,6 +93,8 @@ func groupsHandler(svc groups.Service, csvc users.Service, r *chi.Mux, logger lo
 			opts...,
 		), "assign_members").ServeHTTP)
 
+		// Instead of maintaining this endpoint /{groupID}/members separately, we can simply use /{groupID}/users
+		// because this group is intended exclusively for users. No other entity could not be added
 		r.Delete("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
 			gapi.UnassignMembersEndpoint(svc, "", "users"),
 			gapi.DecodeUnassignMembersRequest,
@@ -95,13 +102,80 @@ func groupsHandler(svc groups.Service, csvc users.Service, r *chi.Mux, logger lo
 			opts...,
 		), "unassign_members").ServeHTTP)
 
-		r.Get("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
-			listMembersEndpoint(csvc),
-			decodeListMembersRequest,
+		r.Post("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+			assignUsersEndpoint(svc),
+			decodeAssignUsersRequest,
 			api.EncodeResponse,
 			opts...,
-		), "list_members").ServeHTTP)
+		), "assign_users").ServeHTTP)
+
+		r.Delete("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+			unassignUsersEndpoint(svc),
+			decodeUnassignUsersRequest,
+			api.EncodeResponse,
+			opts...,
+		), "unassign_users").ServeHTTP)
+
 	})
 
+	// The ideal placeholder name should be {channelID}, but gapi.DecodeListGroupsRequest uses {memberID} as a placeholder for the ID.
+	// So here, we are using {memberID} as the placeholder.
+	r.Get("channels/{memberID}/groups", otelhttp.NewHandler(kithttp.NewServer(
+		gapi.ListGroupsEndpoint(svc, "channels"),
+		gapi.DecodeListGroupsRequest,
+		api.EncodeResponse,
+		opts...,
+	), "list_groups_of_a_channel").ServeHTTP)
 	return r
+}
+
+func decodeAssignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := assignUsersReq{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func decodeUnassignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := unassignUsersReq{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func assignUsersEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(assignUsersReq)
+
+		if err := req.validate(); err != nil {
+			return assignUsersRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, "users", req.UserIDs...); err != nil {
+			return assignUsersRes{}, err
+		}
+		return assignUsersRes{}, nil
+	}
+}
+
+func unassignUsersEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(unassignUsersReq)
+
+		if err := req.validate(); err != nil {
+			return unassignUsersRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+
+		if err := svc.Unassign(ctx, req.token, req.groupID, req.Relation, "users", req.UserIDs...); err != nil {
+			return nil, err
+		}
+		return unassignUsersRes{}, nil
+	}
 }

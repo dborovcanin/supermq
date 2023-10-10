@@ -105,6 +105,9 @@ var (
 	// ErrMissingMemberKind indicates missing group member kind.
 	ErrMissingMemberKind = errors.New("missing group member kind")
 
+	// ErrMissingRelation indicates missing relation.
+	ErrMissingRelation = errors.New("missing relation")
+
 	// ErrInvalidAPIKey indicates an invalid API key type.
 	ErrInvalidAPIKey = errors.New("invalid api key type")
 

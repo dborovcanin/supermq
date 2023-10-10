@@ -258,6 +258,7 @@ func (svc service) Share(ctx context.Context, token, id, relation string, userid
 	}
 
 	for _, userid := range userids {
+
 		addPolicyReq := &mainflux.AddPolicyReq{
 			SubjectType: userType,
 			Subject:     userid,
@@ -265,6 +266,7 @@ func (svc service) Share(ctx context.Context, token, id, relation string, userid
 			ObjectType:  thingType,
 			Object:      id,
 		}
+
 		res, err := svc.auth.AddPolicy(ctx, addPolicyReq)
 		if err != nil {
 			return err
@@ -273,7 +275,6 @@ func (svc service) Share(ctx context.Context, token, id, relation string, userid
 			return errors.ErrAuthorization
 		}
 	}
-
 	return nil
 }
 
@@ -284,6 +285,7 @@ func (svc service) Unshare(ctx context.Context, token, id, relation string, user
 	}
 
 	for _, userid := range userids {
+
 		delPolicyReq := &mainflux.DeletePolicyReq{
 			SubjectType: userType,
 			Subject:     userid,
@@ -291,6 +293,7 @@ func (svc service) Unshare(ctx context.Context, token, id, relation string, user
 			ObjectType:  thingType,
 			Object:      id,
 		}
+
 		res, err := svc.auth.DeletePolicy(ctx, delPolicyReq)
 		if err != nil {
 			return err
@@ -299,7 +302,6 @@ func (svc service) Unshare(ctx context.Context, token, id, relation string, user
 			return errors.ErrAuthorization
 		}
 	}
-
 	return nil
 }
 

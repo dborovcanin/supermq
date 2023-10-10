@@ -318,3 +318,29 @@ func disconnectEndpoint(svc groups.Service) endpoint.Endpoint {
 		return disconnectChannelThingRes{}, nil
 	}
 }
+
+func thingShareEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(thingShareRequest)
+		if err := req.validate(); err != nil {
+			return thingShareRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Share(ctx, req.token, req.thingID, req.Relation, req.UserIDs...); err != nil {
+			return thingShareRes{}, err
+		}
+		return thingShareRes{}, nil
+	}
+}
+
+func thingUnshareEndpoint(svc things.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(thingUnshareRequest)
+		if err := req.validate(); err != nil {
+			return thingUnshareRes{}, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Unshare(ctx, req.token, req.thingID, req.Relation, req.UserIDs...); err != nil {
+			return thingShareRes{}, err
+		}
+		return thingUnshareRes{}, nil
+	}
+}

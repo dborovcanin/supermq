@@ -214,3 +214,31 @@ func (res disconnectChannelThingRes) Headers() map[string]string {
 func (res disconnectChannelThingRes) Empty() bool {
 	return true
 }
+
+type thingShareRes struct{}
+
+func (res thingShareRes) Code() int {
+	return http.StatusOK
+}
+
+func (res thingShareRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res thingShareRes) Empty() bool {
+	return true
+}
+
+type thingUnshareRes struct{}
+
+func (res thingUnshareRes) Code() int {
+	return http.StatusNoContent
+}
+
+func (res thingUnshareRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res thingUnshareRes) Empty() bool {
+	return true
+}

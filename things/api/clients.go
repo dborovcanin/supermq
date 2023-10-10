@@ -95,6 +95,20 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 			opts...,
 		), "disable_thing").ServeHTTP)
 
+		r.Post("/{thingID}/share", otelhttp.NewHandler(kithttp.NewServer(
+			thingShareEndpoint(svc),
+			decodeThingShareRequest,
+			api.EncodeResponse,
+			opts...,
+		), "thing_share").ServeHTTP)
+
+		r.Post("/{thingID}/unshare", otelhttp.NewHandler(kithttp.NewServer(
+			thingUnshareEndpoint(svc),
+			decodeThingUnshareRequest,
+			api.EncodeResponse,
+			opts...,
+		), "thing_delete_share").ServeHTTP)
+
 	})
 
 	return r
@@ -300,5 +314,37 @@ func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 		},
 		groupID: chi.URLParam(r, "groupID"),
 	}
+	return req, nil
+}
+
+func decodeThingShareRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
+	req := thingShareRequest{
+		token:   apiutil.ExtractBearerToken(r),
+		thingID: chi.URLParam(r, "thingID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
+	}
+
+	return req, nil
+}
+
+func decodeThingUnshareRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
+	req := thingUnshareRequest{
+		token:   apiutil.ExtractBearerToken(r),
+		thingID: chi.URLParam(r, "thingID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
+	}
+
 	return req, nil
 }

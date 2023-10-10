@@ -121,3 +121,17 @@ func (tm *tracingMiddleware) Authorize(ctx context.Context, req *mainflux.Author
 	defer span.End()
 	return tm.svc.Authorize(ctx, req)
 }
+
+// Share traces the "Share" operation of the wrapped things.Service.
+func (tm *tracingMiddleware) Share(ctx context.Context, token, id string, relation string, userids ...string) error {
+	ctx, span := tm.tracer.Start(ctx, "share", trace.WithAttributes(attribute.String("id", id), attribute.String("relation", relation), attribute.StringSlice("user_ids", userids)))
+	defer span.End()
+	return tm.svc.Share(ctx, token, id, relation, userids...)
+}
+
+// Unshare traces the "Unshare" operation of the wrapped things.Service.
+func (tm *tracingMiddleware) Unshare(ctx context.Context, token, id string, relation string, userids ...string) error {
+	ctx, span := tm.tracer.Start(ctx, "unshare", trace.WithAttributes(attribute.String("id", id), attribute.String("relation", relation), attribute.StringSlice("user_ids", userids)))
+	defer span.End()
+	return tm.svc.Unshare(ctx, token, id, relation, userids...)
+}

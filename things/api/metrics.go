@@ -125,3 +125,19 @@ func (ms *metricsMiddleware) Authorize(ctx context.Context, req *mainflux.Author
 	}(time.Now())
 	return ms.svc.Authorize(ctx, req)
 }
+
+func (ms *metricsMiddleware) Share(ctx context.Context, token, id string, relation string, userids ...string) error {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "share").Add(1)
+		ms.latency.With("method", "share").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return ms.svc.Share(ctx, token, id, relation, userids...)
+}
+
+func (ms *metricsMiddleware) Unshare(ctx context.Context, token, id string, relation string, userids ...string) error {
+	defer func(begin time.Time) {
+		ms.counter.With("method", "unshare").Add(1)
+		ms.latency.With("method", "unshare").Observe(time.Since(begin).Seconds())
+	}(time.Now())
+	return ms.svc.Unshare(ctx, token, id, relation, userids...)
+}

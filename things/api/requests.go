@@ -302,3 +302,37 @@ func (req *disconnectChannelThingRequest) validate() error {
 	}
 	return nil
 }
+
+type thingShareRequest struct {
+	token    string
+	thingID  string
+	Relation string   `json:"relation,omitempty"`
+	UserIDs  []string `json:"user_ids,omitempty"`
+}
+
+func (req *thingShareRequest) validate() error {
+	if req.thingID == "" {
+		return errors.ErrMalformedEntity
+	}
+	if req.Relation == "" || len(req.UserIDs) <= 0 {
+		return errors.ErrCreateEntity
+	}
+	return nil
+}
+
+type thingUnshareRequest struct {
+	token    string
+	thingID  string
+	Relation string   `json:"relation,omitempty"`
+	UserIDs  []string `json:"user_ids,omitempty"`
+}
+
+func (req *thingUnshareRequest) validate() error {
+	if req.thingID == "" {
+		return errors.ErrMalformedEntity
+	}
+	if req.Relation == "" || len(req.UserIDs) <= 0 {
+		return errors.ErrCreateEntity
+	}
+	return nil
+}

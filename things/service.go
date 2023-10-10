@@ -323,6 +323,60 @@ func (svc service) DisableClient(ctx context.Context, token, id string) (mfclien
 	return client, nil
 }
 
+func (svc service) Share(ctx context.Context, token, id, relation string, userids ...string) error {
+	_, err := svc.authorize(ctx, userType, tokenKind, token, ownerPermission, thingType, id)
+	if err != nil {
+		return err
+	}
+
+	for _, userid := range userids {
+
+		addPolicyReq := &mainflux.AddPolicyReq{
+			SubjectType: userType,
+			Subject:     userid,
+			Relation:    relation,
+			ObjectType:  thingType,
+			Object:      id,
+		}
+
+		res, err := svc.auth.AddPolicy(ctx, addPolicyReq)
+		if err != nil {
+			return err
+		}
+		if !res.Authorized {
+			return errors.ErrAuthorization
+		}
+	}
+	return nil
+}
+
+func (svc service) Unshare(ctx context.Context, token, id, relation string, userids ...string) error {
+	_, err := svc.authorize(ctx, userType, tokenKind, token, ownerPermission, thingType, id)
+	if err != nil {
+		return err
+	}
+
+	for _, userid := range userids {
+
+		delPolicyReq := &mainflux.DeletePolicyReq{
+			SubjectType: userType,
+			Subject:     userid,
+			Relation:    relation,
+			ObjectType:  thingType,
+			Object:      id,
+		}
+
+		res, err := svc.auth.DeletePolicy(ctx, delPolicyReq)
+		if err != nil {
+			return err
+		}
+		if !res.Deleted {
+			return errors.ErrAuthorization
+		}
+	}
+	return nil
+}
+
 func (svc service) changeClientStatus(ctx context.Context, token string, client mfclients.Client) (mfclients.Client, error) {
 	userID, err := svc.authorize(ctx, userType, tokenKind, token, deletePermission, thingType, client.ID)
 	if err != nil {

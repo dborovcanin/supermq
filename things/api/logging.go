@@ -157,8 +157,6 @@ func (lm *loggingMiddleware) Identify(ctx context.Context, key string) (id strin
 	return lm.svc.Identify(ctx, key)
 }
 
-
-
 func (lm *loggingMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (id string, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method authorize for thing key %s and channnel %s took %s to complete", req.Subject, req.Object, time.Since(begin))
@@ -169,4 +167,28 @@ func (lm *loggingMiddleware) Authorize(ctx context.Context, req *mainflux.Author
 		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
 	}(time.Now())
 	return lm.svc.Authorize(ctx, req)
+}
+
+func (lm *loggingMiddleware) Share(ctx context.Context, token, id string, relation string, userids ...string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method share for thing id %s with relation %s for users %v took %s to complete", id, relation, userids, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+	return lm.svc.Share(ctx, token, id, relation, userids...)
+}
+
+func (lm *loggingMiddleware) Unshare(ctx context.Context, token, id string, relation string, userids ...string) (err error) {
+	defer func(begin time.Time) {
+		message := fmt.Sprintf("Method unshare for thing id %s with relation %s for users %v took %s to complete", id, relation, userids, time.Since(begin))
+		if err != nil {
+			lm.logger.Warn(fmt.Sprintf("%s with error: %s.", message, err))
+			return
+		}
+		lm.logger.Info(fmt.Sprintf("%s without errors.", message))
+	}(time.Now())
+	return lm.svc.Unshare(ctx, token, id, relation, userids...)
 }

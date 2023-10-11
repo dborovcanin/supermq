@@ -131,7 +131,7 @@ func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclie
 func (svc service) ViewClient(ctx context.Context, token string, id string) (mfclients.Client, error) {
 	_, err := svc.authorize(ctx, userType, tokenKind, token, viewPermission, thingType, id)
 	if err != nil {
-		return mfclients.Client{}, errors.Wrap(errors.ErrNotFound, err)
+		return mfclients.Client{}, err
 	}
 
 	return svc.clients.RetrieveByID(ctx, id)

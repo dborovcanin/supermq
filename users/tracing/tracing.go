@@ -6,9 +6,9 @@ package tracing
 import (
 	"context"
 
+	"github.com/mainflux/mainflux"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/users"
-	"github.com/mainflux/mainflux/users/jwt"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -34,7 +34,7 @@ func (tm *tracingMiddleware) RegisterClient(ctx context.Context, token string, c
 }
 
 // IssueToken traces the "IssueToken" operation of the wrapped clients.Service.
-func (tm *tracingMiddleware) IssueToken(ctx context.Context, identity, secret string) (jwt.Token, error) {
+func (tm *tracingMiddleware) IssueToken(ctx context.Context, identity, secret string) (*mainflux.Token, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_issue_token", trace.WithAttributes(attribute.String("identity", identity)))
 	defer span.End()
 
@@ -42,7 +42,7 @@ func (tm *tracingMiddleware) IssueToken(ctx context.Context, identity, secret st
 }
 
 // RefreshToken traces the "RefreshToken" operation of the wrapped clients.Service.
-func (tm *tracingMiddleware) RefreshToken(ctx context.Context, accessToken string) (jwt.Token, error) {
+func (tm *tracingMiddleware) RefreshToken(ctx context.Context, accessToken string) (*mainflux.Token, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_refresh_token", trace.WithAttributes(attribute.String("access_token", accessToken)))
 	defer span.End()
 

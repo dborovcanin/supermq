@@ -217,6 +217,7 @@ func decodeListClients(_ context.Context, r *http.Request) (interface{}, error) 
 		sharedBy: sharedID,
 		owner:    ownerID,
 	}
+	
 	return req, nil
 }
 
@@ -427,5 +428,6 @@ func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 		},
 		groupID: chi.URLParam(r, "groupID"),
 	}
+
 	return req, nil
 }

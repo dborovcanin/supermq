@@ -44,9 +44,7 @@ func GenerateValidToken(t *testing.T, clientID string, svc users.Service, cRepo 
 }
 
 func CleanUpDB(t *testing.T, db *sqlx.DB) {
-	_, err := db.Exec("DELETE FROM policies")
-	require.Nil(t, err, fmt.Sprintf("clean policies unexpected error: %s", err))
-	_, err = db.Exec("DELETE FROM groups")
+	_, err := db.Exec("DELETE FROM groups")
 	require.Nil(t, err, fmt.Sprintf("clean groups unexpected error: %s", err))
 	_, err = db.Exec("DELETE FROM clients")
 	require.Nil(t, err, fmt.Sprintf("clean clients unexpected error: %s", err))

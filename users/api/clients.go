@@ -142,7 +142,7 @@ func clientsHandler(svc users.Service, r *chi.Mux, logger mflog.Logger) http.Han
 		decodeListMembersRequest,
 		api.EncodeResponse,
 		opts...,
-	), "list_users_by_user_group_id").ServeHTTP)
+	), "list_users").ServeHTTP)
 
 	// Ideal location: things service, channels endpoint.
 	// Reason for placing here :
@@ -156,7 +156,7 @@ func clientsHandler(svc users.Service, r *chi.Mux, logger mflog.Logger) http.Han
 		decodeListMembersRequest,
 		api.EncodeResponse,
 		opts...,
-	), "list_users_by_channel_id").ServeHTTP)
+	), "list_users_of_a_channel").ServeHTTP)
 
 	return r
 }

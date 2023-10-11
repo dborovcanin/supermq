@@ -155,3 +155,9 @@ func (m *Repository) IsOwner(ctx context.Context, clientID string, ownerID strin
 
 	return ret.Error(0)
 }
+
+func (m *Repository) RetrieveAllByIDs(ctx context.Context, pm mfclients.Page) (mfclients.ClientsPage, error) {
+	ret := m.Called(ctx, pm)
+
+	return ret.Get(0).(mfclients.ClientsPage), ret.Error(1)
+}

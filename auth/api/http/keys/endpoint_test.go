@@ -116,28 +116,28 @@ func TestIssue(t *testing.T) {
 			desc:   "issue API key",
 			req:    toJSON(ak),
 			ct:     contentType,
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusCreated,
 		},
 		{
 			desc:   "issue recovery key",
 			req:    toJSON(rk),
 			ct:     contentType,
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusCreated,
 		},
 		{
 			desc:   "issue login key wrong content type",
 			req:    toJSON(lk),
 			ct:     "",
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusUnsupportedMediaType,
 		},
 		{
 			desc:   "issue recovery key wrong content type",
 			req:    toJSON(rk),
 			ct:     "",
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusUnsupportedMediaType,
 		},
 		{
@@ -158,21 +158,21 @@ func TestIssue(t *testing.T) {
 			desc:   "issue key with invalid request",
 			req:    "{",
 			ct:     contentType,
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusBadRequest,
 		},
 		{
 			desc:   "issue key with invalid JSON",
 			req:    "{invalid}",
 			ct:     contentType,
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusBadRequest,
 		},
 		{
 			desc:   "issue key with invalid JSON content",
-			req:    `{"Type":{"key":"value"}}`,
+			req:    `{"Type":{"key":"AccessToken"}}`,
 			ct:     contentType,
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusBadRequest,
 		},
 	}
@@ -198,7 +198,7 @@ func TestRetrieve(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), SubjectID: id, Subject: email}
 
-	k, err := svc.Issue(context.Background(), token.Value, key)
+	k, err := svc.Issue(context.Background(), token.AccessToken, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	ts := newServer(svc)
@@ -213,19 +213,19 @@ func TestRetrieve(t *testing.T) {
 	}{
 		{
 			desc:   "retrieve an existing key",
-			id:     k.Value,
-			token:  token.Value,
+			id:     k.AccessToken,
+			token:  token.AccessToken,
 			status: http.StatusOK,
 		},
 		{
 			desc:   "retrieve a non-existing key",
 			id:     "non-existing",
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusNotFound,
 		},
 		{
 			desc:   "retrieve a key with an invalid token",
-			id:     k.Value,
+			id:     k.AccessToken,
 			token:  "wrong",
 			status: http.StatusUnauthorized,
 		},
@@ -250,7 +250,7 @@ func TestRevoke(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), SubjectID: id, Subject: email}
 
-	k, err := svc.Issue(context.Background(), token.Value, key)
+	k, err := svc.Issue(context.Background(), token.AccessToken, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	ts := newServer(svc)
@@ -265,19 +265,19 @@ func TestRevoke(t *testing.T) {
 	}{
 		{
 			desc:   "revoke an existing key",
-			id:     k.Value,
-			token:  token.Value,
+			id:     k.AccessToken,
+			token:  token.AccessToken,
 			status: http.StatusNoContent,
 		},
 		{
 			desc:   "revoke a non-existing key",
 			id:     "non-existing",
-			token:  token.Value,
+			token:  token.AccessToken,
 			status: http.StatusNoContent,
 		},
 		{
 			desc:   "revoke key with invalid token",
-			id:     k.Value,
+			id:     k.AccessToken,
 			token:  "wrong",
 			status: http.StatusUnauthorized},
 	}

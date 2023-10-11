@@ -54,13 +54,12 @@ func (repo singleUserRepo) Issue(ctx context.Context, in *mainflux.IssueReq, opt
 	return nil, nil
 }
 
-func (repo singleUserRepo) Identify(ctx context.Context, in *mainflux.Token, opts ...grpc.CallOption) (*mainflux.UserIdentity, error) {
-	// return nil, nil
-	if repo.token != in.GetValue() {
+func (repo singleUserRepo) Identify(ctx context.Context, in *mainflux.IdentityReq, opts ...grpc.CallOption) (*mainflux.IdentityRes, error) {
+	if repo.token != in.GetToken() {
 		return nil, errors.ErrAuthentication
 	}
 
-	return &mainflux.UserIdentity{Id: repo.id}, nil
+	return &mainflux.IdentityRes{Id: repo.id}, nil
 }
 func (repo singleUserRepo) Authorize(ctx context.Context, in *mainflux.AuthorizeReq, opts ...grpc.CallOption) (*mainflux.AuthorizeRes, error) {
 	if repo.id != in.Subject {

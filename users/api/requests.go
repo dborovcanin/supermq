@@ -260,3 +260,56 @@ func (req resetTokenReq) validate() error {
 
 	return nil
 }
+
+type assignUsersReq struct {
+	token    string
+	groupID  string
+	Relation string   `json:"relation"`
+	UserIDs  []string `json:"user_ids"`
+}
+
+func (req assignUsersReq) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.Relation == "" {
+		return apiutil.ErrMissingRelation
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if len(req.UserIDs) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}
+
+type unassignUsersReq struct {
+	token    string
+	groupID  string
+	Relation string   `json:"relation"`
+	UserIDs  []string `json:"user_ids"`
+}
+
+func (req unassignUsersReq) validate() error {
+	if req.token == "" {
+		return apiutil.ErrBearerToken
+	}
+
+	if req.groupID == "" {
+		return apiutil.ErrMissingID
+	}
+
+	if req.Relation == "" {
+		return apiutil.ErrMissingRelation
+	}
+	if len(req.UserIDs) == 0 {
+		return apiutil.ErrEmptyList
+	}
+
+	return nil
+}

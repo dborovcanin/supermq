@@ -140,22 +140,10 @@ func (svc service) ViewGroup(ctx context.Context, token string, id string) (grou
 
 func (svc service) ListGroups(ctx context.Context, token string, memberKind, memberID string, gm groups.Page) (groups.Page, error) {
 	var ids []string
-
 	userID, err := svc.identify(ctx, token)
 	if err != nil {
 		return groups.Page{}, err
 	}
-	allowedIDs, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
-		SubjectType: userType,
-		Subject:     userID,
-		Permission:  viewPermission,
-		ObjectType:  groupType,
-	})
-
-	if err != nil {
-		return groups.Page{}, err
-	}
-
 	switch memberKind {
 	case thingsKind:
 		if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, viewPermission, thingType, memberID); err != nil {
@@ -170,14 +158,67 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 		if err != nil {
 			return groups.Page{}, err
 		}
+		allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
+		if err != nil {
+			return groups.Page{}, err
+		}
 		for _, cid := range cids.Policies {
-			for _, id := range allowedIDs.Policies {
+			for _, id := range allowedIDs {
 				if id == cid {
 					ids = append(ids, id)
 				}
 			}
 		}
+	case groupsKind:
+		if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, gm.Permission, groupType, memberID); err != nil {
+			return groups.Page{}, err
+		}
+
+		gids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+			SubjectType: groupType,
+			Subject:     memberID,
+			Permission:  parentGroupRelation,
+			ObjectType:  groupType,
+		})
+		if err != nil {
+			return groups.Page{}, err
+		}
+
+		allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
+		for _, gid := range gids.Policies {
+			for _, id := range allowedIDs {
+				if id == gid {
+					ids = append(ids, id)
+				}
+			}
+		}
+	case channelsKind:
+		if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, viewPermission, groupType, memberID); err != nil {
+			return groups.Page{}, err
+		}
+		gids, err := svc.auth.ListAllSubjects(ctx, &mainflux.ListSubjectsReq{
+			SubjectType: groupType,
+			Permission:  parentGroupRelation,
+			ObjectType:  groupType,
+			Object:      memberID,
+		})
+		if err != nil {
+			return groups.Page{}, err
+		}
+
+		allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
+		for _, gid := range gids.Policies {
+			for _, id := range allowedIDs {
+				if id == gid {
+					ids = append(ids, id)
+				}
+			}
+		}
 	case usersKind:
+		allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
+		if err != nil {
+			return groups.Page{}, err
+		}
 		if memberID != "" && userID != memberID {
 			if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, ownerRelation, userType, memberID); err != nil {
 				return groups.Page{}, err
@@ -185,7 +226,7 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 			gids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
 				SubjectType: userType,
 				Subject:     memberID,
-				Permission:  viewPermission,
+				Permission:  gm.Permission,
 				ObjectType:  groupType,
 			})
 
@@ -193,19 +234,22 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 				return groups.Page{}, err
 			}
 			for _, gid := range gids.Policies {
-				for _, id := range allowedIDs.Policies {
+				for _, id := range allowedIDs {
 					if id == gid {
 						ids = append(ids, id)
 					}
 				}
 			}
 		} else {
-			ids = allowedIDs.Policies
+			ids = allowedIDs
 		}
 	default:
 		return groups.Page{}, fmt.Errorf("invalid member kind")
 	}
 
+	if len(ids) <= 0 {
+		return groups.Page{}, errors.ErrNotFound
+	}
 	return svc.groups.RetrieveByIDs(ctx, gm, ids...)
 }
 
@@ -416,6 +460,20 @@ func (svc service) Unassign(ctx context.Context, token, groupID, relation, membe
 	// 	return err
 	// }
 	return nil
+}
+
+func (svc service) listAllGroupsOfUserID(ctx context.Context, userID string, permission string) ([]string, error) {
+	allowedIDs, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+		SubjectType: userType,
+		Subject:     userID,
+		Permission:  permission,
+		ObjectType:  groupType,
+	})
+
+	if err != nil {
+		return []string{}, err
+	}
+	return allowedIDs.Policies, nil
 }
 
 func (svc service) changeGroupStatus(ctx context.Context, token string, group groups.Group) (groups.Group, error) {

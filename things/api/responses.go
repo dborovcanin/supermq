@@ -185,6 +185,66 @@ func (res unassignUsersGroupsRes) Empty() bool {
 	return true
 }
 
+type assignUsersRes struct {
+}
+
+func (res assignUsersRes) Code() int {
+	return http.StatusOK
+}
+
+func (res assignUsersRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res assignUsersRes) Empty() bool {
+	return true
+}
+
+type unassignUsersRes struct {
+}
+
+func (res unassignUsersRes) Code() int {
+	return http.StatusNoContent
+}
+
+func (res unassignUsersRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res unassignUsersRes) Empty() bool {
+	return true
+}
+
+type assignUserGroupsRes struct {
+}
+
+func (res assignUserGroupsRes) Code() int {
+	return http.StatusOK
+}
+
+func (res assignUserGroupsRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res assignUserGroupsRes) Empty() bool {
+	return true
+}
+
+type unassignUserGroupsRes struct {
+}
+
+func (res unassignUserGroupsRes) Code() int {
+	return http.StatusNoContent
+}
+
+func (res unassignUserGroupsRes) Headers() map[string]string {
+	return map[string]string{}
+}
+
+func (res unassignUserGroupsRes) Empty() bool {
+	return true
+}
+
 type connectChannelThingRes struct {
 }
 

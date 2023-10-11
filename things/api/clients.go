@@ -116,7 +116,7 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 	// SpiceDB provides list of thing ids present in given channel id
 	// and things service can access spiceDB and get the list of thing ids present in given channel id.
 	// Request to get list of things present in channelID ({groupID}) .
-	r.Get("channels/{groupID}/things", otelhttp.NewHandler(kithttp.NewServer(
+	r.Get("/channels/{groupID}/things", otelhttp.NewHandler(kithttp.NewServer(
 		listMembersEndpoint(svc),
 		decodeListMembersRequest,
 		api.EncodeResponse,

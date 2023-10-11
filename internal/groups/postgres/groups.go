@@ -217,8 +217,6 @@ func (repo groupRepository) RetrieveByIDs(ctx context.Context, gm mfgroups.Page,
 		return mfgroups.Page{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)
 	}
 
-	fmt.Println(q)
-	fmt.Println(dbPage)
 	rows, err := repo.db.NamedQueryContext(ctx, q, dbPage)
 	if err != nil {
 		return mfgroups.Page{}, errors.Wrap(postgres.ErrFailedToRetrieveAll, err)

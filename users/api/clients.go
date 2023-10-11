@@ -217,6 +217,7 @@ func decodeListClients(_ context.Context, r *http.Request) (interface{}, error) 
 		sharedBy: sharedID,
 		owner:    ownerID,
 	}
+	
 	return req, nil
 }
 
@@ -224,6 +225,7 @@ func decodeUpdateClient(_ context.Context, r *http.Request) (interface{}, error)
 	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
 		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
 	}
+
 	req := updateClientReq{
 		token: apiutil.ExtractBearerToken(r),
 		id:    chi.URLParam(r, "id"),
@@ -239,6 +241,7 @@ func decodeUpdateClientTags(_ context.Context, r *http.Request) (interface{}, er
 	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
 		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
 	}
+
 	req := updateClientTagsReq{
 		token: apiutil.ExtractBearerToken(r),
 		id:    chi.URLParam(r, "id"),
@@ -254,6 +257,7 @@ func decodeUpdateClientIdentity(_ context.Context, r *http.Request) (interface{}
 	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
 		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
 	}
+
 	req := updateClientIdentityReq{
 		token: apiutil.ExtractBearerToken(r),
 		id:    chi.URLParam(r, "id"),
@@ -269,6 +273,7 @@ func decodeUpdateClientSecret(_ context.Context, r *http.Request) (interface{}, 
 	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
 		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
 	}
+
 	req := updateClientSecretReq{
 		token: apiutil.ExtractBearerToken(r),
 	}
@@ -285,7 +290,6 @@ func decodePasswordResetRequest(_ context.Context, r *http.Request) (interface{}
 	}
 
 	var req passwResetReq
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
 	}
@@ -311,6 +315,7 @@ func decodeUpdateClientOwner(_ context.Context, r *http.Request) (interface{}, e
 	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
 		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
 	}
+
 	req := updateClientOwnerReq{
 		token: apiutil.ExtractBearerToken(r),
 		id:    chi.URLParam(r, "id"),
@@ -326,6 +331,7 @@ func decodeCredentials(_ context.Context, r *http.Request) (interface{}, error) 
 	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
 		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
 	}
+
 	req := loginClientReq{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
@@ -422,5 +428,6 @@ func decodeListMembersRequest(_ context.Context, r *http.Request) (interface{}, 
 		},
 		groupID: chi.URLParam(r, "groupID"),
 	}
+
 	return req, nil
 }

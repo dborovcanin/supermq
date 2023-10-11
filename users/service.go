@@ -9,77 +9,45 @@ import (
 	"time"
 
 	"github.com/mainflux/mainflux"
+	"github.com/mainflux/mainflux/auth"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/users/jwt"
 	"github.com/mainflux/mainflux/users/postgres"
 )
 
-const ()
-
 const (
-	administratorRelationKey = "administrator"
-	directMemberRelation     = "direct_member"
-	createRelation           = "create"
-	ownerRelation            = "owner"
-
-	adminPermission      = "admin"
-	memberPermission     = "member"
-	createUserPermission = "create_user"
-	deletePermission     = "delete"
-	updatePermission     = "update"
-	viewPermission       = "view"
-
 	userKind  = "users"
 	tokenKind = "token"
 
 	userType  = "user"
 	groupType = "group"
-	// organizationType = "organization"
-
-	mainfluxObject = "mainflux"
-	anyBodySubject = "_any_body"
 )
 
 var (
-	// ErrMissingResetToken indicates malformed or missing reset token
-	// for reseting password.
-	ErrMissingResetToken = errors.New("missing reset token")
-
 	// ErrRecoveryToken indicates error in generating password recovery token.
 	ErrRecoveryToken = errors.New("failed to generate password recovery token")
-
-	// ErrGetToken indicates error in getting signed token.
-	ErrGetToken = errors.New("failed to fetch signed token")
 
 	// ErrPasswordFormat indicates weak password.
 	ErrPasswordFormat = errors.New("password does not meet the requirements")
 )
-
-// Service unites Clients and JWT services.
-type Service interface {
-	ClientService
-	jwt.Service
-}
 
 type service struct {
 	clients    postgres.Repository
 	idProvider mainflux.IDProvider
 	auth       mainflux.AuthServiceClient
 	hasher     Hasher
-	// tokens     jwt.Repository
-	email     Emailer
-	passRegex *regexp.Regexp
+	email      Emailer
+	passRegex  *regexp.Regexp
 }
 
 // NewService returns a new Users service implementation.
-func NewService(c postgres.Repository, a mainflux.AuthServiceClient, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
+func NewService(crepo postgres.Repository, auth mainflux.AuthServiceClient, emailer Emailer, hasher Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
 	return service{
-		clients:    c,
-		auth:       a,
-		hasher:     h,
-		email:      e,
+		clients:    crepo,
+		auth:       auth,
+		hasher:     hasher,
+		email:      emailer,
 		idProvider: idp,
 		passRegex:  pr,
 	}
@@ -121,27 +89,20 @@ func (svc service) RegisterClient(ctx context.Context, token string, cli mfclien
 	return client, nil
 }
 
-func (svc service) IssueToken(ctx context.Context, identity, secret string) (jwt.Token, error) {
+func (svc service) IssueToken(ctx context.Context, identity, secret string) (*mainflux.Token, error) {
 	dbUser, err := svc.clients.RetrieveByIdentity(ctx, identity)
 	if err != nil {
-		return jwt.Token{}, err
+		return &mainflux.Token{}, err
 	}
 	if err := svc.hasher.Compare(secret, dbUser.Credentials.Secret); err != nil {
-		return jwt.Token{}, errors.Wrap(errors.ErrLogin, err)
+		return &mainflux.Token{}, errors.Wrap(errors.ErrLogin, err)
 	}
-	tkn, err := svc.auth.Issue(ctx, &mainflux.IssueReq{Id: dbUser.ID, Email: dbUser.Credentials.Identity, Type: 0})
-	if err != nil {
-		return jwt.Token{}, errors.Wrap(errors.ErrNotFound, err)
-	}
-	return parseToken(tkn)
+
+	return svc.auth.Issue(ctx, &mainflux.IssueReq{Id: dbUser.ID, Email: dbUser.Credentials.Identity, Type: 0})
 }
 
-func (svc service) RefreshToken(ctx context.Context, refreshToken string) (jwt.Token, error) {
-	tkn, err := svc.auth.Refresh(ctx, &mainflux.RefreshReq{Value: refreshToken})
-	if err != nil {
-		return jwt.Token{}, err
-	}
-	return parseToken(tkn)
+func (svc service) RefreshToken(ctx context.Context, refreshToken string) (*mainflux.Token, error) {
+	return svc.auth.Refresh(ctx, &mainflux.RefreshReq{Value: refreshToken})
 }
 
 func (svc service) ViewClient(ctx context.Context, token string, id string) (mfclients.Client, error) {
@@ -302,20 +263,21 @@ func (svc service) UpdateClientIdentity(ctx context.Context, token, clientID, id
 }
 
 func (svc service) GenerateResetToken(ctx context.Context, email, host string) error {
-	// client, err := svc.clients.RetrieveByIdentity(ctx, email)
-	// if err != nil || client.Credentials.Identity == "" {
-	// 	return errors.ErrNotFound
-	// }
-	// claims := jwt.Claims{
-	// 	ClientID: client.ID,
-	// 	Email:    client.Credentials.Identity,
-	// }
-	// t, err := svc.tokens.Issue(ctx, claims)
-	// if err != nil {
-	// 	return errors.Wrap(ErrRecoveryToken, err)
-	// }
-	// return svc.SendPasswordReset(ctx, host, email, client.Name, t.AccessToken)
-	return nil
+	client, err := svc.clients.RetrieveByIdentity(ctx, email)
+	if err != nil || client.Credentials.Identity == "" {
+		return errors.ErrNotFound
+	}
+	issueReq := &mainflux.IssueReq{
+		Id:    client.ID,
+		Email: client.Credentials.Identity,
+		Type:  uint32(auth.RecoveryKey),
+	}
+	token, err := svc.auth.Issue(ctx, issueReq)
+	if err != nil {
+		return errors.Wrap(ErrRecoveryToken, err)
+	}
+
+	return svc.SendPasswordReset(ctx, host, email, client.Name, token.AccessToken)
 }
 
 func (svc service) ResetSecret(ctx context.Context, resetToken, secret string) error {
@@ -503,66 +465,9 @@ func (svc *service) authorize(ctx context.Context, subjType, subjKind, subj, per
 }
 
 func (svc service) Identify(ctx context.Context, token string) (string, error) {
-	user, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
+	user, err := svc.auth.Identify(ctx, &mainflux.IdentityReq{Token: token})
 	if err != nil {
 		return "", err
 	}
 	return user.GetId(), nil
-}
-
-// Auth helpers
-func (svc service) issue(ctx context.Context, id, email string, keyType uint32) (jwt.Token, error) {
-	tkn, err := svc.auth.Issue(ctx, &mainflux.IssueReq{Id: id, Email: email, Type: keyType})
-	if err != nil {
-		return jwt.Token{}, errors.Wrap(errors.ErrNotFound, err)
-	}
-	extra := tkn.Extra.AsMap()["refresh_token"]
-	refresh, ok := extra.(string)
-	if !ok {
-		return jwt.Token{}, errors.ErrAuthentication
-	}
-	ret := jwt.Token{
-		AccessToken:  tkn.GetValue(),
-		RefreshToken: refresh,
-		AccessType:   "bearer",
-	}
-
-	return ret, nil
-}
-
-func parseToken(tkn *mainflux.Token) (jwt.Token, error) {
-	if tkn == nil {
-		return jwt.Token{}, errors.New("invalid token")
-	}
-	extra := tkn.Extra.AsMap()["refresh_token"]
-	refresh, ok := extra.(string)
-	if !ok {
-		return jwt.Token{}, errors.ErrAuthentication
-	}
-	ret := jwt.Token{
-		AccessToken:  tkn.GetValue(),
-		RefreshToken: refresh,
-		AccessType:   "bearer",
-	}
-
-	return ret, nil
-}
-
-func (svc service) claimOwnership(ctx context.Context, subjectType, subject, relation, permission, objectType, object string) error {
-	req := &mainflux.AddPolicyReq{
-		SubjectType: subjectType,
-		Subject:     subject,
-		Relation:    relation,
-		Permission:  permission,
-		Object:      object,
-		ObjectType:  objectType,
-	}
-	res, err := svc.auth.AddPolicy(ctx, req)
-	if err != nil {
-		return errors.Wrap(errors.ErrAuthorization, err)
-	}
-	if !res.GetAuthorized() {
-		return errors.ErrAuthorization
-	}
-	return nil
 }

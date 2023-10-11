@@ -14,7 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/mainflux/mainflux"
-	bsmocks "github.com/mainflux/mainflux/bootstrap/mocks"
+	authmocks "github.com/mainflux/mainflux/auth/mocks"
 	"github.com/mainflux/mainflux/certs"
 	"github.com/mainflux/mainflux/certs/mocks"
 	"github.com/mainflux/mainflux/logger"
@@ -23,7 +23,6 @@ import (
 	mfsdk "github.com/mainflux/mainflux/pkg/sdk/go"
 	"github.com/mainflux/mainflux/things"
 	httpapi "github.com/mainflux/mainflux/things/api"
-	usersmocks "github.com/mainflux/mainflux/users/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,11 +48,10 @@ const (
 var adminRelationKeys = []string{"c_update", "c_list", "c_delete", "c_share"}
 
 func newService(tokens map[string]string) (certs.Service, error) {
-	ac := bsmocks.NewAuthClient(map[string]string{token: email}, map[string][]bsmocks.SubjectSet{})
 
 	server := newThingsServer(newThingsService(ac))
 
-	auth := usersmocks.NewAuthService(tokens, map[string][]usersmocks.SubjectSet{})
+	auth := new(authmocks.Service)
 
 	config := mfsdk.Config{
 		ThingsURL: server.URL,

@@ -20,7 +20,6 @@ func issueEndpoint(svc auth.Service) endpoint.Endpoint {
 
 		key := auth.Key{
 			Type:      req.keyType,
-			Subject:   req.email,
 			SubjectID: req.id,
 		}
 		tkn, err := svc.Issue(ctx, "", key)
@@ -44,7 +43,6 @@ func loginEndpoint(svc auth.Service) endpoint.Endpoint {
 
 		key := auth.Key{
 			Type:      req.keyType,
-			Subject:   req.email,
 			SubjectID: req.id,
 			IssuedAt:  time.Now().UTC(),
 		}

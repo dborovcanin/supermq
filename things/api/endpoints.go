@@ -264,6 +264,57 @@ func unassignUsersGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 		return unassignUsersGroupsRes{}, nil
 	}
 }
+func assignUsersEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(assignUsersRequest)
+		if err := req.validate(); err != nil {
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, "users", req.UserIDs...); err != nil {
+			return nil, err
+		}
+		return assignUsersRes{}, nil
+	}
+}
+
+func unassignUsersEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(unassignUsersRequest)
+		if err := req.validate(); err != nil {
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Unassign(ctx, req.token, req.groupID, req.Relation, "users", req.UserIDs...); err != nil {
+			return nil, err
+		}
+		return unassignUsersRes{}, nil
+	}
+}
+
+func assignUserGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(assignUserGroupsRequest)
+		if err := req.validate(); err != nil {
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Assign(ctx, req.token, req.groupID, "parent_group", "groups", req.UserGroupIDs...); err != nil {
+			return nil, err
+		}
+		return assignUserGroupsRes{}, nil
+	}
+}
+
+func unassignUserGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(unassignUserGroupsRequest)
+		if err := req.validate(); err != nil {
+			return nil, errors.Wrap(apiutil.ErrValidation, err)
+		}
+		if err := svc.Unassign(ctx, req.token, req.groupID, "parent_group", "groups", req.UserGroupIDs...); err != nil {
+			return nil, err
+		}
+		return unassignUserGroupsRes{}, nil
+	}
+}
 
 func connectChannelThingEndpoint(svc groups.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {

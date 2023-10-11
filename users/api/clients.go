@@ -132,6 +132,32 @@ func clientsHandler(svc users.Service, r *chi.Mux, logger mflog.Logger) http.Han
 		), "disable_client").ServeHTTP)
 	})
 
+	// Ideal location: users service, groups endpoint.
+	// Reason for placing here :
+	// SpiceDB provides list of user ids in given user_group_id
+	// and users service can access spiceDB and get the user list with user_group_id.
+	// Request to get list of users present in the user_group_id {groupID}
+	r.Get("/groups/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+		listMembersEndpoint(svc),
+		decodeListMembersRequest,
+		api.EncodeResponse,
+		opts...,
+	), "list_users").ServeHTTP)
+
+	// Ideal location: things service, channels endpoint.
+	// Reason for placing here :
+	// SpiceDB provides list of user ids in given channel_id
+	// and users service can access spiceDB and get the user list with channel_id.
+	// Request to get list of users present in the user_group_id {groupID}
+	// The ideal placeholder name should be {channelID}, but gapi.DecodeListGroupsRequest uses {groupID} as a placeholder for the ID.
+	// So here, we are using {groupID} as the placeholder.
+	r.Get("/channels/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+		listMembersEndpoint(svc),
+		decodeListMembersRequest,
+		api.EncodeResponse,
+		opts...,
+	), "list_users_of_a_channel").ServeHTTP)
+
 	return r
 }
 

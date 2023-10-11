@@ -75,7 +75,7 @@ func main() {
 		exitCode = 1
 		return
 	}
-	
+
 	auth, aHandler, err := authapi.SetupAuthz("authz")
 	if err != nil {
 		logger.Error(err.Error())

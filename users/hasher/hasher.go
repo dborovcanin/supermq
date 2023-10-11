@@ -38,5 +38,6 @@ func (bh *bcryptHasher) Compare(plain, hashed string) error {
 	if err := bcrypt.CompareHashAndPassword([]byte(hashed), []byte(plain)); err != nil {
 		return errors.Wrap(errComparePassword, err)
 	}
+
 	return nil
 }

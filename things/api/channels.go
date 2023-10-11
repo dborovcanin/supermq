@@ -193,6 +193,10 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 }
 
 func decodeAssignUsersGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
 	req := assignUsersGroupsRequest{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
@@ -200,10 +204,15 @@ func decodeAssignUsersGroupsRequest(_ context.Context, r *http.Request) (interfa
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
 	}
+
 	return req, nil
 }
 
 func decodeUnassignUsersGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
 	req := unassignUsersGroupsRequest{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
@@ -211,10 +220,15 @@ func decodeUnassignUsersGroupsRequest(_ context.Context, r *http.Request) (inter
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
 	}
+
 	return req, nil
 }
 
 func decodeAssignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
 	req := assignUsersRequest{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
@@ -222,10 +236,15 @@ func decodeAssignUsersRequest(_ context.Context, r *http.Request) (interface{}, 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
 	}
+
 	return req, nil
 }
 
 func decodeUnassignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
 	req := unassignUsersRequest{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
@@ -233,10 +252,15 @@ func decodeUnassignUsersRequest(_ context.Context, r *http.Request) (interface{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
 	}
+
 	return req, nil
 }
 
 func decodeAssignUserGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
 	req := assignUserGroupsRequest{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
@@ -244,10 +268,15 @@ func decodeAssignUserGroupsRequest(_ context.Context, r *http.Request) (interfac
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
 	}
+
 	return req, nil
 }
 
 func decodeUnassignUserGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
+		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
+	}
+
 	req := unassignUserGroupsRequest{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
@@ -255,6 +284,7 @@ func decodeUnassignUserGroupsRequest(_ context.Context, r *http.Request) (interf
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
 	}
+
 	return req, nil
 }
 
@@ -264,6 +294,7 @@ func decodeConnectChannelThingRequest(_ context.Context, r *http.Request) (inter
 		ThingID:   chi.URLParam(r, "thingID"),
 		ChannelID: chi.URLParam(r, "groupID"),
 	}
+
 	return req, nil
 }
 
@@ -273,6 +304,7 @@ func decodeDisconnectChannelThingRequest(_ context.Context, r *http.Request) (in
 		ThingID:   chi.URLParam(r, "thingID"),
 		ChannelID: chi.URLParam(r, "groupID"),
 	}
+
 	return req, nil
 }
 
@@ -287,6 +319,7 @@ func decodeConnectRequest(_ context.Context, r *http.Request) (interface{}, erro
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
 	}
+
 	return req, nil
 }
 
@@ -301,5 +334,6 @@ func decodeDisconnectRequest(_ context.Context, r *http.Request) (interface{}, e
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
 	}
+
 	return req, nil
 }

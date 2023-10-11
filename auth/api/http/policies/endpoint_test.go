@@ -115,21 +115,21 @@ func TestAddPolicies(t *testing.T) {
 	}{
 		{
 			desc:   "Add policies with authorized access",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusCreated,
 			req:    toJSON(valid),
 		},
 		{
 			desc:   "Add multiple policies to multiple user",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusCreated,
 			req:    toJSON(multipleValid),
 		},
 		{
 			desc:   "Add policies with unauthorized access",
-			token:  userLoginToken.Value,
+			token:  userLoginToken.AccessToken,
 			ct:     contentType,
 			status: http.StatusForbidden,
 			req:    toJSON(valid),
@@ -150,42 +150,42 @@ func TestAddPolicies(t *testing.T) {
 		},
 		{
 			desc:   "Add policies with invalid content type",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     "text/html",
 			status: http.StatusUnsupportedMediaType,
 			req:    toJSON(valid),
 		},
 		{
 			desc:   "Add policies with empty content type",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     "",
 			status: http.StatusUnsupportedMediaType,
 			req:    toJSON(valid),
 		},
 		{
 			desc:   "Add policies with invalid object field in request body",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidObject),
 		},
 		{
 			desc:   "Add policies with invalid policies field in request body",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidPolicies),
 		},
 		{
 			desc:   "Add policies with invalid subjects field in request body",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidSubjects),
 		},
 		{
 			desc:   "Add policies with empty request body",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    "",
@@ -221,7 +221,7 @@ func TestDeletePolicies(t *testing.T) {
 	client := ts.Client()
 
 	policies := addPolicyRequest{Object: "obj", Policies: []string{"read", "write", "delete"}, SubjectIDs: []string{"user1", "user2", "user3"}}
-	err = svc.AddPolicies(context.Background(), token.Value, policies.Object, policies.SubjectIDs, policies.Policies)
+	err = svc.AddPolicies(context.Background(), token.AccessToken, policies.Object, policies.SubjectIDs, policies.Policies)
 	assert.Nil(t, err, fmt.Sprintf("Adding policies expected to succeed: %s", err))
 
 	validSingleDeleteReq := addPolicyRequest{Object: "obj", Policies: []string{"read"}, SubjectIDs: []string{"user1"}}
@@ -239,7 +239,7 @@ func TestDeletePolicies(t *testing.T) {
 	}{
 		{
 			desc:   "Delete policies with unauthorized access",
-			token:  userLoginToken.Value,
+			token:  userLoginToken.AccessToken,
 			ct:     contentType,
 			status: http.StatusForbidden,
 			req:    toJSON(validMultipleDeleteReq),
@@ -260,56 +260,56 @@ func TestDeletePolicies(t *testing.T) {
 		},
 		{
 			desc:   "Delete policies with authorized access",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusNoContent,
 			req:    toJSON(validSingleDeleteReq),
 		},
 		{
 			desc:   "Delete multiple policies to multiple user",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusNoContent,
 			req:    toJSON(validMultipleDeleteReq),
 		},
 		{
 			desc:   "Delete policies with invalid content type",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     "text/html",
 			status: http.StatusUnsupportedMediaType,
 			req:    toJSON(validMultipleDeleteReq),
 		},
 		{
 			desc:   "Delete policies with empty content type",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     "",
 			status: http.StatusUnsupportedMediaType,
 			req:    toJSON(validMultipleDeleteReq),
 		},
 		{
 			desc:   "Delete policies with invalid object field in request body",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidObject),
 		},
 		{
 			desc:   "Delete policies with invalid policies field in request body",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidPolicies),
 		},
 		{
 			desc:   "Delete policies with invalid subjects field in request body",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    toJSON(invalidSubjects),
 		},
 		{
 			desc:   "Delete policies with empty request body",
-			token:  token.Value,
+			token:  token.AccessToken,
 			ct:     contentType,
 			status: http.StatusBadRequest,
 			req:    "",

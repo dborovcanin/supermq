@@ -36,7 +36,7 @@ func issueEndpoint(svc auth.Service) endpoint.Endpoint {
 		}
 
 		res := issueKeyRes{
-			Value: tkn.Value,
+			Value: tkn.AccessToken,
 		}
 		// if !key.ExpiresAt.IsZero() {
 		// 	res.ExpiresAt = &key.ExpiresAt

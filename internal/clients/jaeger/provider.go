@@ -55,7 +55,6 @@ func NewProvider(svcName, url, instanceID string) (*tracesdk.TracerProvider, err
 		)),
 	)
 	otel.SetTracerProvider(tp)
-
 	// otel.SetTextMapPropagator(jaegerp.Jaeger{})
 
 	return tp, nil

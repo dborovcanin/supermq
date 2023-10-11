@@ -39,11 +39,6 @@ func NewRepository(db postgres.Database) Repository {
 	}
 }
 
-// RetrieveByIdentity retrieves client by its unique credentials.
-func (clientRepo) RetrieveByIdentity(ctx context.Context, identity string) (mfclients.Client, error) {
-	return mfclients.Client{}, nil
-}
-
 func (repo clientRepo) Save(ctx context.Context, cs ...mfclients.Client) ([]mfclients.Client, error) {
 	tx, err := repo.ClientRepository.DB.BeginTxx(ctx, nil)
 	if err != nil {

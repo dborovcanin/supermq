@@ -6,7 +6,6 @@ package jaeger
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -56,7 +55,7 @@ func NewProvider(svcName, url, instanceID string) (*tracesdk.TracerProvider, err
 		)),
 	)
 	otel.SetTracerProvider(tp)
-	fmt.Println("TP:", tp)
+
 	// otel.SetTextMapPropagator(jaegerp.Jaeger{})
 
 	return tp, nil

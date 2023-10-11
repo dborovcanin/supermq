@@ -137,3 +137,9 @@ func (m *Repository) UpdateOwner(ctx context.Context, client mfclients.Client) (
 
 	return ret.Get(0).(mfclients.Client), ret.Error(1)
 }
+
+func (m *Repository) RetrieveAllByIDs(ctx context.Context, pm mfclients.Page) (mfclients.ClientsPage, error) {
+	ret := m.Called(ctx, pm)
+
+	return ret.Get(0).(mfclients.ClientsPage), ret.Error(1)
+}

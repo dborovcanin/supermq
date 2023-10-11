@@ -28,14 +28,10 @@ func (req identityReq) validate() error {
 
 type issueReq struct {
 	id      string
-	email   string
 	keyType auth.KeyType
 }
 
 func (req issueReq) validate() error {
-	if req.email == "" {
-		return apiutil.ErrMissingEmail
-	}
 	if req.keyType != auth.AccessKey &&
 		req.keyType != auth.APIKey &&
 		req.keyType != auth.RecoveryKey {

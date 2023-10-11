@@ -138,8 +138,7 @@ func (svc service) Issue(ctx context.Context, token string, key Key) (Token, err
 	case RecoveryKey:
 		return svc.tmpKey(recoveryDuration, key)
 	default:
-		ret, err := svc.accessKey(key)
-		return ret, err
+		return svc.accessKey(key)
 	}
 }
 
@@ -332,7 +331,7 @@ func (svc service) tmpKey(duration time.Duration, key Key) (Token, error) {
 		return Token{}, errors.Wrap(errIssueTmp, err)
 	}
 
-	return Token{Value: value}, nil
+	return Token{AccessToken: value}, nil
 }
 
 func (svc service) accessKey(key Key) (Token, error) {
@@ -348,8 +347,8 @@ func (svc service) accessKey(key Key) (Token, error) {
 	if err != nil {
 		return Token{}, errors.Wrap(errIssueTmp, err)
 	}
-	extra := map[string]interface{}{refreshToken: refresh}
-	return Token{Value: access, Extra: extra}, nil
+
+	return Token{AccessToken: access, RefreshToken: refresh}, nil
 }
 
 func (svc service) refreshKey(ctx context.Context, token string, key Key) (Token, error) {
@@ -375,8 +374,8 @@ func (svc service) refreshKey(ctx context.Context, token string, key Key) (Token
 	if err != nil {
 		return Token{}, errors.Wrap(errIssueTmp, err)
 	}
-	extra := map[string]interface{}{refreshToken: refresh}
-	return Token{Value: access, Extra: extra}, nil
+
+	return Token{AccessToken: access, RefreshToken: refresh}, nil
 }
 
 func (svc service) userKey(ctx context.Context, token string, key Key) (Token, error) {
@@ -405,7 +404,7 @@ func (svc service) userKey(ctx context.Context, token string, key Key) (Token, e
 		return Token{}, errors.Wrap(errIssueUser, err)
 	}
 
-	return Token{Value: tkn}, nil
+	return Token{AccessToken: tkn}, nil
 }
 
 // Done

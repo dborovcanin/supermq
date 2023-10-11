@@ -24,12 +24,11 @@ func registrationEndpoint(svc users.Service) endpoint.Endpoint {
 		if err != nil {
 			return createClientRes{}, err
 		}
-		ucr := createClientRes{
+
+		return createClientRes{
 			Client:  client,
 			created: true,
-		}
-
-		return ucr, nil
+		}, nil
 	}
 }
 
@@ -61,9 +60,7 @@ func viewProfileEndpoint(svc users.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return viewClientRes{
-			Client: client,
-		}, nil
+		return viewClientRes{Client: client}, nil
 	}
 }
 
@@ -270,9 +267,9 @@ func issueTokenEndpoint(svc users.Service) endpoint.Endpoint {
 		}
 
 		return tokenRes{
-			AccessToken:  token.AccessToken,
-			RefreshToken: token.RefreshToken,
-			AccessType:   token.AccessType,
+			AccessToken:  token.GetAccessToken(),
+			RefreshToken: token.GetRefreshToken(),
+			AccessType:   token.GetAccessType(),
 		}, nil
 	}
 }
@@ -290,9 +287,9 @@ func refreshTokenEndpoint(svc users.Service) endpoint.Endpoint {
 		}
 
 		return tokenRes{
-			AccessToken:  token.AccessToken,
-			RefreshToken: token.RefreshToken,
-			AccessType:   token.AccessType,
+			AccessToken:  token.GetAccessToken(),
+			RefreshToken: token.GetRefreshToken(),
+			AccessType:   token.GetAccessType(),
 		}, nil
 	}
 }
@@ -338,6 +335,7 @@ func buildMembersResponse(cp mfclients.MembersPage) memberPageRes {
 		},
 		Members: []viewMembersRes{},
 	}
+
 	for _, client := range cp.Members {
 		res.Members = append(res.Members, viewMembersRes{Client: client})
 	}

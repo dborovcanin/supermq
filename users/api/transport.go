@@ -17,7 +17,7 @@ import (
 // MakeHandler returns a HTTP handler for Users and Groups API endpoints.
 func MakeHandler(cls users.Service, grps groups.Service, mux *chi.Mux, logger mflog.Logger, instanceID string) http.Handler {
 	clientsHandler(cls, mux, logger)
-	groupsHandler(grps, cls, mux, logger)
+	groupsHandler(grps, mux, logger)
 
 	mux.Get("/health", mainflux.Health("users", instanceID))
 	mux.Handle("/metrics", promhttp.Handler())

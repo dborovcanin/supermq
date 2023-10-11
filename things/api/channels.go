@@ -17,11 +17,10 @@ import (
 	"github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/groups"
-	"github.com/mainflux/mainflux/things"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger logger.Logger) http.Handler {
+func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Handler {
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
@@ -47,13 +46,6 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 			opts...,
 		), "update_channel").ServeHTTP)
 
-		r.Get("/{groupID}/things", otelhttp.NewHandler(kithttp.NewServer(
-			listMembersEndpoint(tscv),
-			decodeListMembersRequest,
-			api.EncodeResponse,
-			opts...,
-		), "list_things_by_channel").ServeHTTP)
-
 		r.Get("/", otelhttp.NewHandler(kithttp.NewServer(
 			gapi.ListGroupsEndpoint(svc, "users"),
 			gapi.DecodeListGroupsRequest,
@@ -75,6 +67,9 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 			opts...,
 		), "disable_channel").ServeHTTP)
 
+		// Instead of having this endpoint /channels/{groupID}/members separately,
+		// we can have two separate endpoints for each member kind
+		// users (/channels/{groupID}/users) & user_groups (/channels/{groupID}/groups)
 		r.Post("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
 			assignUsersGroupsEndpoint(svc),
 			decodeAssignUsersGroupsRequest,
@@ -82,12 +77,51 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 			opts...,
 		), "assign_members").ServeHTTP)
 
+		// Instead of having this endpoint /channels/{groupID}/members separately,
+		// we can have two separate endpoints for each member kind
+		// users (/channels/{groupID}/users) & user_groups (/channels/{groupID}/groups)
 		r.Delete("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
 			unassignUsersGroupsEndpoint(svc),
 			decodeUnassignUsersGroupsRequest,
 			api.EncodeResponse,
 			opts...,
 		), "unassign_members").ServeHTTP)
+
+		// Request to add users to a channel
+		// This endpoint can be used alternative to /channels/{groupID}/members
+		r.Post("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+			assignUsersEndpoint(svc),
+			decodeAssignUsersRequest,
+			api.EncodeResponse,
+			opts...,
+		), "assign_users").ServeHTTP)
+
+		// Request to remove users from a channel
+		// This endpoint can be used alternative to /channels/{groupID}/members
+		r.Delete("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+			unassignUsersEndpoint(svc),
+			decodeUnassignUsersRequest,
+			api.EncodeResponse,
+			opts...,
+		), "unassign_users").ServeHTTP)
+
+		// Request to add user_groups to a channel
+		// This endpoint can be used alternative to /channels/{groupID}/members
+		r.Post("/{groupID}/groups", otelhttp.NewHandler(kithttp.NewServer(
+			assignUserGroupsEndpoint(svc),
+			decodeAssignUserGroupsRequest,
+			api.EncodeResponse,
+			opts...,
+		), "assign_groups").ServeHTTP)
+
+		// Request to remove user_groups from a channel
+		// This endpoint can be used alternative to /channels/{groupID}/members
+		r.Delete("/{groupID}/groups", otelhttp.NewHandler(kithttp.NewServer(
+			unassignUserGroupsEndpoint(svc),
+			decodeUnassignUserGroupsRequest,
+			api.EncodeResponse,
+			opts...,
+		), "unassign_groups").ServeHTTP)
 
 		r.Post("/{groupID}/things/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
 			connectChannelThingEndpoint(svc),
@@ -104,6 +138,11 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 		), "disconnect_channel_thing").ServeHTTP)
 	})
 
+	// Ideal location: things service,  things endpoint
+	// Reason for placing here :
+	// SpiceDB provides list of channel ids to which thing id attached
+	// and channel service can access spiceDB and get this channel ids list with given thing id.
+	// Request to get list of channels to which thingID ({memberID}) belongs
 	r.Get("/things/{memberID}/channels", otelhttp.NewHandler(kithttp.NewServer(
 		gapi.ListGroupsEndpoint(svc, "things"),
 		gapi.DecodeListGroupsRequest,
@@ -111,6 +150,30 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 		opts...,
 	), "list_channel_by_things").ServeHTTP)
 
+	// Ideal location: users service, users endpoint
+	// Reason for placing here :
+	// SpiceDB provides list of channel ids attached to given user id
+	// and channel service can access spiceDB and get this user ids list with given thing id.
+	// Request to get list of channels to which userID ({memberID}) have permission.
+	r.Get("/users/{memberID}/channels", otelhttp.NewHandler(kithttp.NewServer(
+		gapi.ListGroupsEndpoint(svc, "users"),
+		gapi.DecodeListGroupsRequest,
+		api.EncodeResponse,
+		opts...,
+	), "list_channel_by_things").ServeHTTP)
+
+	// Ideal location: users service, groups endpoint
+	// SpiceDB provides list of channel ids attached to given user_group id
+	// and channel service can access spiceDB and get this user ids list with given user_group id.
+	// Request to get list of channels to which user_group_id ({memberID}) attached.
+	r.Get("/groups/{memberID}/channels", otelhttp.NewHandler(kithttp.NewServer(
+		gapi.ListGroupsEndpoint(svc, "groups"),
+		gapi.DecodeListGroupsRequest,
+		api.EncodeResponse,
+		opts...,
+	), "list_channel_by_things").ServeHTTP)
+
+	// Connect channel and thing
 	r.Post("/connect", otelhttp.NewHandler(kithttp.NewServer(
 		connectEndpoint(svc),
 		decodeConnectRequest,
@@ -118,6 +181,7 @@ func groupsHandler(svc groups.Service, tscv things.Service, r *chi.Mux, logger l
 		opts...,
 	), "connect").ServeHTTP)
 
+	// Disconnect channel and thing
 	r.Post("/disconnect", otelhttp.NewHandler(kithttp.NewServer(
 		disconnectEndpoint(svc),
 		decodeDisconnectRequest,
@@ -141,6 +205,50 @@ func decodeAssignUsersGroupsRequest(_ context.Context, r *http.Request) (interfa
 
 func decodeUnassignUsersGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	req := unassignUsersGroupsRequest{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func decodeAssignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := assignUsersRequest{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func decodeUnassignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := unassignUsersRequest{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func decodeAssignUserGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := assignUserGroupsRequest{
+		token:   apiutil.ExtractBearerToken(r),
+		groupID: chi.URLParam(r, "groupID"),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
+	}
+	return req, nil
+}
+
+func decodeUnassignUserGroupsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	req := unassignUserGroupsRequest{
 		token:   apiutil.ExtractBearerToken(r),
 		groupID: chi.URLParam(r, "groupID"),
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/mainflux/mainflux/pkg/uuid"
 	cpostgres "github.com/mainflux/mainflux/users/postgres"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -30,7 +31,10 @@ var (
 )
 
 func TestClientsSave(t *testing.T) {
-	t.Cleanup(func() { testsutil.CleanUpDB(t, db) })
+	t.Cleanup(func() {
+		_, err := db.Exec("DELETE FROM clients")
+		require.Nil(t, err, fmt.Sprintf("clean clients unexpected error: %s", err))
+	})
 	repo := cpostgres.NewRepository(database)
 
 	uid := testsutil.GenerateUUID(t, idProvider)
@@ -171,5 +175,73 @@ func TestClientsSave(t *testing.T) {
 			rClient.Credentials.Secret = tc.client.Credentials.Secret
 			assert.Equal(t, tc.client, rClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.client, rClient))
 		}
+	}
+}
+
+func TestIsOwner(t *testing.T) {
+	t.Cleanup(func() {
+		_, err := db.Exec("DELETE FROM clients")
+		require.Nil(t, err, fmt.Sprintf("clean clients unexpected error: %s", err))
+	})
+	repo := cpostgres.NewRepository(database)
+
+	owner := mfclients.Client{
+		ID:   testsutil.GenerateUUID(t, idProvider),
+		Name: "owner",
+		Credentials: mfclients.Credentials{
+			Identity: "owner@example.com",
+			Secret:   password,
+		},
+		Metadata: mfclients.Metadata{},
+		Status:   mfclients.EnabledStatus,
+	}
+	owner, err := repo.Save(context.Background(), owner)
+	require.Nil(t, err, fmt.Sprintf("save owner unexpected error: %s", err))
+
+	cases := []struct {
+		desc    string
+		ownerID string
+		client  mfclients.Client
+		err     error
+	}{
+		{
+			desc:    "add new client successfully with an owner",
+			ownerID: owner.ID,
+			client: mfclients.Client{
+				ID:   testsutil.GenerateUUID(t, idProvider),
+				Name: clientName,
+				Credentials: mfclients.Credentials{
+					Identity: "withowner@example.com",
+					Secret:   password,
+				},
+				Owner:    owner.ID,
+				Metadata: mfclients.Metadata{},
+				Status:   mfclients.EnabledStatus,
+			},
+			err: nil,
+		},
+		{
+			desc:    "add new client successfully without an owner",
+			ownerID: owner.ID,
+			client: mfclients.Client{
+				ID:   testsutil.GenerateUUID(t, idProvider),
+				Name: clientName,
+				Credentials: mfclients.Credentials{
+					Identity: "withoutowner@example.com",
+					Secret:   password,
+				},
+				Metadata: mfclients.Metadata{},
+				Status:   mfclients.EnabledStatus,
+			},
+			err: errors.ErrAuthorization,
+		},
+	}
+
+	for _, tc := range cases {
+		_, err := repo.Save(context.Background(), tc.client)
+		require.Nil(t, err, fmt.Sprintf("%s: save client unexpected error: %s", tc.desc, err))
+		err = repo.IsOwner(context.Background(), tc.client.ID, tc.ownerID)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+
 	}
 }

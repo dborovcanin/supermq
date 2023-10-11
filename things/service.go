@@ -101,7 +101,7 @@ func (svc service) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (s
 }
 
 func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclients.Client) ([]mfclients.Client, error) {
-	userID, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
+	user, err := svc.auth.Identify(ctx, &mainflux.IdentityReq{Token: token})
 	if err != nil {
 		return []mfclients.Client{}, errors.Wrap(errors.ErrAuthorization, err)
 	}
@@ -122,7 +122,7 @@ func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclie
 			c.Credentials.Secret = key
 		}
 		if c.Owner == "" {
-			c.Owner = userID.GetId()
+			c.Owner = user.GetId()
 		}
 		if c.Status != mfclients.DisabledStatus && c.Status != mfclients.EnabledStatus {
 			return []mfclients.Client{}, apiutil.ErrInvalidStatus
@@ -139,7 +139,7 @@ func (svc service) CreateThings(ctx context.Context, token string, cls ...mfclie
 	for _, c := range saved {
 		policy := mainflux.AddPolicyReq{
 			SubjectType: userType,
-			Subject:     userID.GetId(),
+			Subject:     user.GetId(),
 			Relation:    ownerRelation,
 			ObjectType:  thingType,
 			Object:      c.ID,
@@ -436,7 +436,7 @@ func (svc service) Identify(ctx context.Context, key string) (string, error) {
 }
 
 func (svc service) identify(ctx context.Context, token string) (string, error) {
-	user, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
+	user, err := svc.auth.Identify(ctx, &mainflux.IdentityReq{Token: token})
 	if err != nil {
 		return "", err
 	}

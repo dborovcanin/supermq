@@ -20,6 +20,7 @@ func (req createClientReq) validate() error {
 	if len(req.client.Name) > api.MaxNameSize {
 		return apiutil.ErrNameSize
 	}
+
 	return req.client.Validate()
 }
 
@@ -35,6 +36,7 @@ func (req viewClientReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+
 	return nil
 }
 
@@ -46,6 +48,7 @@ func (req viewProfileReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
+
 	return nil
 }
 
@@ -76,6 +79,7 @@ func (req listClientsReq) validate() error {
 		req.visibility != api.SharedVisibility {
 		return apiutil.ErrInvalidVisibilityType
 	}
+
 	return nil
 }
 
@@ -89,7 +93,6 @@ func (req listMembersReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
-
 	if req.groupID == "" {
 		return apiutil.ErrMissingID
 	}
@@ -128,6 +131,7 @@ func (req updateClientTagsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+
 	return nil
 }
 
@@ -161,6 +165,7 @@ func (req updateClientIdentityReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+
 	return nil
 }
 
@@ -174,6 +179,7 @@ func (req updateClientSecretReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
+
 	return nil
 }
 
@@ -189,6 +195,7 @@ func (req changeClientStatusReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+
 	return nil
 }
 
@@ -204,6 +211,7 @@ func (req loginClientReq) validate() error {
 	if req.Secret == "" {
 		return apiutil.ErrMissingSecret
 	}
+
 	return nil
 }
 
@@ -215,6 +223,7 @@ func (req tokenReq) validate() error {
 	if req.RefreshToken == "" {
 		return apiutil.ErrBearerToken
 	}
+
 	return nil
 }
 
@@ -227,7 +236,6 @@ func (req passwResetReq) validate() error {
 	if req.Email == "" {
 		return apiutil.ErrMissingEmail
 	}
-
 	if req.Host == "" {
 		return apiutil.ErrMissingHost
 	}
@@ -245,15 +253,12 @@ func (req resetTokenReq) validate() error {
 	if req.Password == "" {
 		return apiutil.ErrMissingPass
 	}
-
 	if req.ConfPass == "" {
 		return apiutil.ErrMissingConfPass
 	}
-
 	if req.Token == "" {
 		return apiutil.ErrBearerToken
 	}
-
 	if req.Password != req.ConfPass {
 		return apiutil.ErrInvalidResetPass
 	}

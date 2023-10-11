@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/metrics"
+	"github.com/mainflux/mainflux"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/users"
-	"github.com/mainflux/mainflux/users/jwt"
 )
 
 var _ users.Service = (*metricsMiddleware)(nil)
@@ -40,7 +40,7 @@ func (ms *metricsMiddleware) RegisterClient(ctx context.Context, token string, c
 }
 
 // IssueToken instruments IssueToken method with metrics.
-func (ms *metricsMiddleware) IssueToken(ctx context.Context, identity, secret string) (jwt.Token, error) {
+func (ms *metricsMiddleware) IssueToken(ctx context.Context, identity, secret string) (*mainflux.Token, error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "issue_token").Add(1)
 		ms.latency.With("method", "issue_token").Observe(time.Since(begin).Seconds())
@@ -49,7 +49,7 @@ func (ms *metricsMiddleware) IssueToken(ctx context.Context, identity, secret st
 }
 
 // RefreshToken instruments RefreshToken method with metrics.
-func (ms *metricsMiddleware) RefreshToken(ctx context.Context, accessToken string) (token jwt.Token, err error) {
+func (ms *metricsMiddleware) RefreshToken(ctx context.Context, accessToken string) (token *mainflux.Token, err error) {
 	defer func(begin time.Time) {
 		ms.counter.With("method", "refresh_token").Add(1)
 		ms.latency.With("method", "refresh_token").Observe(time.Since(begin).Seconds())

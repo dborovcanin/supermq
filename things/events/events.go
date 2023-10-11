@@ -22,6 +22,7 @@ const (
 	clientList        = clientPrefix + "list"
 	clientListByGroup = clientPrefix + "list_by_group"
 	clientIdentify    = clientPrefix + "identify"
+	clientAuthorize   = clientPrefix + "authorize"
 )
 
 var (
@@ -32,6 +33,8 @@ var (
 	_ events.Event = (*listClientEvent)(nil)
 	_ events.Event = (*listClientByGroupEvent)(nil)
 	_ events.Event = (*identifyClientEvent)(nil)
+	_ events.Event = (*authorizeClientEvent)(nil)
+	_ events.Event = (*shareClientEvent)(nil)
 )
 
 type createClientEvent struct {
@@ -294,5 +297,70 @@ func (ice identifyClientEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"operation": clientIdentify,
 		"thing_id":  ice.thingID,
+	}, nil
+}
+
+type authorizeClientEvent struct {
+	thingID         string
+	namespace       string
+	subjectType     string
+	subjectKind     string
+	subjectRelation string
+	subject         string
+	relation        string
+	permission      string
+	object          string
+	objectType      string
+}
+
+func (ice authorizeClientEvent) Encode() (map[string]interface{}, error) {
+	var val = map[string]interface{}{
+		"operation": clientAuthorize,
+		"thing_id":  ice.thingID,
+	}
+	if ice.namespace != "" {
+		val["namespace"] = ice.namespace
+	}
+	if ice.subjectType != "" {
+		val["subject_type"] = ice.subjectType
+	}
+	if ice.subjectKind != "" {
+		val["subject_kind"] = ice.subjectKind
+	}
+	if ice.subjectRelation != "" {
+		val["subject_relation"] = ice.subjectRelation
+	}
+	if ice.subject != "" {
+		val["subject"] = ice.subject
+	}
+	if ice.relation != "" {
+		val["relation"] = ice.relation
+	}
+	if ice.permission != "" {
+		val["permission"] = ice.permission
+	}
+	if ice.object != "" {
+		val["object"] = ice.object
+	}
+	if ice.objectType != "" {
+		val["object_type"] = ice.objectType
+	}
+
+	return val, nil
+}
+
+type shareClientEvent struct {
+	action   string
+	id       string
+	relation string
+	userIDs  []string
+}
+
+func (sce shareClientEvent) Encode() (map[string]interface{}, error) {
+	return map[string]interface{}{
+		"operation": clientPrefix + sce.action,
+		"id":        sce.id,
+		"relation":  sce.relation,
+		"user_ids":  strings.Join(sce.userIDs, ","),
 	}, nil
 }

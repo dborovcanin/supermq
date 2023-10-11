@@ -23,7 +23,6 @@ func (req createClientReq) validate() error {
 	if len(req.client.Name) > api.MaxNameSize {
 		return apiutil.ErrNameSize
 	}
-	// Do the validation only if request contains ID
 	if req.client.ID != "" {
 		return api.ValidateUUID(req.client.ID)
 	}
@@ -40,11 +39,9 @@ func (req createClientsReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
-
 	if len(req.Clients) == 0 {
 		return apiutil.ErrEmptyList
 	}
-
 	for _, client := range req.Clients {
 		if client.ID != "" {
 			if err := api.ValidateUUID(client.ID); err != nil {
@@ -94,7 +91,6 @@ func (req listClientsReq) validate() error {
 	if req.limit > api.MaxLimitSize || req.limit < 1 {
 		return apiutil.ErrLimitSize
 	}
-
 	if len(req.name) > api.MaxNameSize {
 		return apiutil.ErrNameSize
 	}
@@ -112,7 +108,6 @@ func (req listMembersReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
-
 	if req.groupID == "" {
 		return apiutil.ErrMissingID
 	}
@@ -132,13 +127,13 @@ func (req updateClientReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
-
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
 	if len(req.Name) > api.MaxNameSize {
 		return apiutil.ErrNameSize
 	}
+
 	return nil
 }
 
@@ -152,10 +147,10 @@ func (req updateClientTagsReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
-
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+
 	return nil
 }
 
@@ -175,6 +170,7 @@ func (req updateClientOwnerReq) validate() error {
 	if req.Owner == "" {
 		return apiutil.ErrMissingOwner
 	}
+
 	return nil
 }
 
@@ -191,7 +187,6 @@ func (req updateClientCredentialsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
-
 	if req.Secret == "" {
 		return apiutil.ErrBearerKey
 	}
@@ -208,6 +203,7 @@ func (req changeClientStatusReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+
 	return nil
 }
 
@@ -223,19 +219,15 @@ func (req assignUsersGroupsRequest) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
 	}
-
 	if req.MemberKind == "" {
 		return apiutil.ErrMissingMemberKind
 	}
-
 	if !slices.Contains([]string{"users", "groups"}, req.MemberKind) {
 		return apiutil.ErrInvalidMemberKind
 	}
-
 	if req.groupID == "" {
 		return apiutil.ErrMissingID
 	}
-
 	if len(req.Members) == 0 {
 		return apiutil.ErrEmptyList
 	}

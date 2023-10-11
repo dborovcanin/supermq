@@ -36,13 +36,11 @@ import (
 	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/users"
-
 	capi "github.com/mainflux/mainflux/users/api"
 	"github.com/mainflux/mainflux/users/emailer"
 	uevents "github.com/mainflux/mainflux/users/events"
 	"github.com/mainflux/mainflux/users/hasher"
 	clientspg "github.com/mainflux/mainflux/users/postgres"
-
 	ctracing "github.com/mainflux/mainflux/users/tracing"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"

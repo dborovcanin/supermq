@@ -3,353 +3,247 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
-	"net"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
-
-	grpcapi "github.com/mainflux/mainflux/auth/api/grpc"
 
 	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
 	"github.com/authzed/grpcutil"
-	kitprometheus "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/jmoiron/sqlx"
+	chclient "github.com/mainflux/callhome/pkg/client"
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/auth"
 	api "github.com/mainflux/mainflux/auth/api"
+	grpcapi "github.com/mainflux/mainflux/auth/api/grpc"
 	httpapi "github.com/mainflux/mainflux/auth/api/http"
 	"github.com/mainflux/mainflux/auth/jwt"
 	"github.com/mainflux/mainflux/auth/keto"
 	"github.com/mainflux/mainflux/auth/postgres"
 	"github.com/mainflux/mainflux/auth/spicedb"
 	"github.com/mainflux/mainflux/auth/tracing"
-	"github.com/mainflux/mainflux/logger"
+	"github.com/mainflux/mainflux/internal"
+	jaegerclient "github.com/mainflux/mainflux/internal/clients/jaeger"
+	pgclient "github.com/mainflux/mainflux/internal/clients/postgres"
+	"github.com/mainflux/mainflux/internal/env"
+	"github.com/mainflux/mainflux/internal/server"
+	grpcserver "github.com/mainflux/mainflux/internal/server/grpc"
+	httpserver "github.com/mainflux/mainflux/internal/server/http"
+	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	"github.com/opentracing/opentracing-go"
 	acl "github.com/ory/keto/proto/ory/keto/relation_tuples/v1alpha2"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
-	jconfig "github.com/uber/jaeger-client-go/config"
+	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 )
 
 const (
-	defLogLevel        = "error"
-	defDBHost          = "localhost"
-	defDBPort          = "5432"
-	defDBUser          = "mainflux"
-	defDBPass          = "mainflux"
-	defDB              = "auth"
-	defDBSSLMode       = "disable"
-	defDBSSLCert       = ""
-	defDBSSLKey        = ""
-	defDBSSLRootCert   = ""
-	defHTTPPort        = "8180"
-	defGRPCPort        = "8181"
-	defSecret          = "auth"
-	defServerCert      = ""
-	defServerKey       = ""
-	defJaegerURL       = ""
-	defKetoReadHost    = "mainflux-keto"
-	defKetoWriteHost   = "mainflux-keto"
-	defKetoReadPort    = "4466"
-	defKetoWritePort   = "4467"
-	defLoginDuration   = "30m"
-	defRefreshDuration = "60m"
-
-	defSpiceDBHost       = "localhost"
-	defSpiceDBPort       = "50051"
-	defSpicePreSharedKey = "12345678"
-	defSpiceDBSchemaFile = "./docker/spicedb/schema.zed"
-	envSpiceDBhost       = "MF_SPICEDB_HOST"
-	envSpiceDBport       = "MF_SPICEDB_PORT"
-	envSpiceDBSchemaFile = "MF_SPICEDB_SCHEMA_FILE"
-
-	envLogLevel        = "MF_AUTH_LOG_LEVEL"
-	envDBHost          = "MF_AUTH_DB_HOST"
-	envDBPort          = "MF_AUTH_DB_PORT"
-	envDBUser          = "MF_AUTH_DB_USER"
-	envDBPass          = "MF_AUTH_DB_PASS"
-	envDB              = "MF_AUTH_DB"
-	envDBSSLMode       = "MF_AUTH_DB_SSL_MODE"
-	envDBSSLCert       = "MF_AUTH_DB_SSL_CERT"
-	envDBSSLKey        = "MF_AUTH_DB_SSL_KEY"
-	envDBSSLRootCert   = "MF_AUTH_DB_SSL_ROOT_CERT"
-	envHTTPPort        = "MF_AUTH_HTTP_PORT"
-	envGRPCPort        = "MF_AUTH_GRPC_PORT"
-	envSecret          = "MF_AUTH_SECRET"
-	envServerCert      = "MF_AUTH_SERVER_CERT"
-	envServerKey       = "MF_AUTH_SERVER_KEY"
-	envJaegerURL       = "MF_JAEGER_URL"
-	envKetoReadHost    = "MF_KETO_READ_REMOTE_HOST"
-	envKetoWriteHost   = "MF_KETO_WRITE_REMOTE_HOST"
-	envKetoReadPort    = "MF_KETO_READ_REMOTE_PORT"
-	envKetoWritePort   = "MF_KETO_WRITE_REMOTE_PORT"
-	envLoginDuration   = "MF_AUTH_ACCESS_TOKEN_DURATION"
-	envRefreshDuration = "MF_AUTH_REFRESH_TOKEN_DURATION"
+	svcName           = "auth"
+	envPrefixHTTP     = "MF_AUTH_HTTP_"
+	envPrefixGrpc     = "MF_AUTH_GRPC_"
+	envPrefixDB       = "MF_AUTH_DB_"
+	defDB             = "auth"
+	defSvcHTTPPort    = "8180"
+	defSvcGRPCPort    = "8181"
+	SpicePreSharedKey = "12345678"
 )
 
 type config struct {
-	logLevel        string
-	dbConfig        postgres.Config
-	httpPort        string
-	grpcPort        string
-	secret          string
-	serverCert      string
-	serverKey       string
-	jaegerURL       string
-	resetURL        string
-	ketoReadHost    string
-	ketoWriteHost   string
-	ketoWritePort   string
-	ketoReadPort    string
-	loginDuration   time.Duration
-	refreshDuration time.Duration
-
-	spicedbHost       string
-	spicedbPort       string
-	spicedbSchemaFile string
-}
-
-type tokenConfig struct {
-	hmacSampleSecret []byte // secret for signing token
-	tokenDuration    string // token in duration in min
+	LogLevel          string `env:"MF_AUTH_LOG_LEVEL"               envDefault:"info"`
+	SecretKey         string `env:"MF_AUTH_SECRET_KEY"              envDefault:"secret"`
+	JaegerURL         string `env:"MF_JAEGER_URL"                   envDefault:"http://jaeger:14268/api/traces"`
+	SendTelemetry     bool   `env:"MF_SEND_TELEMETRY"               envDefault:"true"`
+	InstanceID        string `env:"MF_AUTH_ADAPTER_INSTANCE_ID"     envDefault:""`
+	KetoReadHost      string `env:"MF_KETO_READ_REMOTE_HOST"        envDefault:"mainflux-keto"`
+	KetoWriteHost     string `env:"MF_KETO_WRITE_REMOTE_HOST"       envDefault:"mainflux-keto"`
+	KetoWritePort     string `env:"MF_KETO_WRITE_REMOTE_PORT"       envDefault:"4467"`
+	KetoReadPort      string `env:"MF_KETO_READ_REMOTE_PORT"        envDefault:"4466"`
+	AccessDuration    string `env:"MF_AUTH_ACCESS_TOKEN_DURATION"  envDefault:"30m"`
+	RefreshDuration   string `env:"MF_AUTH_REFRESH_TOKEN_DURATION" envDefault:"24h"`
+	SpicedbHost       string `env:"MF_SPICEDB_HOST"                 envDefault:"localhost"`
+	SpicedbPort       string `env:"MF_SPICEDB_PORT"                 envDefault:"50051"`
+	SpicedbSchemaFile string `env:"MF_SPICEDB_SCHEMA_FILE"          envDefault:"./docker/spicedb/schema.zed"`
 }
 
 func main() {
-	cfg := loadConfig()
+	ctx, cancel := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 
-	logger, err := logger.New(os.Stdout, cfg.logLevel)
-	if err != nil {
-		log.Fatalf(err.Error())
+	cfg := config{}
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("failed to load %s configuration : %s", svcName, err.Error())
 	}
 
-	db := connectToDB(cfg.dbConfig, logger)
-	defer db.Close()
-	dbTracer, dbCloser := initJaeger("auth_db", cfg.jaegerURL, logger)
-	defer dbCloser.Close()
+	logger, err := mflog.New(os.Stdout, cfg.LogLevel)
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("failed to init logger: %s", err.Error()))
+	}
 
-	readerConn, writerConn := initKeto(cfg.ketoReadHost, cfg.ketoReadPort, cfg.ketoWriteHost, cfg.ketoWritePort, logger)
+	var exitCode int
+	defer mflog.ExitWithError(&exitCode)
+
+	if cfg.InstanceID == "" {
+		if cfg.InstanceID, err = uuid.New().ID(); err != nil {
+			logger.Error(fmt.Sprintf("failed to generate instanceID: %s", err))
+			exitCode = 1
+			return
+		}
+	}
+
+	dbConfig := pgclient.Config{Name: defDB}
+	if err := dbConfig.LoadEnv(envPrefixDB); err != nil {
+		logger.Fatal(err.Error())
+	}
+	db, err := pgclient.SetupWithConfig(envPrefixDB, *postgres.Migration(), dbConfig)
+	if err != nil {
+		logger.Error(err.Error())
+		exitCode = 1
+		return
+	}
+	defer db.Close()
+
+	tp, err := jaegerclient.NewProvider(svcName, cfg.JaegerURL, cfg.InstanceID)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to init Jaeger: %s", err))
+		exitCode = 1
+		return
+	}
+	defer func() {
+		if err := tp.Shutdown(ctx); err != nil {
+			logger.Error(fmt.Sprintf("error shutting down tracer provider: %v", err))
+		}
+	}()
+	tracer := tp.Tracer(svcName)
+
+	readerConn, writerConn, err := initKeto(cfg.KetoReadHost, cfg.KetoReadPort, cfg.KetoWriteHost, cfg.KetoWritePort)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to init keto grpc client : %s\n", err.Error()))
+		exitCode = 1
+		return
+	}
 
 	spicedbclient, err := initSpiceDB(cfg)
-
 	if err != nil {
-		log.Fatalf("failed to init spicedb grpc client : %s\n", err.Error())
+		logger.Error(fmt.Sprintf("failed to init spicedb grpc client : %s\n", err.Error()))
+		exitCode = 1
+		return
 	}
 
-	svc := newService(db, dbTracer, cfg.secret, logger, readerConn, writerConn, spicedbclient, cfg.loginDuration, cfg.refreshDuration)
-	errs := make(chan error, 2)
+	svc := newService(db, tracer, cfg, logger, readerConn, writerConn, spicedbclient)
 
-	go startHTTPServer(svc, cfg.httpPort, cfg.serverCert, cfg.serverKey, logger, errs)
-	go startGRPCServer(svc, cfg.grpcPort, cfg.serverCert, cfg.serverKey, logger, errs)
+	httpServerConfig := server.Config{Port: defSvcHTTPPort}
+	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err.Error()))
+		exitCode = 1
+		return
+	}
+	hs := httpserver.New(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, logger, cfg.InstanceID), logger)
 
-	go func() {
-		c := make(chan os.Signal)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
+	grpcServerConfig := server.Config{Port: defSvcGRPCPort}
+	if err := env.Parse(&grpcServerConfig, env.Options{Prefix: envPrefixGrpc}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s gRPC server configuration : %s", svcName, err.Error()))
+		exitCode = 1
+		return
+	}
+	registerAuthServiceServer := func(srv *grpc.Server) {
+		reflection.Register(srv)
+		mainflux.RegisterAuthServiceServer(srv, grpcapi.NewServer(svc))
+	}
 
-	err = <-errs
-	logger.Error(fmt.Sprintf("Authentication service terminated: %s", err))
+	gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, registerAuthServiceServer, logger)
+
+	if cfg.SendTelemetry {
+		chc := chclient.New(svcName, mainflux.Version, logger, cancel)
+		go chc.CallHome(ctx)
+	}
+
+	g.Go(func() error {
+		return hs.Start()
+	})
+	g.Go(func() error {
+		return gs.Start()
+	})
+
+	g.Go(func() error {
+		return server.StopSignalHandler(ctx, cancel, logger, svcName, hs, gs)
+	})
+
+	if err := g.Wait(); err != nil {
+		logger.Error(fmt.Sprintf("users service terminated: %s", err))
+	}
 }
 
-func loadConfig() config {
-	dbConfig := postgres.Config{
-		Host:        mainflux.Env(envDBHost, defDBHost),
-		Port:        mainflux.Env(envDBPort, defDBPort),
-		User:        mainflux.Env(envDBUser, defDBUser),
-		Pass:        mainflux.Env(envDBPass, defDBPass),
-		Name:        mainflux.Env(envDB, defDB),
-		SSLMode:     mainflux.Env(envDBSSLMode, defDBSSLMode),
-		SSLCert:     mainflux.Env(envDBSSLCert, defDBSSLCert),
-		SSLKey:      mainflux.Env(envDBSSLKey, defDBSSLKey),
-		SSLRootCert: mainflux.Env(envDBSSLRootCert, defDBSSLRootCert),
-	}
-
-	loginDuration, err := time.ParseDuration(mainflux.Env(envLoginDuration, defLoginDuration))
-	if err != nil {
-		log.Fatal(err)
-	}
-	refreshDuration, err := time.ParseDuration(mainflux.Env(envRefreshDuration, defRefreshDuration))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return config{
-		logLevel:        mainflux.Env(envLogLevel, defLogLevel),
-		dbConfig:        dbConfig,
-		httpPort:        mainflux.Env(envHTTPPort, defHTTPPort),
-		grpcPort:        mainflux.Env(envGRPCPort, defGRPCPort),
-		secret:          mainflux.Env(envSecret, defSecret),
-		serverCert:      mainflux.Env(envServerCert, defServerCert),
-		serverKey:       mainflux.Env(envServerKey, defServerKey),
-		jaegerURL:       mainflux.Env(envJaegerURL, defJaegerURL),
-		ketoReadHost:    mainflux.Env(envKetoReadHost, defKetoReadHost),
-		ketoWriteHost:   mainflux.Env(envKetoWriteHost, defKetoWriteHost),
-		ketoReadPort:    mainflux.Env(envKetoReadPort, defKetoReadPort),
-		ketoWritePort:   mainflux.Env(envKetoWritePort, defKetoWritePort),
-		loginDuration:   loginDuration,
-		refreshDuration: refreshDuration,
-
-		spicedbHost:       mainflux.Env(envSpiceDBhost, defSpiceDBHost),
-		spicedbPort:       mainflux.Env(envSpiceDBport, defSpiceDBPort),
-		spicedbSchemaFile: mainflux.Env(envSpiceDBSchemaFile, defSpiceDBSchemaFile),
-	}
-
-}
-
-func initJaeger(svcName, url string, logger logger.Logger) (opentracing.Tracer, io.Closer) {
-	if url == "" {
-		return opentracing.NoopTracer{}, io.NopCloser(nil)
-	}
-
-	tracer, closer, err := jconfig.Configuration{
-		ServiceName: svcName,
-		Sampler: &jconfig.SamplerConfig{
-			Type:  "const",
-			Param: 1,
-		},
-		Reporter: &jconfig.ReporterConfig{
-			LocalAgentHostPort: url,
-			LogSpans:           true,
-		},
-	}.NewTracer()
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to init Jaeger: %s", err))
-		os.Exit(1)
-	}
-
-	return tracer, closer
-}
-
-func initKeto(hostReadAddress, readPort, hostWriteAddress, writePort string, logger logger.Logger) (readerConnection, writerConnection *grpc.ClientConn) {
+func initKeto(hostReadAddress, readPort, hostWriteAddress, writePort string) (readerConnection, writerConnection *grpc.ClientConn, err error) {
 	readConn, err := grpc.Dial(fmt.Sprintf("%s:%s", hostReadAddress, readPort), grpc.WithInsecure())
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to dial %s:%s for Keto Read Service: %s", hostReadAddress, readPort, err))
-		os.Exit(1)
+		return nil, nil, fmt.Errorf("failed to dial %s:%s for Keto Read Service: %s", hostReadAddress, readPort, err)
 	}
 
 	writeConn, err := grpc.Dial(fmt.Sprintf("%s:%s", hostWriteAddress, writePort), grpc.WithInsecure())
 	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to dial %s:%s for Keto Write Service: %s", hostWriteAddress, writePort, err))
-		os.Exit(1)
+		return nil, nil, fmt.Errorf("failed to dial %s:%s for Keto Write Service: %s", hostWriteAddress, writePort, err)
 	}
 
-	return readConn, writeConn
+	return readConn, writeConn, nil
 }
 
 func initSpiceDB(cfg config) (*authzed.Client, error) {
 	client, err := authzed.NewClient(
-		fmt.Sprintf("%s:%s", cfg.spicedbHost, cfg.spicedbPort),
+		fmt.Sprintf("%s:%s", cfg.SpicedbHost, cfg.SpicedbPort),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpcutil.WithInsecureBearerToken(defSpicePreSharedKey),
+		grpcutil.WithInsecureBearerToken(SpicePreSharedKey),
 	)
 	if err != nil {
 		return client, err
 	}
 
-	if err := initSchema(client, cfg.spicedbSchemaFile); err != nil {
+	if err := initSchema(client, cfg.SpicedbSchemaFile); err != nil {
 		return client, err
 	}
+
 	return client, nil
 }
 
 func initSchema(client *authzed.Client, schemaFilePath string) error {
 	schemaContent, err := os.ReadFile(schemaFilePath)
-
 	if err != nil {
 		return fmt.Errorf("failed to read spice db schema file : %w", err)
 	}
-	_, err = client.SchemaServiceClient.WriteSchema(context.Background(), &v1.WriteSchemaRequest{Schema: string(schemaContent)})
-	if err != nil {
+
+	if _, err = client.SchemaServiceClient.WriteSchema(context.Background(), &v1.WriteSchemaRequest{Schema: string(schemaContent)}); err != nil {
 		return fmt.Errorf("failed to create schema in spicedb : %w", err)
 	}
+
 	return nil
 }
 
-func connectToDB(dbConfig postgres.Config, logger logger.Logger) *sqlx.DB {
-	db, err := postgres.Connect(dbConfig)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to connect to postgres: %s", err))
-		os.Exit(1)
-	}
-	return db
-}
-
-func newService(db *sqlx.DB, tracer opentracing.Tracer, secret string, logger logger.Logger, readerConn, writerConn *grpc.ClientConn, spicedbClient *authzed.Client, lDuration, rDuration time.Duration) auth.Service {
+func newService(db *sqlx.DB, tracer trace.Tracer, cfg config, logger mflog.Logger, readerConn, writerConn *grpc.ClientConn, spicedbClient *authzed.Client) auth.Service {
 	database := postgres.NewDatabase(db)
 	keysRepo := tracing.New(postgres.New(database), tracer)
 
 	groupsRepo := postgres.NewGroupRepo(database)
-	groupsRepo = tracing.GroupRepositoryMiddleware(tracer, groupsRepo)
 
 	pa := keto.NewPolicyAgent(acl.NewCheckServiceClient(readerConn), acl.NewWriteServiceClient(writerConn), acl.NewReadServiceClient(readerConn))
 
 	pa = spicedb.NewPolicyAgent(spicedbClient)
 	idProvider := uuid.New()
-	t := jwt.New([]byte(secret))
+	t := jwt.New([]byte(cfg.SecretKey))
 
-	svc := auth.New(keysRepo, groupsRepo, idProvider, t, pa, lDuration, rDuration)
+	aDuration, err := time.ParseDuration(cfg.AccessDuration)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to parse access token duration: %s", err.Error()))
+	}
+	rDuration, err := time.ParseDuration(cfg.RefreshDuration)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to parse refresh token duration: %s", err.Error()))
+	}
+
+	svc := auth.New(keysRepo, groupsRepo, idProvider, t, pa, aDuration, rDuration)
 	svc = api.LoggingMiddleware(svc, logger)
-	svc = api.MetricsMiddleware(
-		svc,
-		kitprometheus.NewCounterFrom(stdprometheus.CounterOpts{
-			Namespace: "auth",
-			Subsystem: "api",
-			Name:      "request_count",
-			Help:      "Number of requests received.",
-		}, []string{"method"}),
-		kitprometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
-			Namespace: "auth",
-			Subsystem: "api",
-			Name:      "request_latency_microseconds",
-			Help:      "Total duration of requests in microseconds.",
-		}, []string{"method"}),
-	)
+	counter, latency := internal.MakeMetrics("groups", "api")
+	svc = api.MetricsMiddleware(svc, counter, latency)
 
 	return svc
-}
-
-func startHTTPServer(svc auth.Service, port, certFile, keyFile string, logger logger.Logger, errs chan error) {
-	p := fmt.Sprintf(":%s", port)
-	if certFile != "" || keyFile != "" {
-		logger.Info(fmt.Sprintf("Authentication service started using https, cert %s key %s, exposed port %s", certFile, keyFile, port))
-		errs <- http.ListenAndServeTLS(p, certFile, keyFile, httpapi.MakeHandler(svc, logger))
-		return
-	}
-	logger.Info(fmt.Sprintf("Authentication service started using http, exposed port %s", port))
-	errs <- http.ListenAndServe(p, httpapi.MakeHandler(svc, logger))
-
-}
-
-func startGRPCServer(svc auth.Service, port string, certFile string, keyFile string, logger logger.Logger, errs chan error) {
-	p := fmt.Sprintf(":%s", port)
-	listener, err := net.Listen("tcp", p)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to listen on port %s: %s", port, err))
-	}
-
-	var server *grpc.Server
-	if certFile != "" || keyFile != "" {
-		creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Failed to load auth certificates: %s", err))
-			os.Exit(1)
-		}
-		logger.Info(fmt.Sprintf("Authentication gRPC service started using https on port %s with cert %s key %s", port, certFile, keyFile))
-		server = grpc.NewServer(grpc.Creds(creds))
-	} else {
-		logger.Info(fmt.Sprintf("Authentication gRPC service started using http on port %s", port))
-		server = grpc.NewServer()
-	}
-
-	mainflux.RegisterAuthServiceServer(server, grpcapi.NewServer(svc))
-	logger.Info(fmt.Sprintf("Authentication gRPC service started, exposed port %s", port))
-	errs <- server.Serve(listener)
 }

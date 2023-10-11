@@ -196,13 +196,50 @@ func (es *eventStore) Identify(ctx context.Context, key string) (string, error) 
 }
 
 func (es *eventStore) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (string, error) {
-	return es.svc.Authorize(ctx, req)
+	thingID, err := es.svc.Authorize(ctx, req)
+	if err != nil {
+		return thingID, err
+	}
+
+	event := authorizeClientEvent{
+		thingID:    thingID,
+		object:     req.GetObject(),
+		permission: req.GetPermission(),
+	}
+
+	if err := es.Publish(ctx, event); err != nil {
+		return thingID, err
+	}
+
+	return thingID, nil
 }
 
 func (es *eventStore) Share(ctx context.Context, token, id string, relation string, userids ...string) error {
-	return es.svc.Share(ctx, token, id, relation, userids...)
+	if err := es.svc.Share(ctx, token, id, relation, userids...); err != nil {
+		return err
+	}
+
+	event := shareClientEvent{
+		action:   "share",
+		id:       id,
+		relation: relation,
+		userIDs:  userids,
+	}
+
+	return es.Publish(ctx, event)
 }
 
 func (es *eventStore) Unshare(ctx context.Context, token, id string, relation string, userids ...string) error {
-	return es.svc.Unshare(ctx, token, id, relation, userids...)
+	if err := es.svc.Unshare(ctx, token, id, relation, userids...); err != nil {
+		return err
+	}
+
+	event := shareClientEvent{
+		action:   "unshare",
+		id:       id,
+		relation: relation,
+		userIDs:  userids,
+	}
+
+	return es.Publish(ctx, event)
 }

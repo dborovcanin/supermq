@@ -135,7 +135,7 @@ func TestIdentify(t *testing.T) {
 	recoveryToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.RecoveryKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
 	assert.Nil(t, err, fmt.Sprintf("Issuing recovery key expected to succeed: %s", err))
 
-	apiToken, err := svc.Issue(context.Background(), loginToken.Value, auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), ExpiresAt: time.Now().Add(time.Minute), SubjectID: id, Subject: email})
+	apiToken, err := svc.Issue(context.Background(), loginToken.AccessToken, auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), ExpiresAt: time.Now().Add(time.Minute), SubjectID: id, Subject: email})
 	assert.Nil(t, err, fmt.Sprintf("Issuing API key expected to succeed: %s", err))
 
 	authAddr := fmt.Sprintf("localhost:%d", port)
@@ -145,49 +145,49 @@ func TestIdentify(t *testing.T) {
 	cases := []struct {
 		desc  string
 		token string
-		idt   *mainflux.UserIdentity
+		idt   *mainflux.IdentityRes
 		err   error
 		code  codes.Code
 	}{
 		{
 			desc:  "identify user with user token",
-			token: loginToken.Value,
-			idt:   &mainflux.UserIdentity{Email: email, Id: id},
+			token: loginToken.AccessToken,
+			idt:   &mainflux.IdentityRes{Id: id},
 			err:   nil,
 			code:  codes.OK,
 		},
 		{
 			desc:  "identify user with recovery token",
-			token: recoveryToken.Value,
-			idt:   &mainflux.UserIdentity{Email: email, Id: id},
+			token: recoveryToken.AccessToken,
+			idt:   &mainflux.IdentityRes{Id: id},
 			err:   nil,
 			code:  codes.OK,
 		},
 		{
 			desc:  "identify user with API token",
-			token: apiToken.Value,
-			idt:   &mainflux.UserIdentity{Email: email, Id: id},
+			token: apiToken.AccessToken,
+			idt:   &mainflux.IdentityRes{Id: id},
 			err:   nil,
 			code:  codes.OK,
 		},
 		{
 			desc:  "identify user with invalid user token",
 			token: "invalid",
-			idt:   &mainflux.UserIdentity{},
+			idt:   &mainflux.IdentityRes{},
 			err:   status.Error(codes.Unauthenticated, "unauthenticated access"),
 			code:  codes.Unauthenticated,
 		},
 		{
 			desc:  "identify user with empty token",
 			token: "",
-			idt:   &mainflux.UserIdentity{},
+			idt:   &mainflux.IdentityRes{},
 			err:   status.Error(codes.InvalidArgument, "received invalid token request"),
 			code:  codes.Unauthenticated,
 		},
 	}
 
 	for _, tc := range cases {
-		idt, err := client.Identify(context.Background(), &mainflux.Token{Value: tc.token})
+		idt, err := client.Identify(context.Background(), &mainflux.IdentityReq{Token: tc.token})
 		if idt != nil {
 			assert.Equal(t, tc.idt, idt, fmt.Sprintf("%s: expected %v got %v", tc.desc, tc.idt, idt))
 		}
@@ -217,7 +217,7 @@ func TestAuthorize(t *testing.T) {
 	}{
 		{
 			desc:     "authorize user with authorized token",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  id,
 			object:   authoritiesObj,
 			relation: memberRelation,
@@ -227,7 +227,7 @@ func TestAuthorize(t *testing.T) {
 		},
 		{
 			desc:     "authorize user with unauthorized relation",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  id,
 			object:   authoritiesObj,
 			relation: "unauthorizedRelation",
@@ -237,7 +237,7 @@ func TestAuthorize(t *testing.T) {
 		},
 		{
 			desc:     "authorize user with unauthorized object",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  id,
 			object:   "unauthorizedobject",
 			relation: memberRelation,
@@ -247,7 +247,7 @@ func TestAuthorize(t *testing.T) {
 		},
 		{
 			desc:     "authorize user with unauthorized subject",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  "unauthorizedSubject",
 			object:   authoritiesObj,
 			relation: memberRelation,
@@ -257,7 +257,7 @@ func TestAuthorize(t *testing.T) {
 		},
 		{
 			desc:     "authorize user with invalid ACL",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  "",
 			object:   "",
 			relation: "",
@@ -300,7 +300,7 @@ func TestAddPolicy(t *testing.T) {
 	}{
 		{
 			desc:     "add groupadmin policy to user",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  id,
 			object:   groupAdminObj,
 			relation: memberRelation,
@@ -310,7 +310,7 @@ func TestAddPolicy(t *testing.T) {
 		},
 		{
 			desc:     "add policy to user with invalid ACL",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  "",
 			object:   "",
 			relation: "",
@@ -357,7 +357,7 @@ func TestDeletePolicy(t *testing.T) {
 	}{
 		{
 			desc:     "delete valid policy",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  id,
 			object:   thingID,
 			relation: readRelation,
@@ -366,7 +366,7 @@ func TestDeletePolicy(t *testing.T) {
 		},
 		{
 			desc:     "delete invalid policy",
-			token:    token.Value,
+			token:    token.AccessToken,
 			subject:  "",
 			object:   "",
 			relation: "",
@@ -411,15 +411,15 @@ func TestMembers(t *testing.T) {
 		users = append(users, id)
 	}
 
-	group, err = svc.CreateGroup(context.Background(), token.Value, group)
+	group, err = svc.CreateGroup(context.Background(), token.AccessToken, group)
 	assert.Nil(t, err, fmt.Sprintf("Creating group expected to succeed: %s", err))
 	err = svc.AddPolicy(context.Background(), auth.PolicyReq{Subject: id, Object: group.ID, Relation: "groupadmin"})
 	assert.Nil(t, err, fmt.Sprintf("Adding a policy expected to succeed: %s", err))
 
-	err = svc.Assign(context.Background(), token.Value, group.ID, thingsType, things...)
+	err = svc.Assign(context.Background(), token.AccessToken, group.ID, thingsType, things...)
 	assert.Nil(t, err, fmt.Sprintf("Assign members to  expected to succeed: %s", err))
 
-	err = svc.Assign(context.Background(), token.Value, group.ID, usersType, users...)
+	err = svc.Assign(context.Background(), token.AccessToken, group.ID, usersType, users...)
 	assert.Nil(t, err, fmt.Sprintf("Assign members to group expected to succeed: %s", err))
 
 	cases := []struct {
@@ -434,7 +434,7 @@ func TestMembers(t *testing.T) {
 		{
 			desc:      "get all things with user token",
 			groupID:   group.ID,
-			token:     token.Value,
+			token:     token.AccessToken,
 			groupType: thingsType,
 			size:      numOfThings,
 			err:       nil,
@@ -443,7 +443,7 @@ func TestMembers(t *testing.T) {
 		{
 			desc:      "get all users with user token",
 			groupID:   group.ID,
-			token:     token.Value,
+			token:     token.AccessToken,
 			groupType: usersType,
 			size:      numOfUsers,
 			err:       nil,

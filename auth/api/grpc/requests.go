@@ -10,17 +10,11 @@ import (
 
 type identityReq struct {
 	token string
-	kind  auth.KeyType
 }
 
 func (req identityReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerToken
-	}
-	if req.kind != auth.AccessKey &&
-		req.kind != auth.APIKey &&
-		req.kind != auth.RecoveryKey {
-		return apiutil.ErrInvalidAuthKey
 	}
 
 	return nil

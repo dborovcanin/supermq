@@ -19,16 +19,16 @@ func registrationEndpoint(svc users.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return createClientRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.RegisterClient(ctx, req.token, req.client)
 		if err != nil {
 			return createClientRes{}, err
 		}
-		ucr := createClientRes{
+
+		return createClientRes{
 			Client:  client,
 			created: true,
-		}
-
-		return ucr, nil
+		}, nil
 	}
 }
 
@@ -43,6 +43,7 @@ func viewClientEndpoint(svc users.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+
 		return viewClientRes{Client: client}, nil
 	}
 }
@@ -58,9 +59,8 @@ func viewProfileEndpoint(svc users.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		return viewClientRes{
-			Client: client,
-		}, nil
+
+		return viewClientRes{Client: client}, nil
 	}
 }
 
@@ -108,10 +108,12 @@ func listMembersEndpoint(svc users.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return memberPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		page, err := svc.ListMembers(ctx, req.token, req.groupID, req.Page)
 		if err != nil {
 			return memberPageRes{}, err
 		}
+
 		return buildMembersResponse(page), nil
 	}
 }
@@ -132,6 +134,7 @@ func updateClientEndpoint(svc users.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -151,6 +154,7 @@ func updateClientTagsEndpoint(svc users.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -161,10 +165,12 @@ func updateClientIdentityEndpoint(svc users.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.UpdateClientIdentity(ctx, req.token, req.id, req.Identity)
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -185,6 +191,7 @@ func passwordResetRequestEndpoint(svc users.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.GenerateResetToken(ctx, req.Email, req.Host); err != nil {
 			return nil, err
 		}
@@ -202,9 +209,11 @@ func passwordResetEndpoint(svc users.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.ResetSecret(ctx, req.Token, req.Password); err != nil {
 			return nil, err
 		}
+
 		return passwChangeRes{}, nil
 	}
 }
@@ -215,10 +224,12 @@ func updateClientSecretEndpoint(svc users.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.UpdateClientSecret(ctx, req.token, req.OldSecret, req.NewSecret)
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -234,11 +245,11 @@ func updateClientOwnerEndpoint(svc users.Service) endpoint.Endpoint {
 			ID:    req.id,
 			Owner: req.Owner,
 		}
-
 		client, err := svc.UpdateClientOwner(ctx, req.token, client)
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -254,10 +265,11 @@ func issueTokenEndpoint(svc users.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+
 		return tokenRes{
-			AccessToken:  token.AccessToken,
-			RefreshToken: token.RefreshToken,
-			AccessType:   token.AccessType,
+			AccessToken:  token.GetAccessToken(),
+			RefreshToken: token.GetRefreshToken(),
+			AccessType:   token.GetAccessType(),
 		}, nil
 	}
 }
@@ -275,9 +287,9 @@ func refreshTokenEndpoint(svc users.Service) endpoint.Endpoint {
 		}
 
 		return tokenRes{
-			AccessToken:  token.AccessToken,
-			RefreshToken: token.RefreshToken,
-			AccessType:   token.AccessType,
+			AccessToken:  token.GetAccessToken(),
+			RefreshToken: token.GetRefreshToken(),
+			AccessType:   token.GetAccessType(),
 		}, nil
 	}
 }
@@ -288,10 +300,12 @@ func enableClientEndpoint(svc users.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.EnableClient(ctx, req.token, req.id)
 		if err != nil {
 			return nil, err
 		}
+
 		return deleteClientRes{Client: client}, nil
 	}
 }
@@ -302,10 +316,12 @@ func disableClientEndpoint(svc users.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.DisableClient(ctx, req.token, req.id)
 		if err != nil {
 			return nil, err
 		}
+
 		return deleteClientRes{Client: client}, nil
 	}
 }
@@ -319,8 +335,10 @@ func buildMembersResponse(cp mfclients.MembersPage) memberPageRes {
 		},
 		Members: []viewMembersRes{},
 	}
+
 	for _, client := range cp.Members {
 		res.Members = append(res.Members, viewMembersRes{Client: client})
 	}
+
 	return res
 }

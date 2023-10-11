@@ -94,7 +94,7 @@ func TestShareGroupAccess(t *testing.T) {
 		IssuedAt:  time.Now(),
 	}
 
-	apiToken, err := svc.Issue(context.Background(), token.Value, key)
+	apiToken, err := svc.Issue(context.Background(), token.AccessToken, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
 
 	type shareGroupAccessReq struct {
@@ -102,8 +102,8 @@ func TestShareGroupAccess(t *testing.T) {
 		userGroupID  string
 		ThingGroupID string `json:"thing_group_id"`
 	}
-	data := shareGroupAccessReq{token: apiToken.Value, userGroupID: "ug", ThingGroupID: "tg"}
-	invalidData := shareGroupAccessReq{token: apiToken.Value, userGroupID: "ug", ThingGroupID: ""}
+	data := shareGroupAccessReq{token: apiToken.AccessToken, userGroupID: "ug", ThingGroupID: "tg"}
+	invalidData := shareGroupAccessReq{token: apiToken.AccessToken, userGroupID: "ug", ThingGroupID: ""}
 
 	cases := []struct {
 		desc        string
@@ -117,7 +117,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share a user group with thing group",
 			req:         toJSON(data),
 			contentType: contentType,
-			auth:        apiToken.Value,
+			auth:        apiToken.AccessToken,
 			userGroupID: "ug",
 			status:      http.StatusOK,
 		},
@@ -125,7 +125,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share a user group with invalid thing group",
 			req:         toJSON(invalidData),
 			contentType: contentType,
-			auth:        apiToken.Value,
+			auth:        apiToken.AccessToken,
 			userGroupID: "ug",
 			status:      http.StatusBadRequest,
 		},
@@ -133,7 +133,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share an invalid user group with thing group",
 			req:         toJSON(data),
 			contentType: contentType,
-			auth:        apiToken.Value,
+			auth:        apiToken.AccessToken,
 			userGroupID: "",
 			status:      http.StatusBadRequest,
 		},
@@ -141,7 +141,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share an invalid user group with invalid thing group",
 			req:         toJSON(invalidData),
 			contentType: contentType,
-			auth:        apiToken.Value,
+			auth:        apiToken.AccessToken,
 			userGroupID: "",
 			status:      http.StatusBadRequest,
 		},
@@ -149,7 +149,7 @@ func TestShareGroupAccess(t *testing.T) {
 			desc:        "share a user group with thing group with invalid content type",
 			req:         toJSON(data),
 			contentType: "",
-			auth:        apiToken.Value,
+			auth:        apiToken.AccessToken,
 			userGroupID: "ug",
 			status:      http.StatusUnsupportedMediaType,
 		},

@@ -33,10 +33,10 @@ func (m *Service) Refresh(ctx context.Context, in *mainflux.RefreshReq, opts ...
 	return ret.Get(0).(*mainflux.Token), ret.Error(1)
 }
 
-func (m *Service) Identify(ctx context.Context, in *mainflux.Token, opts ...grpc.CallOption) (*mainflux.UserIdentity, error) {
+func (m *Service) Identify(ctx context.Context, in *mainflux.IdentityReq, opts ...grpc.CallOption) (*mainflux.IdentityRes, error) {
 	ret := m.Called(ctx, in)
 
-	return ret.Get(0).(*mainflux.UserIdentity), ret.Error(1)
+	return ret.Get(0).(*mainflux.IdentityRes), ret.Error(1)
 }
 
 func (m *Service) Authorize(ctx context.Context, in *mainflux.AuthorizeReq, opts ...grpc.CallOption) (*mainflux.AuthorizeRes, error) {

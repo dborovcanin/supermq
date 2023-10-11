@@ -436,7 +436,7 @@ func (svc service) changeGroupStatus(ctx context.Context, token string, group gr
 }
 
 func (svc service) identify(ctx context.Context, token string) (string, error) {
-	user, err := svc.auth.Identify(ctx, &mainflux.Token{Value: token})
+	user, err := svc.auth.Identify(ctx, &mainflux.IdentityReq{Token: token})
 	if err != nil {
 		return "", err
 	}

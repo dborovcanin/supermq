@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mainflux/mainflux"
 	mflog "github.com/mainflux/mainflux/logger"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/users"
-	"github.com/mainflux/mainflux/users/jwt"
 )
 
 var _ users.Service = (*loggingMiddleware)(nil)
@@ -42,7 +42,7 @@ func (lm *loggingMiddleware) RegisterClient(ctx context.Context, token string, c
 
 // IssueToken logs the issue_token request. It logs the client identity and token type and the time it took to complete the request.
 // If the request fails, it logs the error.
-func (lm *loggingMiddleware) IssueToken(ctx context.Context, identity, secret string) (t jwt.Token, err error) {
+func (lm *loggingMiddleware) IssueToken(ctx context.Context, identity, secret string) (t *mainflux.Token, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method issue_token of type %s for client %s took %s to complete", t.AccessType, identity, time.Since(begin))
 		if err != nil {
@@ -56,7 +56,7 @@ func (lm *loggingMiddleware) IssueToken(ctx context.Context, identity, secret st
 
 // RefreshToken logs the refresh_token request. It logs the refreshtoken, token type and the time it took to complete the request.
 // If the request fails, it logs the error.
-func (lm *loggingMiddleware) RefreshToken(ctx context.Context, refreshToken string) (t jwt.Token, err error) {
+func (lm *loggingMiddleware) RefreshToken(ctx context.Context, refreshToken string) (t *mainflux.Token, err error) {
 	defer func(begin time.Time) {
 		message := fmt.Sprintf("Method refresh_token of type %s for refresh token %s took %s to complete", t.AccessType, refreshToken, time.Since(begin))
 		if err != nil {

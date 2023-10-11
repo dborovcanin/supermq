@@ -27,8 +27,9 @@ func issueEndpoint(svc auth.Service) endpoint.Endpoint {
 			return issueRes{}, err
 		}
 		ret := issueRes{
-			value: tkn.Value,
-			extra: tkn.Extra,
+			accessToken:  tkn.AccessToken,
+			refreshToken: tkn.RefreshToken,
+			accessType:   tkn.AccessType,
 		}
 		return ret, nil
 	}
@@ -51,8 +52,9 @@ func loginEndpoint(svc auth.Service) endpoint.Endpoint {
 			return issueRes{}, err
 		}
 		ret := issueRes{
-			value: tkn.Value,
-			extra: tkn.Extra,
+			accessToken:  tkn.AccessToken,
+			refreshToken: tkn.RefreshToken,
+			accessType:   tkn.AccessType,
 		}
 		return ret, nil
 	}
@@ -71,8 +73,9 @@ func refreshEndpoint(svc auth.Service) endpoint.Endpoint {
 			return issueRes{}, err
 		}
 		ret := issueRes{
-			value: tkn.Value,
-			extra: tkn.Extra,
+			accessToken:  tkn.AccessToken,
+			refreshToken: tkn.RefreshToken,
+			accessType:   tkn.AccessType,
 		}
 		return ret, nil
 	}

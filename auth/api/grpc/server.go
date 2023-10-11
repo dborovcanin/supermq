@@ -17,10 +17,10 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-var _ mainflux.UsersAuthServiceServer = (*grpcServer)(nil)
+var _ mainflux.AuthServiceServer = (*grpcServer)(nil)
 
 type grpcServer struct {
-	mainflux.UnimplementedUsersAuthServiceServer
+	mainflux.UnimplementedAuthServiceServer
 	issue           kitgrpc.Handler
 	login           kitgrpc.Handler
 	refresh         kitgrpc.Handler
@@ -39,7 +39,7 @@ type grpcServer struct {
 }
 
 // NewServer returns new AuthServiceServer instance.
-func NewServer(svc auth.Service) mainflux.UsersAuthServiceServer {
+func NewServer(svc auth.Service) mainflux.AuthServiceServer {
 	return &grpcServer{
 		issue: kitgrpc.NewServer(
 			(issueEndpoint(svc)),
@@ -241,12 +241,12 @@ func (s *grpcServer) Members(ctx context.Context, req *mainflux.MembersReq) (*ma
 
 func decodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.IssueReq)
-	return issueReq{id: req.GetId(), email: req.GetEmail(), keyType: auth.KeyType(req.GetType())}, nil
+	return issueReq{id: req.GetId(), keyType: auth.KeyType(req.GetType())}, nil
 }
 
 func decodeLoginRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.LoginReq)
-	return issueReq{id: req.GetId(), email: req.GetEmail(), keyType: auth.AccessKey}, nil
+	return issueReq{id: req.GetId(), keyType: auth.AccessKey}, nil
 }
 
 func decodeRefreshRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -278,7 +278,7 @@ func decodeIdentifyRequest(_ context.Context, grpcReq interface{}) (interface{},
 
 func encodeIdentifyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(identityRes)
-	return &mainflux.UserIdentity{Id: res.id, Email: res.email}, nil
+	return &mainflux.UserIdentity{Id: res.id}, nil
 }
 
 func decodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {

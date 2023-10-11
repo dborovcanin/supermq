@@ -9,19 +9,17 @@ option go_package = "./mainflux";
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
 
-// ThingsAuthService is a service that provides authentication and authorization
-// functionalities for the things service. ThingsAuthService can authorize
-// things to perform actions on channels or users to perform actions on things.
-service ThingsAuthService {
+// AuthzService is a service that provides authentication and authorization
+// functionalities for the things service.
+service AuthzService {
   // Authorize checks if the subject is authorized to perform
   // the action on the object.
   rpc Authorize(AuthorizeReq) returns (AuthorizeRes) {}
 }
 
-// UsersAuthService is a service that provides authentication and authorization
-// functionalities for the users service. UsersAuthService can authorize
-// users to perform actions on other users, groups, channels or things.
-service UsersAuthService {
+// AuthService is a service that provides authentication and authorization
+// functionalities for the users service.
+service AuthService {
   rpc Issue(IssueReq) returns (Token) {}
   rpc Login(LoginReq) returns (Token) {}
   rpc Refresh(RefreshReq) returns (Token) {}

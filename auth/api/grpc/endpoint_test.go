@@ -57,7 +57,7 @@ func newService() auth.Service {
 func startGRPCServer(svc auth.Service, port int) {
 	listener, _ := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	server := grpc.NewServer()
-	mainflux.RegisterUsersAuthServiceServer(server, grpcapi.NewServer(svc))
+	mainflux.RegisterAuthServiceServer(server, grpcapi.NewServer(svc))
 	go func() {
 		if err := server.Serve(listener); err != nil {
 			panic(fmt.Sprintf("failed to serve: %s", err))
@@ -121,7 +121,7 @@ func TestIssue(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, err := client.Issue(context.Background(), &mainflux.IssueReq{Id: tc.id, Email: tc.email, Type: uint32(tc.kind)})
+		_, err := client.Issue(context.Background(), &mainflux.IssueReq{Id: tc.id, Type: uint32(tc.kind)})
 		e, ok := status.FromError(err)
 		assert.True(t, ok, "gRPC status can't be extracted from the error")
 		assert.Equal(t, tc.code, e.Code(), fmt.Sprintf("%s: expected %s got %s", tc.desc, tc.code, e.Code()))
@@ -152,21 +152,21 @@ func TestIdentify(t *testing.T) {
 		{
 			desc:  "identify user with user token",
 			token: loginToken.Value,
-			idt:   &mainflux.UserIdentity{Email: email, Id: id},
+			idt:   &mainflux.UserIdentity{Id: id},
 			err:   nil,
 			code:  codes.OK,
 		},
 		{
 			desc:  "identify user with recovery token",
 			token: recoveryToken.Value,
-			idt:   &mainflux.UserIdentity{Email: email, Id: id},
+			idt:   &mainflux.UserIdentity{Id: id},
 			err:   nil,
 			code:  codes.OK,
 		},
 		{
 			desc:  "identify user with API token",
 			token: apiToken.Value,
-			idt:   &mainflux.UserIdentity{Email: email, Id: id},
+			idt:   &mainflux.UserIdentity{Id: id},
 			err:   nil,
 			code:  codes.OK,
 		},

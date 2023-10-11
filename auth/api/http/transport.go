@@ -16,12 +16,15 @@ import (
 )
 
 // MakeHandler returns a HTTP handler for API endpoints.
-func MakeHandler(svc auth.Service, logger logger.Logger) http.Handler {
+func MakeHandler(svc auth.Service, logger logger.Logger, instanceID string) http.Handler {
 	mux := bone.New()
+
 	mux = keys.MakeHandler(svc, mux, logger)
 	mux = groups.MakeHandler(svc, mux, logger)
 	mux = policies.MakeHandler(svc, mux, logger)
-	mux.GetFunc("/health", mainflux.Health("auth", ""))
+
+	mux.GetFunc("/health", mainflux.Health("auth", instanceID))
 	mux.Handle("/metrics", promhttp.Handler())
+
 	return mux
 }

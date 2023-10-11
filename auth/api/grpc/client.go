@@ -17,7 +17,7 @@ import (
 
 const svcName = "mainflux.AuthService"
 
-var _ mainflux.UsersAuthServiceClient = (*grpcClient)(nil)
+var _ mainflux.AuthServiceClient = (*grpcClient)(nil)
 
 type grpcClient struct {
 	issue           endpoint.Endpoint
@@ -39,7 +39,7 @@ type grpcClient struct {
 }
 
 // NewClient returns new gRPC client instance.
-func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.UsersAuthServiceClient {
+func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthServiceClient {
 	return &grpcClient{
 		issue: kitgrpc.NewClient(
 			conn,
@@ -170,7 +170,7 @@ func (client grpcClient) Issue(ctx context.Context, req *mainflux.IssueReq, _ ..
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.issue(ctx, issueReq{id: req.GetId(), email: req.GetEmail(), keyType: auth.KeyType(req.Type)})
+	res, err := client.issue(ctx, issueReq{id: req.GetId(), keyType: auth.KeyType(req.Type)})
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (client grpcClient) Issue(ctx context.Context, req *mainflux.IssueReq, _ ..
 
 func encodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(issueReq)
-	return &mainflux.IssueReq{Id: req.id, Email: req.email, Type: uint32(req.keyType)}, nil
+	return &mainflux.IssueReq{Id: req.id, Type: uint32(req.keyType)}, nil
 }
 
 func decodeIssueResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
@@ -190,7 +190,7 @@ func (client grpcClient) Login(ctx context.Context, req *mainflux.LoginReq, _ ..
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.login(ctx, issueReq{id: req.GetId(), email: req.GetEmail(), keyType: auth.APIKey})
+	res, err := client.login(ctx, issueReq{id: req.GetId(), keyType: auth.APIKey})
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (client grpcClient) Login(ctx context.Context, req *mainflux.LoginReq, _ ..
 
 func encodeLoginRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(issueReq)
-	return &mainflux.LoginReq{Id: req.id, Email: req.email}, nil
+	return &mainflux.LoginReq{Id: req.id}, nil
 }
 
 func decodeLoginResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
@@ -236,7 +236,7 @@ func (client grpcClient) Identify(ctx context.Context, token *mainflux.Token, _ 
 	}
 
 	ir := res.(identityRes)
-	return &mainflux.UserIdentity{Id: ir.id, Email: ir.email}, nil
+	return &mainflux.UserIdentity{Id: ir.id}, nil
 }
 
 func encodeIdentifyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -246,7 +246,7 @@ func encodeIdentifyRequest(_ context.Context, grpcReq interface{}) (interface{},
 
 func decodeIdentifyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(*mainflux.UserIdentity)
-	return identityRes{id: res.GetId(), email: res.GetEmail()}, nil
+	return identityRes{id: res.GetId()}, nil
 }
 
 func (client grpcClient) Authorize(ctx context.Context, req *mainflux.AuthorizeReq, _ ...grpc.CallOption) (r *mainflux.AuthorizeRes, err error) {

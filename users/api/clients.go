@@ -137,7 +137,7 @@ func clientsHandler(svc users.Service, r *chi.Mux, logger mflog.Logger) http.Han
 	// SpiceDB provides list of user ids in given user_group_id
 	// and users service can access spiceDB and get the user list with user_group_id.
 	// Request to get list of users present in the user_group_id {groupID}
-	r.Get("groups/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
+	r.Get("/groups/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
 		listMembersEndpoint(svc),
 		decodeListMembersRequest,
 		api.EncodeResponse,
@@ -151,7 +151,7 @@ func clientsHandler(svc users.Service, r *chi.Mux, logger mflog.Logger) http.Han
 	// Request to get list of users present in the user_group_id {groupID}
 	// The ideal placeholder name should be {channelID}, but gapi.DecodeListGroupsRequest uses {groupID} as a placeholder for the ID.
 	// So here, we are using {groupID} as the placeholder.
-	r.Get("channels/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+	r.Get("/channels/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
 		listMembersEndpoint(svc),
 		decodeListMembersRequest,
 		api.EncodeResponse,

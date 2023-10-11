@@ -137,12 +137,12 @@ func clientsHandler(svc users.Service, r *chi.Mux, logger mflog.Logger) http.Han
 	// SpiceDB provides list of user ids in given user_group_id
 	// and users service can access spiceDB and get the user list with user_group_id.
 	// Request to get list of users present in the user_group_id {groupID}
-	r.Get("/groups/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
+	r.Get("/groups/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
 		listMembersEndpoint(svc),
 		decodeListMembersRequest,
 		api.EncodeResponse,
 		opts...,
-	), "list_members").ServeHTTP)
+	), "list_users").ServeHTTP)
 
 	// Ideal location: things service, channels endpoint.
 	// Reason for placing here :

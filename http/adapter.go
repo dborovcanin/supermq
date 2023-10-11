@@ -23,11 +23,11 @@ var _ Service = (*adapterService)(nil)
 
 type adapterService struct {
 	publisher messaging.Publisher
-	auth      mainflux.ThingsAuthServiceClient
+	auth      mainflux.AuthzServiceClient
 }
 
 // New instantiates the HTTP adapter implementation.
-func New(publisher messaging.Publisher, auth mainflux.ThingsAuthServiceClient) Service {
+func New(publisher messaging.Publisher, auth mainflux.AuthzServiceClient) Service {
 	return &adapterService{
 		publisher: publisher,
 		auth:      auth,

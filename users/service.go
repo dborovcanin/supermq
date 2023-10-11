@@ -51,14 +51,14 @@ type Service interface {
 type service struct {
 	clients    postgres.Repository
 	idProvider mainflux.IDProvider
-	auth       mainflux.UsersAuthServiceClient
+	auth       mainflux.AuthServiceClient
 	hasher     Hasher
 	email      Emailer
 	passRegex  *regexp.Regexp
 }
 
 // NewService returns a new Users service implementation.
-func NewService(c postgres.Repository, a mainflux.UsersAuthServiceClient, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
+func NewService(c postgres.Repository, a mainflux.AuthServiceClient, e Emailer, h Hasher, idp mainflux.IDProvider, pr *regexp.Regexp) Service {
 	return service{
 		clients:    c,
 		auth:       a,

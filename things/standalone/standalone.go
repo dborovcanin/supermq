@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var _ mainflux.UsersAuthServiceClient = (*singleUserRepo)(nil)
+var _ mainflux.AuthServiceClient = (*singleUserRepo)(nil)
 
 type singleUserRepo struct {
 	id    string
@@ -20,7 +20,7 @@ type singleUserRepo struct {
 }
 
 // NewAuthService creates single user repository for constrained environments.
-func NewAuthService(id, token string) mainflux.UsersAuthServiceClient {
+func NewAuthService(id, token string) mainflux.AuthServiceClient {
 	return singleUserRepo{
 		id:    id,
 		token: token,

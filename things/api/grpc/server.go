@@ -16,15 +16,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var _ mainflux.ThingsAuthServiceServer = (*grpcServer)(nil)
+var _ mainflux.AuthzServiceServer = (*grpcServer)(nil)
 
 type grpcServer struct {
-	mainflux.UnimplementedThingsAuthServiceServer
+	mainflux.UnimplementedAuthzServiceServer
 	authorize kitgrpc.Handler
 }
 
 // NewServer returns new AuthServiceServer instance.
-func NewServer(svc things.Service) mainflux.ThingsAuthServiceServer {
+func NewServer(svc things.Service) mainflux.AuthzServiceServer {
 	return &grpcServer{
 		authorize: kitgrpc.NewServer(
 			(authorizeEndpoint(svc)),

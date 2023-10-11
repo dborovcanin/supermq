@@ -75,7 +75,7 @@ func newService(tokens map[string]string) (certs.Service, error) {
 	return certs.New(auth, repo, sdk, pki), nil
 }
 
-func newThingsService(auth mainflux.UsersAuthServiceClient) things.Service {
+func newThingsService(auth mainflux.AuthServiceClient) things.Service {
 	ths := make(map[string]mfclients.Client, thingsNum)
 	for i := 0; i < thingsNum; i++ {
 		id := strconv.Itoa(i + 1)

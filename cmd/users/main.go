@@ -36,13 +36,11 @@ import (
 	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/users"
-
 	capi "github.com/mainflux/mainflux/users/api"
 	"github.com/mainflux/mainflux/users/emailer"
 	uevents "github.com/mainflux/mainflux/users/events"
 	"github.com/mainflux/mainflux/users/hasher"
 	clientspg "github.com/mainflux/mainflux/users/postgres"
-
 	ctracing "github.com/mainflux/mainflux/users/tracing"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
@@ -193,7 +191,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, auth mainflux.UsersAuthServiceClient, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (users.Service, groups.Service, error) {
+func newService(ctx context.Context, auth mainflux.AuthServiceClient, db *sqlx.DB, dbConfig pgclient.Config, esClient *redis.Client, tracer trace.Tracer, c config, ec email.Config, logger mflog.Logger) (users.Service, groups.Service, error) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	cRepo := clientspg.NewRepository(database)
 	gRepo := gpostgres.New(database)

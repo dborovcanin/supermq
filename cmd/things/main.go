@@ -144,7 +144,7 @@ func main() {
 	}
 	defer esclient.Close()
 
-	var auth mainflux.UsersAuthServiceClient
+	var auth mainflux.AuthServiceClient
 
 	switch cfg.StandaloneID != "" && cfg.StandaloneToken != "" {
 	case true:
@@ -186,7 +186,7 @@ func main() {
 	}
 	regiterAuthzServer := func(srv *grpc.Server) {
 		reflection.Register(srv)
-		mainflux.RegisterThingsAuthServiceServer(srv, grpcapi.NewServer(csvc))
+		mainflux.RegisterAuthzServiceServer(srv, grpcapi.NewServer(csvc))
 	}
 	gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, regiterAuthzServer, logger)
 
@@ -213,7 +213,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth mainflux.UsersAuthServiceClient, cacheClient *redis.Client, esClient *redis.Client, keyDuration, esURL string, tracer trace.Tracer, logger mflog.Logger) (things.Service, groups.Service, error) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth mainflux.AuthServiceClient, cacheClient *redis.Client, esClient *redis.Client, keyDuration, esURL string, tracer trace.Tracer, logger mflog.Logger) (things.Service, groups.Service, error) {
 	database := postgres.NewDatabase(db, dbConfig, tracer)
 	cRepo := thingspg.NewRepository(database)
 	gRepo := gpostgres.New(database)

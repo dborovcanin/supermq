@@ -148,7 +148,7 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 		gapi.DecodeListGroupsRequest,
 		api.EncodeResponse,
 		opts...,
-	), "list_channel_by_things").ServeHTTP)
+	), "list_channel_by_thing_id").ServeHTTP)
 
 	// Ideal location: users service, users endpoint
 	// Reason for placing here :
@@ -160,7 +160,7 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 		gapi.DecodeListGroupsRequest,
 		api.EncodeResponse,
 		opts...,
-	), "list_channel_by_things").ServeHTTP)
+	), "list_channel_by_user_id").ServeHTTP)
 
 	// Ideal location: users service, groups endpoint
 	// SpiceDB provides list of channel ids attached to given user_group id
@@ -171,7 +171,7 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 		gapi.DecodeListGroupsRequest,
 		api.EncodeResponse,
 		opts...,
-	), "list_channel_by_things").ServeHTTP)
+	), "list_channel_by_user_group_id").ServeHTTP)
 
 	// Connect channel and thing
 	r.Post("/connect", otelhttp.NewHandler(kithttp.NewServer(

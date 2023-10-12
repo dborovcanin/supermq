@@ -6,12 +6,13 @@ package users
 import (
 	"context"
 
+	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/clients"
 )
 
-// ClientService specifies an API that must be fullfiled by the domain service
+// Service specifies an API that must be fullfiled by the domain service
 // implementation, and all of its decorators (e.g. logging & metrics).
-type ClientService interface {
+type Service interface {
 	// RegisterClient creates new client. In case of the failed registration, a
 	// non-nil error value is returned.
 	RegisterClient(ctx context.Context, token string, client clients.Client) (clients.Client, error)
@@ -62,4 +63,12 @@ type ClientService interface {
 
 	// Identify returns the client id from the given token.
 	Identify(ctx context.Context, tkn string) (string, error)
+
+	// IssueToken issues a new access and refresh token.
+	IssueToken(ctx context.Context, identity, secret string) (*mainflux.Token, error)
+
+	// RefreshToken refreshes expired access tokens.
+	// After an access token expires, the refresh token is used to get
+	// a new pair of access and refresh tokens.
+	RefreshToken(ctx context.Context, accessToken string) (*mainflux.Token, error)
 }

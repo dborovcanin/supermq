@@ -6,11 +6,11 @@ package events
 import (
 	"context"
 
+	"github.com/mainflux/mainflux"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
 	"github.com/mainflux/mainflux/pkg/events"
 	"github.com/mainflux/mainflux/pkg/events/redis"
 	"github.com/mainflux/mainflux/users"
-	"github.com/mainflux/mainflux/users/jwt"
 )
 
 const streamID = "mainflux.users"
@@ -214,6 +214,7 @@ func (es *eventStore) Identify(ctx context.Context, token string) (string, error
 	if err != nil {
 		return userID, err
 	}
+
 	event := identifyClientEvent{
 		userID: userID,
 	}
@@ -229,6 +230,7 @@ func (es *eventStore) GenerateResetToken(ctx context.Context, email, host string
 	if err := es.svc.GenerateResetToken(ctx, email, host); err != nil {
 		return err
 	}
+
 	event := generateResetTokenEvent{
 		email: email,
 		host:  host,
@@ -237,11 +239,12 @@ func (es *eventStore) GenerateResetToken(ctx context.Context, email, host string
 	return es.Publish(ctx, event)
 }
 
-func (es *eventStore) IssueToken(ctx context.Context, identity, secret string) (jwt.Token, error) {
+func (es *eventStore) IssueToken(ctx context.Context, identity, secret string) (*mainflux.Token, error) {
 	token, err := es.svc.IssueToken(ctx, identity, secret)
 	if err != nil {
 		return token, err
 	}
+
 	event := issueTokenEvent{
 		identity: identity,
 	}
@@ -253,11 +256,12 @@ func (es *eventStore) IssueToken(ctx context.Context, identity, secret string) (
 	return token, nil
 }
 
-func (es *eventStore) RefreshToken(ctx context.Context, refreshToken string) (jwt.Token, error) {
+func (es *eventStore) RefreshToken(ctx context.Context, refreshToken string) (*mainflux.Token, error) {
 	token, err := es.svc.RefreshToken(ctx, refreshToken)
 	if err != nil {
 		return token, err
 	}
+
 	event := refreshTokenEvent{}
 
 	if err := es.Publish(ctx, event); err != nil {
@@ -271,6 +275,7 @@ func (es *eventStore) ResetSecret(ctx context.Context, resetToken, secret string
 	if err := es.svc.ResetSecret(ctx, resetToken, secret); err != nil {
 		return err
 	}
+
 	event := resetSecretEvent{}
 
 	return es.Publish(ctx, event)
@@ -280,6 +285,7 @@ func (es *eventStore) SendPasswordReset(ctx context.Context, host, email, user, 
 	if err := es.svc.SendPasswordReset(ctx, host, email, user, token); err != nil {
 		return err
 	}
+
 	event := sendPasswordResetEvent{
 		host:  host,
 		email: email,

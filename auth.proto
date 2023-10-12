@@ -7,7 +7,6 @@ package mainflux;
 option go_package = "./mainflux";
 
 import "google/protobuf/empty.proto";
-import "google/protobuf/struct.proto";
 
 // AuthzService is a service that provides authentication and authorization
 // functionalities for the things service.
@@ -23,7 +22,7 @@ service AuthService {
   rpc Issue(IssueReq) returns (Token) {}
   rpc Login(LoginReq) returns (Token) {}
   rpc Refresh(RefreshReq) returns (Token) {}
-  rpc Identify(Token) returns (UserIdentity) {}
+  rpc Identify(IdentityReq) returns (IdentityRes) {}
   rpc Authorize(AuthorizeReq) returns (AuthorizeRes) {}
   rpc AddPolicy(AddPolicyReq) returns (AddPolicyRes) {}
   rpc DeletePolicy(DeletePolicyReq) returns (DeletePolicyRes) {}
@@ -41,11 +40,18 @@ service AuthService {
 // field can be used to determine how to validate the token.
 // Also, different tokens can be encoded in different ways.
 message Token {
-  string value = 1;
-  optional google.protobuf.Struct extra = 2;
+    string accessToken = 1;
+    optional string refreshToken = 2;
+    string accessType = 3;
 }
 
-message UserIdentity { string id = 1; }
+message IdentityReq {
+    string token = 1;
+}
+
+message IdentityRes {
+    string id    = 1;
+}
 
 message IssueReq {
   string id = 1;

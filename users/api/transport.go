@@ -21,5 +21,6 @@ func MakeHandler(cls users.Service, grps groups.Service, mux *chi.Mux, logger mf
 
 	mux.Get("/health", mainflux.Health("users", instanceID))
 	mux.Handle("/metrics", promhttp.Handler())
+
 	return mux
 }

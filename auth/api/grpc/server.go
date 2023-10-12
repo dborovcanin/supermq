@@ -14,7 +14,6 @@ import (
 	"github.com/mainflux/mainflux/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var _ mainflux.AuthServiceServer = (*grpcServer)(nil)
@@ -143,12 +142,12 @@ func (s *grpcServer) Refresh(ctx context.Context, req *mainflux.RefreshReq) (*ma
 	return res.(*mainflux.Token), nil
 }
 
-func (s *grpcServer) Identify(ctx context.Context, token *mainflux.Token) (*mainflux.UserIdentity, error) {
+func (s *grpcServer) Identify(ctx context.Context, token *mainflux.IdentityReq) (*mainflux.IdentityRes, error) {
 	_, res, err := s.identify.ServeGRPC(ctx, token)
 	if err != nil {
 		return nil, encodeError(err)
 	}
-	return res.(*mainflux.UserIdentity), nil
+	return res.(*mainflux.IdentityRes), nil
 }
 
 func (s *grpcServer) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (*mainflux.AuthorizeRes, error) {
@@ -256,29 +255,22 @@ func decodeRefreshRequest(_ context.Context, grpcReq interface{}) (interface{}, 
 
 func encodeIssueResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(issueRes)
-	fields := map[string]*structpb.Value{}
-	for k, v := range res.extra {
-		val, err := structpb.NewValue(v)
-		if err != nil {
-			return nil, err
-		}
-		fields[k] = val
-	}
 
-	extra := &structpb.Struct{
-		Fields: fields,
-	}
-	return &mainflux.Token{Value: res.value, Extra: extra}, nil
+	return &mainflux.Token{
+		AccessToken:  res.accessToken,
+		RefreshToken: &res.refreshToken,
+		AccessType:   res.accessType,
+	}, nil
 }
 
 func decodeIdentifyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(*mainflux.Token)
-	return identityReq{token: req.GetValue()}, nil
+	req := grpcReq.(*mainflux.IdentityReq)
+	return identityReq{token: req.GetToken()}, nil
 }
 
 func encodeIdentifyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(identityRes)
-	return &mainflux.UserIdentity{Id: res.id}, nil
+	return &mainflux.IdentityRes{Id: res.id}, nil
 }
 
 func decodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -316,7 +308,7 @@ func encodeAddPolicyResponse(_ context.Context, grpcRes interface{}) (interface{
 
 func decodeAssignRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.Token)
-	return assignReq{token: req.GetValue()}, nil
+	return assignReq{token: req.GetAccessToken()}, nil
 }
 
 func decodeDeletePolicyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {

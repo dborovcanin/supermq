@@ -74,8 +74,9 @@ func (key Key) String() string {
 }
 
 type Token struct {
-	Value string                 `json:"value,omitempty"`
-	Extra map[string]interface{} `json:"extra,omitempty"`
+	AccessToken  string // AccessToken contains the security credentials for a login session and identifies the client.
+	RefreshToken string // RefreshToken is a credential artifact that OAuth can use to get a new access token without client interaction.
+	AccessType   string // AccessType is the specific type of access token issued. It can be Bearer, Client or Basic.
 }
 
 // Identity contains ID and Email.

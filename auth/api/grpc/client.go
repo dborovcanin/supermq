@@ -71,7 +71,7 @@ func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthServic
 			"Identify",
 			encodeIdentifyRequest,
 			decodeIdentifyResponse,
-			mainflux.UserIdentity{},
+			mainflux.IdentityRes{},
 		).Endpoint(),
 		authorize: kitgrpc.NewClient(
 			conn,
@@ -226,26 +226,26 @@ func decodeRefreshResponse(_ context.Context, grpcRes interface{}) (interface{},
 	return grpcRes, nil
 }
 
-func (client grpcClient) Identify(ctx context.Context, token *mainflux.Token, _ ...grpc.CallOption) (*mainflux.UserIdentity, error) {
+func (client grpcClient) Identify(ctx context.Context, token *mainflux.IdentityReq, _ ...grpc.CallOption) (*mainflux.IdentityRes, error) {
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.identify(ctx, identityReq{token: token.GetValue()})
+	res, err := client.identify(ctx, identityReq{token: token.GetToken()})
 	if err != nil {
 		return nil, err
 	}
 
 	ir := res.(identityRes)
-	return &mainflux.UserIdentity{Id: ir.id}, nil
+	return &mainflux.IdentityRes{Id: ir.id}, nil
 }
 
 func encodeIdentifyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(identityReq)
-	return &mainflux.Token{Value: req.token}, nil
+	return &mainflux.IdentityReq{Token: req.token}, nil
 }
 
 func decodeIdentifyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(*mainflux.UserIdentity)
+	res := grpcRes.(*mainflux.IdentityRes)
 	return identityRes{id: res.GetId()}, nil
 }
 

@@ -121,7 +121,7 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 		decodeListMembersRequest,
 		api.EncodeResponse,
 		opts...,
-	), "list_things_by_channel").ServeHTTP)
+	), "list_things_by_channel_id").ServeHTTP)
 
 	return r
 }

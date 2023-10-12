@@ -158,16 +158,9 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 		if err != nil {
 			return groups.Page{}, err
 		}
-		allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
+		ids, err = svc.filterAllowedGroupIDsOfUserID(ctx, userID, gm.Permission, cids.Policies)
 		if err != nil {
 			return groups.Page{}, err
-		}
-		for _, cid := range cids.Policies {
-			for _, id := range allowedIDs {
-				if id == cid {
-					ids = append(ids, id)
-				}
-			}
 		}
 	case groupsKind:
 		if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, gm.Permission, groupType, memberID); err != nil {
@@ -183,14 +176,9 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 		if err != nil {
 			return groups.Page{}, err
 		}
-
-		allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
-		for _, gid := range gids.Policies {
-			for _, id := range allowedIDs {
-				if id == gid {
-					ids = append(ids, id)
-				}
-			}
+		ids, err = svc.filterAllowedGroupIDsOfUserID(ctx, userID, gm.Permission, gids.Policies)
+		if err != nil {
+			return groups.Page{}, err
 		}
 	case channelsKind:
 		if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, viewPermission, groupType, memberID); err != nil {
@@ -206,19 +194,11 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 			return groups.Page{}, err
 		}
 
-		allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
-		for _, gid := range gids.Policies {
-			for _, id := range allowedIDs {
-				if id == gid {
-					ids = append(ids, id)
-				}
-			}
-		}
-	case usersKind:
-		allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
+		ids, err = svc.filterAllowedGroupIDsOfUserID(ctx, userID, gm.Permission, gids.Policies)
 		if err != nil {
 			return groups.Page{}, err
 		}
+	case usersKind:
 		if memberID != "" && userID != memberID {
 			if _, err := svc.authorizeKind(ctx, userType, usersKind, userID, ownerRelation, userType, memberID); err != nil {
 				return groups.Page{}, err
@@ -233,15 +213,15 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 			if err != nil {
 				return groups.Page{}, err
 			}
-			for _, gid := range gids.Policies {
-				for _, id := range allowedIDs {
-					if id == gid {
-						ids = append(ids, id)
-					}
-				}
+			ids, err = svc.filterAllowedGroupIDsOfUserID(ctx, userID, gm.Permission, gids.Policies)
+			if err != nil {
+				return groups.Page{}, err
 			}
 		} else {
-			ids = allowedIDs
+			ids, err = svc.listAllGroupsOfUserID(ctx, userID, gm.Permission)
+			if err != nil {
+				return groups.Page{}, err
+			}
 		}
 	default:
 		return groups.Page{}, fmt.Errorf("invalid member kind")
@@ -460,6 +440,23 @@ func (svc service) Unassign(ctx context.Context, token, groupID, relation, membe
 	// 	return err
 	// }
 	return nil
+}
+
+func (svc service) filterAllowedGroupIDsOfUserID(ctx context.Context, userID string, permission string, groupIDs []string) ([]string, error) {
+	var ids []string
+	allowedIDs, err := svc.listAllGroupsOfUserID(ctx, userID, permission)
+	if err != nil {
+		return []string{}, err
+	}
+
+	for _, gid := range groupIDs {
+		for _, id := range allowedIDs {
+			if id == gid {
+				ids = append(ids, id)
+			}
+		}
+	}
+	return ids, nil
 }
 
 func (svc service) listAllGroupsOfUserID(ctx context.Context, userID string, permission string) ([]string, error) {

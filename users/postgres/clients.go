@@ -6,7 +6,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/mainflux/mainflux/internal/postgres"
 	mfclients "github.com/mainflux/mainflux/pkg/clients"
@@ -68,9 +67,9 @@ func (repo clientRepo) Save(ctx context.Context, c mfclients.Client) (mfclients.
 }
 
 func (repo clientRepo) IsOwner(ctx context.Context, clientID, ownerID string) error {
-	q := fmt.Sprintf(`SELECT * FROM clients WHERE id = '%s' AND owner_id = '%s'`, clientID, ownerID)
+	q := "SELECT * FROM clients WHERE id = $1 AND owner_id = $2"
 
-	rows, err := repo.ClientRepository.DB.QueryContext(ctx, q)
+	rows, err := repo.ClientRepository.DB.QueryContext(ctx, q, clientID, ownerID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return errors.ErrAuthorization

@@ -141,7 +141,7 @@ type AuthServiceClient interface {
 	Issue(ctx context.Context, in *IssueReq, opts ...grpc.CallOption) (*Token, error)
 	Login(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*Token, error)
 	Refresh(ctx context.Context, in *RefreshReq, opts ...grpc.CallOption) (*Token, error)
-	Identify(ctx context.Context, in *Token, opts ...grpc.CallOption) (*UserIdentity, error)
+	Identify(ctx context.Context, in *IdentityReq, opts ...grpc.CallOption) (*IdentityRes, error)
 	Authorize(ctx context.Context, in *AuthorizeReq, opts ...grpc.CallOption) (*AuthorizeRes, error)
 	AddPolicy(ctx context.Context, in *AddPolicyReq, opts ...grpc.CallOption) (*AddPolicyRes, error)
 	DeletePolicy(ctx context.Context, in *DeletePolicyReq, opts ...grpc.CallOption) (*DeletePolicyRes, error)
@@ -190,8 +190,8 @@ func (c *authServiceClient) Refresh(ctx context.Context, in *RefreshReq, opts ..
 	return out, nil
 }
 
-func (c *authServiceClient) Identify(ctx context.Context, in *Token, opts ...grpc.CallOption) (*UserIdentity, error) {
-	out := new(UserIdentity)
+func (c *authServiceClient) Identify(ctx context.Context, in *IdentityReq, opts ...grpc.CallOption) (*IdentityRes, error) {
+	out := new(IdentityRes)
 	err := c.cc.Invoke(ctx, AuthService_Identify_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -305,7 +305,7 @@ type AuthServiceServer interface {
 	Issue(context.Context, *IssueReq) (*Token, error)
 	Login(context.Context, *LoginReq) (*Token, error)
 	Refresh(context.Context, *RefreshReq) (*Token, error)
-	Identify(context.Context, *Token) (*UserIdentity, error)
+	Identify(context.Context, *IdentityReq) (*IdentityRes, error)
 	Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error)
 	AddPolicy(context.Context, *AddPolicyReq) (*AddPolicyRes, error)
 	DeletePolicy(context.Context, *DeletePolicyReq) (*DeletePolicyRes, error)
@@ -333,7 +333,7 @@ func (UnimplementedAuthServiceServer) Login(context.Context, *LoginReq) (*Token,
 func (UnimplementedAuthServiceServer) Refresh(context.Context, *RefreshReq) (*Token, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Refresh not implemented")
 }
-func (UnimplementedAuthServiceServer) Identify(context.Context, *Token) (*UserIdentity, error) {
+func (UnimplementedAuthServiceServer) Identify(context.Context, *IdentityReq) (*IdentityRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Identify not implemented")
 }
 func (UnimplementedAuthServiceServer) Authorize(context.Context, *AuthorizeReq) (*AuthorizeRes, error) {
@@ -437,7 +437,7 @@ func _AuthService_Refresh_Handler(srv interface{}, ctx context.Context, dec func
 }
 
 func _AuthService_Identify_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Token)
+	in := new(IdentityReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -449,7 +449,7 @@ func _AuthService_Identify_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: AuthService_Identify_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Identify(ctx, req.(*Token))
+		return srv.(AuthServiceServer).Identify(ctx, req.(*IdentityReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }

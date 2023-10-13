@@ -8,6 +8,7 @@ import (
 	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
 	"github.com/mainflux/mainflux/auth"
+	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/errors"
 )
 
@@ -16,13 +17,18 @@ const defRetrieveAllLimit = 1000
 type policyAgent struct {
 	client           *authzed.Client
 	permissionClient v1.PermissionsServiceClient
+	logger           mflog.Logger
 }
 
-func NewPolicyAgent(client *authzed.Client) auth.PolicyAgent {
-	return policyAgent{client: client, permissionClient: client.PermissionsServiceClient}
+func NewPolicyAgent(client *authzed.Client, logger mflog.Logger) auth.PolicyAgent {
+	return &policyAgent{
+		client:           client,
+		permissionClient: client.PermissionsServiceClient,
+		logger:           logger,
+	}
 }
 
-func (pa policyAgent) CheckPolicy(ctx context.Context, pr auth.PolicyReq) error {
+func (pa *policyAgent) CheckPolicy(ctx context.Context, pr auth.PolicyReq) error {
 	checkReq := v1.CheckPermissionRequest{
 		Resource:   &v1.ObjectReference{ObjectType: pr.ObjectType, ObjectId: pr.Object},
 		Permission: pr.Permission,
@@ -42,7 +48,7 @@ func (pa policyAgent) CheckPolicy(ctx context.Context, pr auth.PolicyReq) error 
 	return errors.ErrAuthorization
 }
 
-func (pa policyAgent) AddPolicies(ctx context.Context, prs []auth.PolicyReq) error {
+func (pa *policyAgent) AddPolicies(ctx context.Context, prs []auth.PolicyReq) error {
 	updates := []*v1.RelationshipUpdate{}
 	for _, pr := range prs {
 		updates = append(updates, &v1.RelationshipUpdate{
@@ -62,7 +68,7 @@ func (pa policyAgent) AddPolicies(ctx context.Context, prs []auth.PolicyReq) err
 	}
 	return nil
 }
-func (pa policyAgent) AddPolicy(ctx context.Context, pr auth.PolicyReq) error {
+func (pa *policyAgent) AddPolicy(ctx context.Context, pr auth.PolicyReq) error {
 	updates := []*v1.RelationshipUpdate{
 		{
 			Operation: v1.RelationshipUpdate_OPERATION_CREATE,
@@ -80,7 +86,7 @@ func (pa policyAgent) AddPolicy(ctx context.Context, pr auth.PolicyReq) error {
 	return nil
 }
 
-func (pa policyAgent) DeletePolicies(ctx context.Context, prs []auth.PolicyReq) error {
+func (pa *policyAgent) DeletePolicies(ctx context.Context, prs []auth.PolicyReq) error {
 	updates := []*v1.RelationshipUpdate{}
 	for _, pr := range prs {
 		updates = append(updates, &v1.RelationshipUpdate{
@@ -101,7 +107,7 @@ func (pa policyAgent) DeletePolicies(ctx context.Context, prs []auth.PolicyReq) 
 	return nil
 }
 
-func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error {
+func (pa *policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error {
 	req := &v1.DeleteRelationshipsRequest{
 		RelationshipFilter: &v1.RelationshipFilter{
 			ResourceType:       pr.ObjectType,
@@ -124,7 +130,7 @@ func (pa policyAgent) DeletePolicy(ctx context.Context, pr auth.PolicyReq) error
 }
 
 // RetrieveObjects - Listing of things.
-func (pa policyAgent) RetrieveObjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) ([]auth.PolicyRes, string, error) {
+func (pa *policyAgent) RetrieveObjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) ([]auth.PolicyRes, string, error) {
 	resourceReq := &v1.LookupResourcesRequest{
 		ResourceObjectType: pr.ObjectType,
 		Permission:         pr.Permission,
@@ -163,24 +169,7 @@ loop:
 	return objectsToAuthPolicies(resources), token, retErr
 }
 
-// func (pa policyAgent) RetrieveAllObjects(ctx context.Context, pr auth.PolicyReq) ([]auth.PolicyRes, error) {
-// 	var tuples []auth.PolicyRes
-// 	nextPageToken := "" //Continuation token
-// 	for i := 0; ; i++ {
-// 		relationTuples, npt, err := pa.RetrieveObjects(ctx, pr, nextPageToken, defRetrieveAllLimit)
-// 		if err != nil {
-// 			return tuples, err
-// 		}
-// 		tuples = append(tuples, relationTuples...)
-// 		if npt == "" || (len(tuples) < defRetrieveAllLimit) { //Continuati
-// 			break
-// 		}
-// 		nextPageToken = npt
-// 	}
-// 	return tuples, nil
-// }
-
-func (pa policyAgent) RetrieveAllObjects(ctx context.Context, pr auth.PolicyReq) ([]auth.PolicyRes, error) {
+func (pa *policyAgent) RetrieveAllObjects(ctx context.Context, pr auth.PolicyReq) ([]auth.PolicyRes, error) {
 	resourceReq := &v1.LookupResourcesRequest{
 		ResourceObjectType: pr.ObjectType,
 		Permission:         pr.Permission,
@@ -204,7 +193,7 @@ func (pa policyAgent) RetrieveAllObjects(ctx context.Context, pr auth.PolicyReq)
 	}
 }
 
-func (pa policyAgent) RetrieveAllObjectsCount(ctx context.Context, pr auth.PolicyReq) (int, error) {
+func (pa *policyAgent) RetrieveAllObjectsCount(ctx context.Context, pr auth.PolicyReq) (int, error) {
 	var count int
 	nextPageToken := ""
 	for {
@@ -221,7 +210,7 @@ func (pa policyAgent) RetrieveAllObjectsCount(ctx context.Context, pr auth.Polic
 	return count, nil
 }
 
-func (pa policyAgent) RetrieveSubjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) ([]auth.PolicyRes, string, error) {
+func (pa *policyAgent) RetrieveSubjects(ctx context.Context, pr auth.PolicyReq, nextPageToken string, limit int32) ([]auth.PolicyRes, string, error) {
 	subjectsReq := v1.LookupSubjectsRequest{
 		Resource:                &v1.ObjectReference{ObjectType: pr.ObjectType, ObjectId: pr.Object},
 		Permission:              pr.Permission,
@@ -259,7 +248,7 @@ loop:
 	return subjectsToAuthPolicies(subjects), "", retErr
 }
 
-func (pa policyAgent) RetrieveAllSubjects(ctx context.Context, pr auth.PolicyReq) ([]auth.PolicyRes, error) {
+func (pa *policyAgent) RetrieveAllSubjects(ctx context.Context, pr auth.PolicyReq) ([]auth.PolicyRes, error) {
 	var tuples []auth.PolicyRes
 	nextPageToken := ""
 	for i := 0; ; i++ {
@@ -276,7 +265,7 @@ func (pa policyAgent) RetrieveAllSubjects(ctx context.Context, pr auth.PolicyReq
 	return tuples, nil
 }
 
-func (pa policyAgent) RetrieveAllSubjectsCount(ctx context.Context, pr auth.PolicyReq) (int, error) {
+func (pa *policyAgent) RetrieveAllSubjectsCount(ctx context.Context, pr auth.PolicyReq) (int, error) {
 	var count int
 	nextPageToken := ""
 	for {
@@ -313,32 +302,33 @@ func subjectsToAuthPolicies(subjects []*v1.LookupSubjectsResponse) []auth.Policy
 	return policies
 }
 
-func (pa policyAgent) Watch(continue_token string) {
+func (pa *policyAgent) Watch(continue_token string) {
 	stream, err := pa.client.WatchServiceClient.Watch(context.Background(), &v1.WatchRequest{
 		OptionalObjectTypes: []string{},
 		OptionalStartCursor: &v1.ZedToken{Token: continue_token},
 	})
 	if err != nil {
-		fmt.Println("got error while watching: ", err.Error())
+		pa.logger.Error(fmt.Sprintf("got error while watching: %s", err.Error()))
 	}
 loop:
 	for {
 		watchResp, err := stream.Recv()
 		switch err {
 		case nil:
-			publishToStream(watchResp)
+			pa.publishToStream(watchResp)
 		case io.EOF:
-			fmt.Println("got EOF while watch streaming")
+			pa.logger.Info("got EOF while watch streaming")
 			break loop
 		default:
-			fmt.Println("got error while watch streaming : ", err.Error())
+			pa.logger.Error(fmt.Sprintf("got error while watch streaming : %s", err.Error()))
 			break loop
 		}
 	}
 }
 
-func publishToStream(resp *v1.WatchResponse) {
-	fmt.Println("Publish next token", resp.ChangesThrough.Token)
+func (pa *policyAgent) publishToStream(resp *v1.WatchResponse) {
+	pa.logger.Info(fmt.Sprintf("Publish next token %s", resp.ChangesThrough.Token))
+
 	for _, update := range resp.Updates {
 		operation := v1.RelationshipUpdate_Operation_name[int32(update.Operation)]
 		objectType := update.Relationship.Resource.ObjectType
@@ -347,9 +337,10 @@ func publishToStream(resp *v1.WatchResponse) {
 		subjectType := update.Relationship.Subject.Object.ObjectType
 		subjectRelation := update.Relationship.Subject.OptionalRelation
 		subjectId := update.Relationship.Subject.Object.ObjectId
-		fmt.Printf(`
+
+		pa.logger.Info(fmt.Sprintf(`
 		Operation : %s	object_type: %s		object_id: %s 	relation: %s 	subject_type: %s 	subject_relation: %s	subject_id: %s
-		`, operation, objectType, objectId, relation, subjectType, subjectRelation, subjectId)
+		`, operation, objectType, objectId, relation, subjectType, subjectRelation, subjectId))
 
 	}
 }

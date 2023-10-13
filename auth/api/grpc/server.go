@@ -7,7 +7,6 @@ import (
 	"context"
 
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
-	"github.com/golang/protobuf/ptypes/empty"
 	mainflux "github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/auth"
 	"github.com/mainflux/mainflux/internal/apiutil"
@@ -33,8 +32,6 @@ type grpcServer struct {
 	listSubjects    kitgrpc.Handler
 	listAllSubjects kitgrpc.Handler
 	countSubjects   kitgrpc.Handler
-	assign          kitgrpc.Handler
-	members         kitgrpc.Handler
 }
 
 // NewServer returns new AuthServiceServer instance.
@@ -104,16 +101,6 @@ func NewServer(svc auth.Service) mainflux.AuthServiceServer {
 			(countSubjectsEndpoint(svc)),
 			decodeCountSubjectsRequest,
 			encodeCountSubjectsResponse,
-		),
-		assign: kitgrpc.NewServer(
-			(assignEndpoint(svc)),
-			decodeAssignRequest,
-			encodeEmptyResponse,
-		),
-		members: kitgrpc.NewServer(
-			(membersEndpoint(svc)),
-			decodeMembersRequest,
-			encodeMembersResponse,
 		),
 	}
 }
@@ -222,22 +209,6 @@ func (s *grpcServer) CountSubjects(ctx context.Context, req *mainflux.CountSubje
 	return res.(*mainflux.CountSubjectsRes), nil
 }
 
-func (s *grpcServer) Assign(ctx context.Context, token *mainflux.Assignment) (*empty.Empty, error) {
-	_, res, err := s.assign.ServeGRPC(ctx, token)
-	if err != nil {
-		return nil, encodeError(err)
-	}
-	return res.(*empty.Empty), nil
-}
-
-func (s *grpcServer) Members(ctx context.Context, req *mainflux.MembersReq) (*mainflux.MembersRes, error) {
-	_, res, err := s.members.ServeGRPC(ctx, req)
-	if err != nil {
-		return nil, encodeError(err)
-	}
-	return res.(*mainflux.MembersRes), nil
-}
-
 func decodeIssueRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.IssueReq)
 	return issueReq{id: req.GetId(), keyType: auth.KeyType(req.GetType())}, nil
@@ -304,11 +275,6 @@ func decodeAddPolicyRequest(_ context.Context, grpcReq interface{}) (interface{}
 func encodeAddPolicyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(addPolicyRes)
 	return &mainflux.AddPolicyRes{Authorized: res.authorized}, nil
-}
-
-func decodeAssignRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(*mainflux.Token)
-	return assignReq{token: req.GetAccessToken()}, nil
 }
 
 func decodeDeletePolicyRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -391,33 +357,6 @@ func decodeCountSubjectsRequest(_ context.Context, grpcReq interface{}) (interfa
 func encodeCountSubjectsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(countObjectsRes)
 	return &mainflux.CountObjectsRes{Count: int64(res.count)}, nil
-}
-
-func decodeMembersRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(*mainflux.MembersReq)
-	return membersReq{
-		token:      req.GetToken(),
-		groupID:    req.GetGroupID(),
-		memberType: req.GetType(),
-		offset:     req.Offset,
-		limit:      req.Limit,
-	}, nil
-}
-
-func encodeMembersResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(membersRes)
-	return &mainflux.MembersRes{
-		Total:   res.total,
-		Offset:  res.offset,
-		Limit:   res.limit,
-		Type:    res.groupType,
-		Members: res.members,
-	}, nil
-}
-
-func encodeEmptyResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(emptyRes)
-	return &empty.Empty{}, encodeError(res.err)
 }
 
 func encodeError(err error) error {

@@ -4,8 +4,7 @@
 package grpc
 
 type identityRes struct {
-	id    string
-	email string
+	id string
 }
 
 type issueRes struct {
@@ -51,7 +50,4 @@ type membersRes struct {
 	limit     uint64
 	groupType string
 	members   []string
-}
-type emptyRes struct {
-	err error
 }

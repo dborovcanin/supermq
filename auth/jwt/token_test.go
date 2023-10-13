@@ -20,10 +20,10 @@ const secret = "test"
 func key() auth.Key {
 	exp := time.Now().UTC().Add(10 * time.Minute).Round(time.Second)
 	return auth.Key{
-		ID:        "id",
+		ID:        "66af4a67-3823-438a-abd7-efdb613eaef6",
 		Type:      auth.AccessKey,
-		Subject:   "user@email.com",
-		SubjectID: "",
+		Issuer:    "mainflux.auth",
+		Subject:   "66af4a67-3823-438a-abd7-efdb613eaef6",
 		IssuedAt:  time.Now().UTC().Add(-10 * time.Second).Round(time.Second),
 		ExpiresAt: exp,
 	}
@@ -45,8 +45,11 @@ func TestIssue(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		_, err := tokenizer.Issue(tc.key)
+		tkn, err := tokenizer.Issue(tc.key)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s expected %s, got %s", tc.desc, tc.err, err))
+		if err != nil {
+			assert.NotEmpty(t, tkn, fmt.Sprintf("%s expected token, got empty string", tc.desc))
+		}
 	}
 }
 
@@ -89,19 +92,21 @@ func TestParse(t *testing.T) {
 			desc:  "parse expired key",
 			key:   auth.Key{},
 			token: expToken,
-			err:   auth.ErrKeyExpired,
+			err:   jwt.ErrExpiry,
 		},
 		{
 			desc:  "parse expired API key",
 			key:   apiKey,
 			token: apiToken,
-			err:   auth.ErrAPIKeyExpired,
+			err:   jwt.ErrExpiry,
 		},
 	}
 
 	for _, tc := range cases {
 		key, err := tokenizer.Parse(tc.token)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s expected %s, got %s", tc.desc, tc.err, err))
-		assert.Equal(t, tc.key, key, fmt.Sprintf("%s expected %v, got %v", tc.desc, tc.key, key))
+		if err == nil {
+			assert.Equal(t, tc.key, key, fmt.Sprintf("%s expected %v, got %v", tc.desc, tc.key, key))
+		}
 	}
 }

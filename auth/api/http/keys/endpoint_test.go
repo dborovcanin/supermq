@@ -65,13 +65,12 @@ func (tr testRequest) make() (*http.Response, error) {
 
 func newService() auth.Service {
 	krepo := new(mocks.Keys)
-	grepo := new(mocks.Repository)
 	prepo := new(mocks.PolicyAgent)
 	idProvider := uuid.NewMock()
 
 	t := jwt.New([]byte(secret))
 
-	return auth.New(krepo, grepo, idProvider, t, prepo, loginDuration, refreshDuration)
+	return auth.New(krepo, idProvider, t, prepo, loginDuration, refreshDuration)
 }
 
 func newServer(svc auth.Service) *httptest.Server {
@@ -87,7 +86,7 @@ func toJSON(data interface{}) string {
 
 func TestIssue(t *testing.T) {
 	svc := newService()
-	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	ts := newServer(svc)
@@ -194,9 +193,9 @@ func TestIssue(t *testing.T) {
 
 func TestRetrieve(t *testing.T) {
 	svc := newService()
-	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), SubjectID: id, Subject: email}
+	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), Subject: id}
 
 	k, err := svc.Issue(context.Background(), token.AccessToken, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
@@ -246,9 +245,9 @@ func TestRetrieve(t *testing.T) {
 
 func TestRevoke(t *testing.T) {
 	svc := newService()
-	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), SubjectID: id, Subject: email}
+	key := auth.Key{Type: auth.APIKey, IssuedAt: time.Now(), Subject: id}
 
 	k, err := svc.Issue(context.Background(), token.AccessToken, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))

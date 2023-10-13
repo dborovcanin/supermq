@@ -8,7 +8,6 @@ import (
 	"github.com/go-zoo/bone"
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/auth"
-	"github.com/mainflux/mainflux/auth/api/http/groups"
 	"github.com/mainflux/mainflux/auth/api/http/keys"
 	"github.com/mainflux/mainflux/auth/api/http/policies"
 	"github.com/mainflux/mainflux/logger"
@@ -20,7 +19,6 @@ func MakeHandler(svc auth.Service, logger logger.Logger, instanceID string) http
 	mux := bone.New()
 
 	mux = keys.MakeHandler(svc, mux, logger)
-	mux = groups.MakeHandler(svc, mux, logger)
 	mux = policies.MakeHandler(svc, mux, logger)
 
 	mux.GetFunc("/health", mainflux.Health("auth", instanceID))

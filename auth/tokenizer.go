@@ -6,8 +6,8 @@ package auth
 // Tokenizer specifies API for encoding and decoding between string and Key.
 type Tokenizer interface {
 	// Issue converts API Key to its string representation.
-	Issue(Key) (string, error)
+	Issue(key Key) (token string, err error)
 
 	// Parse extracts API Key data from string token.
-	Parse(string) (Key, error)
+	Parse(token string) (key Key, err error)
 }

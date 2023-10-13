@@ -6,33 +6,35 @@ package postgres_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/mainflux/mainflux/auth"
 	"github.com/mainflux/mainflux/auth/postgres"
 	"github.com/mainflux/mainflux/pkg/errors"
-	"github.com/mainflux/mainflux/pkg/ulid"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	"github.com/opentracing/opentracing-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const email = "user-save@example.com"
-
 var (
-	expTime      = time.Now().Add(5 * time.Minute)
-	idProvider   = uuid.New()
-	ulidProvider = ulid.New()
+	expTime    = time.Now().Add(5 * time.Minute)
+	idProvider = uuid.New()
+	invalidID  = strings.Repeat("a", 255)
 )
 
-func TestKeySave(t *testing.T) {
-	dbMiddleware := postgres.NewDatabase(db)
-	repo := postgres.New(dbMiddleware)
-
+func generateID(t *testing.T) string {
 	id, err := idProvider.ID()
 	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	return id
+}
+
+func TestKeySave(t *testing.T) {
+	repo := postgres.New(database)
+
+	keyID := generateID(t)
+	issuer := generateID(t)
 
 	cases := []struct {
 		desc string
@@ -42,24 +44,108 @@ func TestKeySave(t *testing.T) {
 		{
 			desc: "save a new key",
 			key: auth.Key{
-				Subject:   email,
+				ID:        keyID,
+				Type:      auth.APIKey,
+				Issuer:    issuer,
+				Subject:   generateID(t),
 				IssuedAt:  time.Now(),
 				ExpiresAt: expTime,
-				ID:        id,
-				SubjectID: id,
 			},
 			err: nil,
 		},
 		{
 			desc: "save with duplicate id",
 			key: auth.Key{
-				Subject:   email,
+				ID:        keyID,
+				Type:      auth.APIKey,
+				Issuer:    issuer,
+				Subject:   generateID(t),
 				IssuedAt:  time.Now(),
 				ExpiresAt: expTime,
-				ID:        id,
-				SubjectID: id,
 			},
 			err: errors.ErrConflict,
+		},
+		{
+			desc: "save with empty id",
+			key: auth.Key{
+				Type:      auth.APIKey,
+				Issuer:    issuer,
+				Subject:   generateID(t),
+				IssuedAt:  time.Now(),
+				ExpiresAt: expTime,
+			},
+			err: errors.ErrConflict,
+		},
+		{
+			desc: "save with empty subject",
+			key: auth.Key{
+				ID:        generateID(t),
+				Type:      auth.APIKey,
+				Issuer:    issuer,
+				IssuedAt:  time.Now(),
+				ExpiresAt: expTime,
+			},
+			err: nil,
+		},
+		{
+			desc: "save with empty issuer",
+			key: auth.Key{
+				ID:        generateID(t),
+				Type:      auth.APIKey,
+				Issuer:    "",
+				Subject:   generateID(t),
+				IssuedAt:  time.Now(),
+				ExpiresAt: expTime,
+			},
+			err: nil,
+		},
+		{
+			desc: "save with empty issued at",
+			key: auth.Key{
+				ID:        generateID(t),
+				Type:      auth.APIKey,
+				Issuer:    issuer,
+				Subject:   generateID(t),
+				IssuedAt:  time.Time{},
+				ExpiresAt: expTime,
+			},
+			err: nil,
+		},
+		{
+			desc: "save with invalid id",
+			key: auth.Key{
+				ID:        invalidID,
+				Type:      auth.APIKey,
+				Issuer:    issuer,
+				Subject:   generateID(t),
+				IssuedAt:  time.Now(),
+				ExpiresAt: expTime,
+			},
+			err: errors.ErrMalformedEntity,
+		},
+		{
+			desc: "save with invalid subject",
+			key: auth.Key{
+				ID:        generateID(t),
+				Type:      auth.APIKey,
+				Issuer:    issuer,
+				Subject:   invalidID,
+				IssuedAt:  time.Now(),
+				ExpiresAt: expTime,
+			},
+			err: errors.ErrMalformedEntity,
+		},
+		{
+			desc: "save with invalid issuer",
+			key: auth.Key{
+				ID:        generateID(t),
+				Type:      auth.APIKey,
+				Issuer:    invalidID,
+				Subject:   generateID(t),
+				IssuedAt:  time.Now(),
+				ExpiresAt: expTime,
+			},
+			err: errors.ErrMalformedEntity,
 		},
 	}
 
@@ -70,91 +156,115 @@ func TestKeySave(t *testing.T) {
 }
 
 func TestKeyRetrieve(t *testing.T) {
-	dbMiddleware := postgres.NewDatabase(db)
-	repo := postgres.New(dbMiddleware)
-
-	id, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	repo := postgres.New(database)
 
 	key := auth.Key{
-		Subject:   email,
+		ID:        generateID(t),
+		Subject:   generateID(t),
 		IssuedAt:  time.Now(),
+		Issuer:    generateID(t),
 		ExpiresAt: expTime,
-		ID:        id,
-		SubjectID: id,
 	}
-	_, err = repo.Save(context.Background(), key)
+	_, err := repo.Save(context.Background(), key)
 	assert.Nil(t, err, fmt.Sprintf("Storing Key expected to succeed: %s", err))
+
 	cases := []struct {
-		desc  string
-		id    string
-		owner string
-		err   error
+		desc   string
+		id     string
+		issuer string
+		err    error
 	}{
 		{
-			desc:  "retrieve an existing key",
-			id:    key.ID,
-			owner: key.SubjectID,
-			err:   nil,
+			desc:   "retrieve an existing key",
+			id:     key.ID,
+			issuer: key.Issuer,
+			err:    nil,
 		},
 		{
-			desc:  "retrieve key with empty issuer id",
-			id:    key.ID,
-			owner: "",
-			err:   errors.ErrNotFound,
+			desc:   "retrieve key with empty issuer id",
+			id:     key.ID,
+			issuer: "",
+			err:    errors.ErrNotFound,
 		},
 		{
-			desc:  "retrieve non-existent key",
-			id:    "",
-			owner: key.SubjectID,
-			err:   errors.ErrNotFound,
+			desc:   "retrieve non-existent key",
+			id:     "",
+			issuer: key.Issuer,
+			err:    errors.ErrNotFound,
+		},
+		{
+			desc:   "retrieve non-existent key with empty issuer id",
+			id:     "",
+			issuer: "",
+			err:    errors.ErrNotFound,
 		},
 	}
 
 	for _, tc := range cases {
-		_, err := repo.Retrieve(context.Background(), tc.owner, tc.id)
+		_, err := repo.Retrieve(context.Background(), tc.issuer, tc.id)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }
 
 func TestKeyRemove(t *testing.T) {
-	dbMiddleware := postgres.NewDatabase(db)
-	repo := postgres.New(dbMiddleware)
-
-	id, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
+	repo := postgres.New(database)
 
 	key := auth.Key{
-		Subject:   email,
+		ID:        generateID(t),
+		Subject:   generateID(t),
 		IssuedAt:  time.Now(),
+		Issuer:    generateID(t),
 		ExpiresAt: expTime,
-		ID:        id,
-		SubjectID: id,
 	}
-	_, err = repo.Save(opentracing.ContextWithSpan(context.Background(), opentracing.StartSpan("")), key)
+	_, err := repo.Save(context.Background(), key)
 	assert.Nil(t, err, fmt.Sprintf("Storing Key expected to succeed: %s", err))
+
 	cases := []struct {
-		desc  string
-		id    string
-		owner string
-		err   error
+		desc   string
+		id     string
+		issuer string
+		err    error
 	}{
 		{
-			desc:  "remove an existing key",
-			id:    key.ID,
-			owner: key.SubjectID,
-			err:   nil,
+			desc:   "remove an existing key",
+			id:     key.ID,
+			issuer: key.Issuer,
+			err:    nil,
 		},
 		{
-			desc:  "remove key that does not exist",
-			id:    key.ID,
-			owner: key.SubjectID,
-			err:   nil,
+			desc:   "remove key that has already been removed",
+			id:     key.ID,
+			issuer: key.Issuer,
+			err:    nil,
+		},
+		{
+			desc:   "remove key that does not exist",
+			id:     generateID(t),
+			issuer: generateID(t),
+			err:    nil,
+		},
+		{
+			desc:   "remove key with empty issuer id",
+			id:     key.ID,
+			issuer: "",
+			err:    nil,
+		},
+		{
+			desc:   "remove key with empty id",
+			id:     "",
+			issuer: key.Issuer,
+			err:    nil,
+		},
+		{
+			desc:   "remove key with empty id and issuer id",
+			id:     "",
+			issuer: "",
+			err:    nil,
 		},
 	}
 
 	for _, tc := range cases {
-		err := repo.Remove(context.Background(), tc.owner, tc.id)
+		err := repo.Remove(context.Background(), tc.issuer, tc.id)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 	}
 }

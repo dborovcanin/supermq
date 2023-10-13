@@ -11,13 +11,21 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/mainflux/mainflux/auth/postgres"
+	apostgres "github.com/mainflux/mainflux/auth/postgres"
+	pgclient "github.com/mainflux/mainflux/internal/clients/postgres"
+	"github.com/mainflux/mainflux/internal/postgres"
 	dockertest "github.com/ory/dockertest/v3"
+	"go.opentelemetry.io/otel"
 )
 
-var db *sqlx.DB
+var (
+	db       *sqlx.DB
+	database postgres.Database
+	tracer   = otel.Tracer("repo_tests")
+)
 
 func TestMain(m *testing.M) {
 	pool, err := dockertest.NewPool("")
@@ -37,9 +45,10 @@ func TestMain(m *testing.M) {
 
 	port := container.GetPort("5432/tcp")
 
+	pool.MaxWait = 120 * time.Second
 	if err := pool.Retry(func() error {
 		url := fmt.Sprintf("host=localhost port=%s user=test dbname=test password=test sslmode=disable", port)
-		db, err := sql.Open("postgres", url)
+		db, err := sql.Open("pgx", url)
 		if err != nil {
 			return err
 		}
@@ -48,7 +57,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Could not connect to docker: %s", err)
 	}
 
-	dbConfig := postgres.Config{
+	dbConfig := pgclient.Config{
 		Host:        "localhost",
 		Port:        port,
 		User:        "test",
@@ -60,9 +69,11 @@ func TestMain(m *testing.M) {
 		SSLRootCert: "",
 	}
 
-	if db, err = postgres.Connect(dbConfig); err != nil {
+	if db, err = pgclient.SetupDB(dbConfig, *apostgres.Migration()); err != nil {
 		log.Fatalf("Could not setup test DB connection: %s", err)
 	}
+
+	database = postgres.NewDatabase(db, dbConfig, tracer)
 
 	code := m.Run()
 

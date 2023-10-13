@@ -15,6 +15,7 @@ import (
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,23 +32,21 @@ const (
 	authoritiesObj  = "authorities"
 	loginDuration   = 30 * time.Minute
 	refreshDuration = 24 * time.Hour
+	accessToken     = "access"
 )
 
-func newService() auth.Service {
+func newService() (auth.Service, *mocks.Keys) {
 	krepo := new(mocks.Keys)
-	grepo := new(mocks.Repository)
 	prepo := new(mocks.PolicyAgent)
 	idProvider := uuid.NewMock()
 
 	t := jwt.New([]byte(secret))
 
-	return auth.New(krepo, grepo, idProvider, t, prepo, loginDuration, refreshDuration)
+	return auth.New(krepo, idProvider, t, prepo, loginDuration, refreshDuration), krepo
 }
 
 func TestIssue(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
+	svc, krepo := newService()
 
 	cases := []struct {
 		desc  string
@@ -61,7 +60,7 @@ func TestIssue(t *testing.T) {
 				Type:     auth.AccessKey,
 				IssuedAt: time.Now(),
 			},
-			token: secret.AccessToken,
+			token: accessToken,
 			err:   nil,
 		},
 		{
@@ -69,7 +68,7 @@ func TestIssue(t *testing.T) {
 			key: auth.Key{
 				Type: auth.AccessKey,
 			},
-			token: secret.AccessToken,
+			token: accessToken,
 			err:   auth.ErrInvalidKeyIssuedAt,
 		},
 		{
@@ -78,7 +77,7 @@ func TestIssue(t *testing.T) {
 				Type:     auth.APIKey,
 				IssuedAt: time.Now(),
 			},
-			token: secret.AccessToken,
+			token: accessToken,
 			err:   nil,
 		},
 		{
@@ -95,7 +94,7 @@ func TestIssue(t *testing.T) {
 			key: auth.Key{
 				Type: auth.APIKey,
 			},
-			token: secret.AccessToken,
+			token: accessToken,
 			err:   auth.ErrInvalidKeyIssuedAt,
 		},
 		{
@@ -112,26 +111,27 @@ func TestIssue(t *testing.T) {
 			key: auth.Key{
 				Type: auth.RecoveryKey,
 			},
-			token: secret.AccessToken,
+			token: accessToken,
 			err:   auth.ErrInvalidKeyIssuedAt,
 		},
 	}
 
 	for _, tc := range cases {
+		repocall := krepo.On("Save", mock.Anything, mock.Anything).Return(mock.Anything, tc.err)
 		_, err := svc.Issue(context.Background(), tc.token, tc.key)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s expected %s got %s\n", tc.desc, tc.err, err))
+		repocall.Unset()
 	}
 }
 
 func TestRevoke(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	svc, _ := newService()
+	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 	key := auth.Key{
-		Type:      auth.APIKey,
-		IssuedAt:  time.Now(),
-		SubjectID: id,
-		Subject:   email,
+		Type:     auth.APIKey,
+		IssuedAt: time.Now(),
+		Subject:  id,
 	}
 	_, err = svc.Issue(context.Background(), secret.AccessToken, key)
 	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
@@ -169,18 +169,17 @@ func TestRevoke(t *testing.T) {
 }
 
 func TestRetrieve(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: email, SubjectID: id})
+	svc, _ := newService()
+	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
+		ID:       "id",
+		Type:     auth.APIKey,
+		Subject:  id,
+		IssuedAt: time.Now(),
 	}
 
-	userToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	userToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
@@ -234,15 +233,15 @@ func TestRetrieve(t *testing.T) {
 }
 
 func TestIdentify(t *testing.T) {
-	svc := newService()
+	svc, _ := newService()
 
-	loginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	loginSecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
-	recoverySecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.RecoveryKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	recoverySecret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.RecoveryKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing reset key expected to succeed: %s", err))
 
-	apiSecret, err := svc.Issue(context.Background(), loginSecret.AccessToken, auth.Key{Type: auth.APIKey, SubjectID: id, Subject: email, IssuedAt: time.Now(), ExpiresAt: time.Now().Add(time.Minute)})
+	apiSecret, err := svc.Issue(context.Background(), loginSecret.AccessToken, auth.Key{Type: auth.APIKey, Subject: id, IssuedAt: time.Now(), ExpiresAt: time.Now().Add(time.Minute)})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	exp1 := time.Now().Add(-2 * time.Second)
@@ -255,43 +254,43 @@ func TestIdentify(t *testing.T) {
 	cases := []struct {
 		desc string
 		key  string
-		idt  auth.Identity
+		idt  string
 		err  error
 	}{
 		{
 			desc: "identify login key",
 			key:  loginSecret.AccessToken,
-			idt:  auth.Identity{id, email},
+			idt:  id,
 			err:  nil,
 		},
 		{
 			desc: "identify recovery key",
 			key:  recoverySecret.AccessToken,
-			idt:  auth.Identity{id, email},
+			idt:  id,
 			err:  nil,
 		},
 		{
 			desc: "identify API key",
 			key:  apiSecret.AccessToken,
-			idt:  auth.Identity{id, email},
+			idt:  id,
 			err:  nil,
 		},
 		{
 			desc: "identify expired API key",
 			key:  expSecret.AccessToken,
-			idt:  auth.Identity{},
+			idt:  "",
 			err:  auth.ErrAPIKeyExpired,
 		},
 		{
 			desc: "identify expired key",
 			key:  invalidSecret.AccessToken,
-			idt:  auth.Identity{},
+			idt:  "",
 			err:  errors.ErrAuthentication,
 		},
 		{
 			desc: "identify invalid key",
 			key:  "invalid",
-			idt:  auth.Identity{},
+			idt:  "",
 			err:  errors.ErrAuthentication,
 		},
 	}
@@ -303,713 +302,8 @@ func TestIdentify(t *testing.T) {
 	}
 }
 
-func TestCreateGroup(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	group := auth.Group{
-		Name:        "Group",
-		Description: description,
-	}
-
-	parentGroup := auth.Group{
-		Name:        "ParentGroup",
-		Description: description,
-	}
-
-	parent, err := svc.CreateGroup(context.Background(), apiToken.AccessToken, parentGroup)
-	assert.Nil(t, err, fmt.Sprintf("Creating parent group expected to succeed: %s", err))
-
-	err = svc.Authorize(context.Background(), auth.PolicyReq{Object: parent.ID, Relation: memberRelation, Subject: id})
-	assert.Nil(t, err, fmt.Sprintf("Checking parent group owner's policy expected to succeed: %s", err))
-
-	cases := []struct {
-		desc  string
-		group auth.Group
-		err   error
-	}{
-		{
-			desc:  "create new group",
-			group: group,
-			err:   nil,
-		},
-		{
-			desc:  "create group with existing name",
-			group: group,
-			err:   nil,
-		},
-		{
-			desc: "create group with parent",
-			group: auth.Group{
-				Name:     groupName,
-				ParentID: parent.ID,
-			},
-			err: nil,
-		},
-		{
-			desc: "create group with invalid parent",
-			group: auth.Group{
-				Name:     groupName,
-				ParentID: "xxxxxxxxxx",
-			},
-			err: errors.ErrCreateEntity,
-		},
-	}
-
-	for _, tc := range cases {
-		g, err := svc.CreateGroup(context.Background(), apiToken.AccessToken, tc.group)
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-
-		if err == nil {
-			authzErr := svc.Authorize(context.Background(), auth.PolicyReq{Object: g.ID, Relation: memberRelation, Subject: g.OwnerID})
-			assert.Nil(t, authzErr, fmt.Sprintf("%s - Checking group owner's policy expected to succeed: %s", tc.desc, authzErr))
-		}
-	}
-}
-
-func TestUpdateGroup(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	group := auth.Group{
-		Name:        "Group",
-		Description: description,
-		Metadata: auth.GroupMetadata{
-			"field": "AccessToken",
-		},
-	}
-
-	group, err = svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-	assert.Nil(t, err, fmt.Sprintf("Creating parent group failed: %s", err))
-
-	cases := []struct {
-		desc  string
-		group auth.Group
-		err   error
-	}{
-		{
-			desc: "update group",
-			group: auth.Group{
-				ID:          group.ID,
-				Name:        "NewName",
-				Description: "NewDescription",
-				Metadata: auth.GroupMetadata{
-					"field": "AccessToken2",
-				},
-			},
-			err: nil,
-		},
-	}
-
-	for _, tc := range cases {
-		g, err := svc.UpdateGroup(context.Background(), apiToken.AccessToken, tc.group)
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-		assert.Equal(t, g.ID, tc.group.ID, fmt.Sprintf("ID: expected %s got %s\n", g.ID, tc.group.ID))
-		assert.Equal(t, g.Name, tc.group.Name, fmt.Sprintf("Name: expected %s got %s\n", g.Name, tc.group.Name))
-		assert.Equal(t, g.Description, tc.group.Description, fmt.Sprintf("Description: expected %s got %s\n", g.Description, tc.group.Description))
-		assert.Equal(t, g.Metadata["field"], g.Metadata["field"], fmt.Sprintf("Metadata: expected %s got %s\n", g.Metadata, tc.group.Metadata))
-	}
-
-}
-
-func TestViewGroup(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	group := auth.Group{
-		Name:        "Group",
-		Description: description,
-		Metadata: auth.GroupMetadata{
-			"field": "AccessToken",
-		},
-	}
-
-	group, err = svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-	assert.Nil(t, err, fmt.Sprintf("Creating parent group failed: %s", err))
-
-	cases := []struct {
-		desc    string
-		token   string
-		groupID string
-		err     error
-	}{
-		{
-
-			desc:    "view group",
-			token:   apiToken.AccessToken,
-			groupID: group.ID,
-			err:     nil,
-		},
-		{
-			desc:    "view group with invalid token",
-			token:   "wrongtoken",
-			groupID: group.ID,
-			err:     errors.ErrAuthentication,
-		},
-		{
-			desc:    "view group for wrong id",
-			token:   apiToken.AccessToken,
-			groupID: "wrong",
-			err:     errors.ErrNotFound,
-		},
-	}
-
-	for _, tc := range cases {
-		_, err := svc.ViewGroup(context.Background(), tc.token, tc.groupID)
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-	}
-}
-
-func TestListGroups(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	group := auth.Group{
-		Description: description,
-		Metadata: auth.GroupMetadata{
-			"field": "AccessToken",
-		},
-	}
-	n := uint64(10)
-	parentID := ""
-	for i := uint64(0); i < n; i++ {
-		group.Name = fmt.Sprintf("Group%d", i)
-		group.ParentID = parentID
-		g, err := svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-		require.Nil(t, err, fmt.Sprintf("unexpected error: %s\n", err))
-		parentID = g.ID
-	}
-
-	cases := map[string]struct {
-		token    string
-		level    uint64
-		size     uint64
-		metadata auth.GroupMetadata
-		err      error
-	}{
-		"list all groups": {
-			token: apiToken.AccessToken,
-			level: 5,
-			size:  n,
-			err:   nil,
-		},
-		"list groups for level 1": {
-			token: apiToken.AccessToken,
-			level: 1,
-			size:  n,
-			err:   nil,
-		},
-		"list all groups with wrong token": {
-			token: "wrongToken",
-			level: 5,
-			size:  0,
-			err:   errors.ErrAuthentication,
-		},
-	}
-
-	for desc, tc := range cases {
-		page, err := svc.ListGroups(context.Background(), tc.token, auth.PageMetadata{Level: tc.level, Metadata: tc.metadata})
-		size := uint64(len(page.Groups))
-		assert.Equal(t, tc.size, size, fmt.Sprintf("%s: expected %d got %d\n", desc, tc.size, size))
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
-	}
-
-}
-
-func TestListChildren(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	group := auth.Group{
-		Description: description,
-		Metadata: auth.GroupMetadata{
-			"field": "AccessToken",
-		},
-	}
-	n := uint64(10)
-	parentID := ""
-	groupIDs := make([]string, n)
-	for i := uint64(0); i < n; i++ {
-		group.Name = fmt.Sprintf("Group%d", i)
-		group.ParentID = parentID
-		g, err := svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-		require.Nil(t, err, fmt.Sprintf("unexpected error: %s\n", err))
-		parentID = g.ID
-		groupIDs[i] = g.ID
-	}
-
-	cases := map[string]struct {
-		token    string
-		level    uint64
-		size     uint64
-		id       string
-		metadata auth.GroupMetadata
-		err      error
-	}{
-		"list all children": {
-			token: apiToken.AccessToken,
-			level: 5,
-			id:    groupIDs[0],
-			size:  n,
-			err:   nil,
-		},
-		"list all groups with wrong token": {
-			token: "wrongToken",
-			level: 5,
-			size:  0,
-			err:   errors.ErrAuthentication,
-		},
-	}
-
-	for desc, tc := range cases {
-		page, err := svc.ListChildren(context.Background(), tc.token, tc.id, auth.PageMetadata{Level: tc.level, Metadata: tc.metadata})
-		size := uint64(len(page.Groups))
-		assert.Equal(t, tc.size, size, fmt.Sprintf("%s: expected %d got %d\n", desc, tc.size, size))
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
-	}
-}
-
-func TestListParents(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	group := auth.Group{
-		Description: description,
-		Metadata: auth.GroupMetadata{
-			"field": "AccessToken",
-		},
-	}
-	n := uint64(10)
-	parentID := ""
-	groupIDs := make([]string, n)
-	for i := uint64(0); i < n; i++ {
-		group.Name = fmt.Sprintf("Group%d", i)
-		group.ParentID = parentID
-		g, err := svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-		require.Nil(t, err, fmt.Sprintf("unexpected error: %s\n", err))
-		parentID = g.ID
-		groupIDs[i] = g.ID
-	}
-
-	cases := map[string]struct {
-		token    string
-		level    uint64
-		size     uint64
-		id       string
-		metadata auth.GroupMetadata
-		err      error
-	}{
-		"list all parents": {
-			token: apiToken.AccessToken,
-			level: 5,
-			id:    groupIDs[n-1],
-			size:  n,
-			err:   nil,
-		},
-		"list all parents with wrong token": {
-			token: "wrongToken",
-			level: 5,
-			size:  0,
-			err:   errors.ErrAuthentication,
-		},
-	}
-
-	for desc, tc := range cases {
-		page, err := svc.ListParents(context.Background(), tc.token, tc.id, auth.PageMetadata{Level: tc.level, Metadata: tc.metadata})
-		size := uint64(len(page.Groups))
-		assert.Equal(t, tc.size, size, fmt.Sprintf("%s: expected %d got %d\n", desc, tc.size, size))
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
-	}
-}
-
-func TestListMembers(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	group := auth.Group{
-		Description: description,
-		Metadata: auth.GroupMetadata{
-			"field": "AccessToken",
-		},
-	}
-	g, err := svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-	assert.Nil(t, err, fmt.Sprintf("Creating group expected to succeed: %s", err))
-	group.ID = g.ID
-
-	n := uint64(10)
-	for i := uint64(0); i < n; i++ {
-		uid, err := idProvider.ID()
-		require.Nil(t, err, fmt.Sprintf("unexpected error: %s\n", err))
-
-		err = svc.Assign(context.Background(), apiToken.AccessToken, group.ID, "things", uid)
-		require.Nil(t, err, fmt.Sprintf("Assign member expected to succeed: %s\n", err))
-	}
-
-	cases := map[string]struct {
-		token    string
-		size     uint64
-		offset   uint64
-		limit    uint64
-		group    auth.Group
-		metadata auth.GroupMetadata
-		err      error
-	}{
-		"list all members": {
-			token:  apiToken.AccessToken,
-			offset: 0,
-			limit:  n,
-			group:  group,
-			size:   n,
-			err:    nil,
-		},
-		"list half members": {
-			token:  apiToken.AccessToken,
-			offset: n / 2,
-			limit:  n,
-			group:  group,
-			size:   n / 2,
-			err:    nil,
-		},
-		"list all members with wrong token": {
-			token:  "wrongToken",
-			offset: 0,
-			limit:  n,
-			size:   0,
-			err:    errors.ErrAuthentication,
-		},
-	}
-
-	for desc, tc := range cases {
-		page, err := svc.ListMembers(context.Background(), tc.token, tc.group.ID, "things", auth.PageMetadata{Offset: tc.offset, Limit: tc.limit, Metadata: tc.metadata})
-		size := uint64(len(page.Members))
-		assert.Equal(t, tc.size, size, fmt.Sprintf("%s: expected %d got %d\n", desc, tc.size, size))
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
-	}
-
-}
-
-func TestListMemberships(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	group := auth.Group{
-		Description: description,
-		Metadata: auth.GroupMetadata{
-			"field": "AccessToken",
-		},
-	}
-
-	memberID, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("unexpected error: %s\n", err))
-
-	n := uint64(10)
-	for i := uint64(0); i < n; i++ {
-		group.Name = fmt.Sprintf("Group%d", i)
-		g, err := svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-		require.Nil(t, err, fmt.Sprintf("unexpected error: %s\n", err))
-
-		_ = svc.AddPolicy(context.Background(), auth.PolicyReq{Subject: id, Object: memberID, Relation: "owner"})
-		err = svc.Assign(context.Background(), apiToken.AccessToken, g.ID, "things", memberID)
-		require.Nil(t, err, fmt.Sprintf("Assign member expected to succeed: %s\n", err))
-	}
-
-	cases := map[string]struct {
-		token    string
-		size     uint64
-		offset   uint64
-		limit    uint64
-		group    auth.Group
-		metadata auth.GroupMetadata
-		err      error
-	}{
-		"list all members": {
-			token:  apiToken.AccessToken,
-			offset: 0,
-			limit:  n,
-			group:  group,
-			size:   n,
-			err:    nil,
-		},
-		"list half members": {
-			token:  apiToken.AccessToken,
-			offset: n / 2,
-			limit:  n,
-			group:  group,
-			size:   n / 2,
-			err:    nil,
-		},
-		"list all members with wrong token": {
-			token:  "wrongToken",
-			offset: 0,
-			limit:  n,
-			size:   0,
-			err:    errors.ErrAuthentication,
-		},
-	}
-
-	for desc, tc := range cases {
-		page, err := svc.ListMemberships(context.Background(), tc.token, memberID, auth.PageMetadata{Limit: tc.limit, Offset: tc.offset, Metadata: tc.metadata})
-		size := uint64(len(page.Groups))
-		assert.Equal(t, tc.size, size, fmt.Sprintf("%s: expected %d got %d\n", desc, tc.size, size))
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", desc, tc.err, err))
-	}
-}
-
-func TestRemoveGroup(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	uid, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
-
-	creationTime := time.Now().UTC()
-	group := auth.Group{
-		Name:      groupName,
-		OwnerID:   uid,
-		CreatedAt: creationTime,
-		UpdatedAt: creationTime,
-	}
-
-	group, err = svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-	require.Nil(t, err, fmt.Sprintf("group save got unexpected error: %s", err))
-
-	err = svc.RemoveGroup(context.Background(), "wrongToken", group.ID)
-	assert.True(t, errors.Contains(err, errors.ErrAuthentication), fmt.Sprintf("Unauthorized access: expected %v got %v", errors.ErrAuthentication, err))
-
-	err = svc.RemoveGroup(context.Background(), apiToken.AccessToken, "wrongID")
-	assert.True(t, errors.Contains(err, errors.ErrNotFound), fmt.Sprintf("Remove group with wrong id: expected %v got %v", errors.ErrNotFound, err))
-
-	gp, err := svc.ListGroups(context.Background(), apiToken.AccessToken, auth.PageMetadata{Level: auth.MaxLevel})
-	require.Nil(t, err, fmt.Sprintf("list groups unexpected error: %s", err))
-	assert.True(t, gp.Total == 1, fmt.Sprintf("retrieve members of a group: expected %d got %d\n", 1, gp.Total))
-
-	err = svc.RemoveGroup(context.Background(), apiToken.AccessToken, group.ID)
-	assert.True(t, errors.Contains(err, nil), fmt.Sprintf("Unauthorized access: expected %v got %v", nil, err))
-
-	gp, err = svc.ListGroups(context.Background(), apiToken.AccessToken, auth.PageMetadata{Level: auth.MaxLevel})
-	require.Nil(t, err, fmt.Sprintf("list groups save unexpected error: %s", err))
-	assert.True(t, gp.Total == 0, fmt.Sprintf("retrieve members of a group: expected %d got %d\n", 0, gp.Total))
-
-}
-
-func TestAssign(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	uid, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
-
-	creationTime := time.Now().UTC()
-	group := auth.Group{
-		Name:      groupName + "Updated",
-		OwnerID:   uid,
-		CreatedAt: creationTime,
-		UpdatedAt: creationTime,
-	}
-
-	group, err = svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-	require.Nil(t, err, fmt.Sprintf("group save got unexpected error: %s", err))
-
-	mid, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
-
-	err = svc.Assign(context.Background(), apiToken.AccessToken, group.ID, "things", mid)
-	require.Nil(t, err, fmt.Sprintf("member assign save unexpected error: %s", err))
-
-	// check access control policies things members.
-	subjectSet := fmt.Sprintf("%s:%s#%s", "members", group.ID, memberRelation)
-	err = svc.Authorize(context.Background(), auth.PolicyReq{Object: mid, Relation: "read", Subject: subjectSet})
-	require.Nil(t, err, fmt.Sprintf("entites having an access to group %s must have %s policy on %s: %s", group.ID, "read", mid, err))
-	err = svc.Authorize(context.Background(), auth.PolicyReq{Object: mid, Relation: "write", Subject: subjectSet})
-	require.Nil(t, err, fmt.Sprintf("entites having an access to group %s must have %s policy on %s: %s", group.ID, "write", mid, err))
-	err = svc.Authorize(context.Background(), auth.PolicyReq{Object: mid, Relation: "delete", Subject: subjectSet})
-	require.Nil(t, err, fmt.Sprintf("entites having an access to group %s must have %s policy on %s: %s", group.ID, "delete", mid, err))
-
-	mp, err := svc.ListMembers(context.Background(), apiToken.AccessToken, group.ID, "things", auth.PageMetadata{Offset: 0, Limit: 10})
-	require.Nil(t, err, fmt.Sprintf("member assign save unexpected error: %s", err))
-	assert.True(t, mp.Total == 1, fmt.Sprintf("retrieve members of a group: expected %d got %d\n", 1, mp.Total))
-
-	err = svc.Assign(context.Background(), "wrongToken", group.ID, "things", mid)
-	assert.True(t, errors.Contains(err, errors.ErrAuthentication), fmt.Sprintf("Unauthorized access: expected %v got %v", errors.ErrAuthentication, err))
-
-}
-
-func TestUnassign(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	uid, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
-
-	creationTime := time.Now().UTC()
-	group := auth.Group{
-		Name:      groupName + "Updated",
-		OwnerID:   uid,
-		CreatedAt: creationTime,
-		UpdatedAt: creationTime,
-	}
-
-	group, err = svc.CreateGroup(context.Background(), apiToken.AccessToken, group)
-	require.Nil(t, err, fmt.Sprintf("group save got unexpected error: %s", err))
-
-	mid, err := idProvider.ID()
-	require.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
-
-	err = svc.Assign(context.Background(), apiToken.AccessToken, group.ID, "things", mid)
-	require.Nil(t, err, fmt.Sprintf("member assign save unexpected error: %s", err))
-
-	mp, err := svc.ListMembers(context.Background(), apiToken.AccessToken, group.ID, "things", auth.PageMetadata{Limit: 10, Offset: 0})
-	require.Nil(t, err, fmt.Sprintf("member assign save unexpected error: %s", err))
-	assert.True(t, mp.Total == 1, fmt.Sprintf("retrieve members of a group: expected %d got %d\n", 1, mp.Total))
-
-	err = svc.Unassign(context.Background(), apiToken.AccessToken, group.ID, mid)
-	require.Nil(t, err, fmt.Sprintf("member unassign save unexpected error: %s", err))
-
-	mp, err = svc.ListMembers(context.Background(), apiToken.AccessToken, group.ID, "things", auth.PageMetadata{Limit: 10, Offset: 0})
-	require.Nil(t, err, fmt.Sprintf("member assign save unexpected error: %s", err))
-	assert.True(t, mp.Total == 0, fmt.Sprintf("retrieve members of a group: expected %d got %d\n", 0, mp.Total))
-
-	err = svc.Unassign(context.Background(), "wrongToken", group.ID, mid)
-	assert.True(t, errors.Contains(err, errors.ErrAuthentication), fmt.Sprintf("Unauthorized access: expected %v got %v", errors.ErrAuthentication, err))
-
-	err = svc.Unassign(context.Background(), apiToken.AccessToken, group.ID, mid)
-	assert.True(t, errors.Contains(err, errors.ErrNotFound), fmt.Sprintf("Unauthorized access: expected %v got %v", nil, err))
-}
-
 func TestAuthorize(t *testing.T) {
-	svc := newService()
+	svc, _ := newService()
 
 	pr := auth.PolicyReq{Object: authoritiesObj, Relation: memberRelation, Subject: id}
 	err := svc.Authorize(context.Background(), pr)
@@ -1017,7 +311,7 @@ func TestAuthorize(t *testing.T) {
 }
 
 func TestAddPolicy(t *testing.T) {
-	svc := newService()
+	svc, _ := newService()
 
 	pr := auth.PolicyReq{Object: "obj", Relation: "rel", Subject: "sub"}
 	err := svc.AddPolicy(context.Background(), pr)
@@ -1028,50 +322,23 @@ func TestAddPolicy(t *testing.T) {
 }
 
 func TestDeletePolicy(t *testing.T) {
-	svc := newService()
+	svc, _ := newService()
 
 	pr := auth.PolicyReq{Object: authoritiesObj, Relation: memberRelation, Subject: id}
 	err := svc.DeletePolicy(context.Background(), pr)
 	require.Nil(t, err, fmt.Sprintf("deleting %v policy expected to succeed: %s", pr, err))
 }
 
-func TestAssignAccessRights(t *testing.T) {
-	svc := newService()
-
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
-	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
-
-	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
-	}
-
-	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
-	assert.Nil(t, err, fmt.Sprintf("Issuing user's key expected to succeed: %s", err))
-
-	userGroupID := "user-group"
-	thingGroupID := "thing-group"
-	err = svc.AssignGroupAccessRights(context.Background(), apiToken.AccessToken, thingGroupID, userGroupID)
-	require.Nil(t, err, fmt.Sprintf("sharing the user group with thing group expected to succeed: %v", err))
-
-	err = svc.Authorize(context.Background(), auth.PolicyReq{Object: thingGroupID, Relation: memberRelation, Subject: fmt.Sprintf("%s:%s#%s", "members", userGroupID, memberRelation)})
-	require.Nil(t, err, fmt.Sprintf("checking shared group access policy expected to be succeed: %#v", err))
-}
-
 func TestAddPolicies(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	svc, _ := newService()
+	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
+		ID:       "id",
+		Type:     auth.APIKey,
+		Subject:  id,
+		IssuedAt: time.Now(),
 	}
 
 	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
@@ -1147,16 +414,15 @@ func TestAddPolicies(t *testing.T) {
 }
 
 func TestDeletePolicies(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	svc, _ := newService()
+	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
+		ID:       "id",
+		Type:     auth.APIKey,
+		Subject:  id,
+		IssuedAt: time.Now(),
 	}
 
 	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)
@@ -1237,16 +503,15 @@ func TestDeletePolicies(t *testing.T) {
 }
 
 func TestListPolicies(t *testing.T) {
-	svc := newService()
-	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	svc, _ := newService()
+	secret, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing login key expected to succeed: %s", err))
 
 	key := auth.Key{
-		ID:        "id",
-		Type:      auth.APIKey,
-		SubjectID: id,
-		Subject:   email,
-		IssuedAt:  time.Now(),
+		ID:       "id",
+		Type:     auth.APIKey,
+		Subject:  id,
+		IssuedAt: time.Now(),
 	}
 
 	apiToken, err := svc.Issue(context.Background(), secret.AccessToken, key)

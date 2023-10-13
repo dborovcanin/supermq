@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	kitgrpc "github.com/go-kit/kit/transport/grpc"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/auth"
 	"google.golang.org/grpc"
@@ -33,8 +32,6 @@ type grpcClient struct {
 	listSubjects    endpoint.Endpoint
 	listAllSubjects endpoint.Endpoint
 	countSubjects   endpoint.Endpoint
-	assign          endpoint.Endpoint
-	members         endpoint.Endpoint
 	timeout         time.Duration
 }
 
@@ -144,22 +141,6 @@ func NewClient(conn *grpc.ClientConn, timeout time.Duration) mainflux.AuthServic
 			encodeCountSubjectsRequest,
 			decodeCountSubjectsResponse,
 			mainflux.CountSubjectsRes{},
-		).Endpoint(),
-		assign: kitgrpc.NewClient(
-			conn,
-			svcName,
-			"Assign",
-			encodeAssignRequest,
-			decodeAssignResponse,
-			mainflux.AuthorizeRes{},
-		).Endpoint(),
-		members: kitgrpc.NewClient(
-			conn,
-			svcName,
-			"Members",
-			encodeMembersRequest,
-			decodeMembersResponse,
-			mainflux.MembersRes{},
 		).Endpoint(),
 
 		timeout: timeout,
@@ -556,83 +537,6 @@ func decodeCountSubjectsResponse(_ context.Context, grpcRes interface{}) (interf
 func encodeCountSubjectsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(countSubjectsReq)
 	return &mainflux.CountSubjectsReq{
-		Namespace:   req.Namespace,
-		SubjectType: req.SubjectType,
-		Subject:     req.Subject,
-		Relation:    req.Relation,
-		Permission:  req.Permission,
-		ObjectType:  req.ObjectType,
-		Object:      req.Object,
-	}, nil
-}
-
-func (client grpcClient) Members(ctx context.Context, req *mainflux.MembersReq, _ ...grpc.CallOption) (r *mainflux.MembersRes, err error) {
-	ctx, close := context.WithTimeout(ctx, client.timeout)
-	defer close()
-
-	res, err := client.members(ctx, membersReq{
-		token:      req.GetToken(),
-		groupID:    req.GetGroupID(),
-		memberType: req.GetType(),
-		offset:     req.GetOffset(),
-		limit:      req.GetLimit(),
-	})
-	if err != nil {
-		return &mainflux.MembersRes{}, err
-	}
-
-	mr := res.(membersRes)
-
-	return &mainflux.MembersRes{
-		Offset:  mr.offset,
-		Limit:   mr.limit,
-		Total:   mr.total,
-		Type:    mr.groupType,
-		Members: mr.members,
-	}, err
-}
-
-func encodeMembersRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(membersReq)
-	return &mainflux.MembersReq{
-		Token:   req.token,
-		Offset:  req.offset,
-		Limit:   req.limit,
-		GroupID: req.groupID,
-		Type:    req.memberType,
-	}, nil
-}
-
-func decodeMembersResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(*mainflux.MembersRes)
-	return membersRes{
-		offset:  res.Offset,
-		limit:   res.Limit,
-		total:   res.Total,
-		members: res.Members,
-	}, nil
-}
-
-func (client grpcClient) Assign(ctx context.Context, req *mainflux.Assignment, _ ...grpc.CallOption) (r *empty.Empty, err error) {
-	ctx, close := context.WithTimeout(ctx, client.timeout)
-	defer close()
-
-	_, err = client.assign(ctx, assignReq{token: req.GetToken(), groupID: req.GetGroupID(), memberID: req.GetMemberID()})
-	if err != nil {
-		return &empty.Empty{}, err
-	}
-
-	return &empty.Empty{}, err
-}
-
-func encodeAssignRequest(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	res := grpcRes.(*mainflux.AuthorizeRes)
-	return authorizeRes{authorized: res.Authorized}, nil
-}
-
-func decodeAssignResponse(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(authReq)
-	return &mainflux.AuthorizeReq{
 		Namespace:   req.Namespace,
 		SubjectType: req.SubjectType,
 		Subject:     req.Subject,

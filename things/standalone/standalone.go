@@ -6,7 +6,6 @@ package standalone
 import (
 	"context"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/mainflux/mainflux"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"google.golang.org/grpc"
@@ -76,11 +75,5 @@ func (repo singleUserRepo) ListAllSubjects(ctx context.Context, in *mainflux.Lis
 	return nil, nil
 }
 func (repo singleUserRepo) CountSubjects(ctx context.Context, in *mainflux.CountSubjectsReq, opts ...grpc.CallOption) (*mainflux.CountSubjectsRes, error) {
-	return nil, nil
-}
-func (repo singleUserRepo) Assign(ctx context.Context, in *mainflux.Assignment, opts ...grpc.CallOption) (*empty.Empty, error) {
-	return nil, nil
-}
-func (repo singleUserRepo) Members(ctx context.Context, in *mainflux.MembersReq, opts ...grpc.CallOption) (*mainflux.MembersRes, error) {
 	return nil, nil
 }

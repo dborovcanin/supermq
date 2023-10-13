@@ -43,6 +43,7 @@ func (tc *thingCache) Save(ctx context.Context, thingKey string, thingID string)
 	if err := tc.client.Set(ctx, tid, thingKey, tc.keyDuration).Err(); err != nil {
 		return errors.Wrap(errors.ErrCreateEntity, err)
 	}
+
 	return nil
 }
 
@@ -55,6 +56,7 @@ func (tc *thingCache) ID(ctx context.Context, thingKey string) (string, error) {
 	if thingID == "" {
 		return "", errors.ErrNotFound
 	}
+
 	return thingID, nil
 }
 
@@ -73,5 +75,6 @@ func (tc *thingCache) Remove(ctx context.Context, thingID string) error {
 	if err := tc.client.Del(ctx, tkey, tid).Err(); err != nil {
 		return errors.Wrap(errors.ErrRemoveEntity, err)
 	}
+
 	return nil
 }

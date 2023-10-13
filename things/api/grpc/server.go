@@ -45,14 +45,6 @@ func (s *grpcServer) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) 
 func decodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*mainflux.AuthorizeReq)
 	return req, nil
-	// return authReq{Namespace: req.GetNamespace(),
-	// 	SubjectType: req.GetSubjectType(),
-	// 	SubjectKind: req.GetSubjectKind(),
-	// 	Subject:     req.GetSubject(),
-	// 	Relation:    req.GetRelation(),
-	// 	Permission:  req.GetPermission(),
-	// 	ObjectType:  req.GetObjectType(),
-	// 	Object:      req.GetObject()}, nil
 }
 
 func encodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {

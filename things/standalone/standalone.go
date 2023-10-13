@@ -34,22 +34,6 @@ func (repo singleUserRepo) Refresh(ctx context.Context, in *mainflux.RefreshReq,
 	return nil, nil
 }
 
-// func (repo singleUserRepo) Identify(ctx context.Context, req *policies.IdentifyReq, opts ...grpc.CallOption) (*policies.IdentifyRes, error) {
-// 	if repo.token != req.GetToken() {
-// 		return nil, errors.ErrAuthentication
-// 	}
-
-// 	return &policies.IdentifyRes{Id: repo.id}, nil
-// }
-
-// func (repo singleUserRepo) Authorize(ctx context.Context, req *policies.AuthorizeReq, _ ...grpc.CallOption) (r *policies.AuthorizeRes, err error) {
-// 	if repo.id != req.GetSubject() {
-// 		return &policies.AuthorizeRes{}, errors.ErrAuthorization
-// 	}
-
-// 	return &policies.AuthorizeRes{Authorized: true}, nil
-// }
-
 func (repo singleUserRepo) Issue(ctx context.Context, in *mainflux.IssueReq, opts ...grpc.CallOption) (*mainflux.Token, error) {
 	return nil, nil
 }
@@ -61,6 +45,7 @@ func (repo singleUserRepo) Identify(ctx context.Context, in *mainflux.IdentityRe
 
 	return &mainflux.IdentityRes{Id: repo.id}, nil
 }
+
 func (repo singleUserRepo) Authorize(ctx context.Context, in *mainflux.AuthorizeReq, opts ...grpc.CallOption) (*mainflux.AuthorizeRes, error) {
 	if repo.id != in.Subject {
 		return &mainflux.AuthorizeRes{Authorized: false}, errors.ErrAuthorization

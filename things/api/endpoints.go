@@ -20,16 +20,16 @@ func createClientEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return createClientRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.CreateThings(ctx, req.token, req.client)
 		if err != nil {
 			return createClientRes{}, err
 		}
-		ucr := createClientRes{
+
+		return createClientRes{
 			Client:  client[0],
 			created: true,
-		}
-
-		return ucr, nil
+		}, nil
 	}
 }
 
@@ -39,10 +39,12 @@ func createClientsEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return clientsPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		page, err := svc.CreateThings(ctx, req.token, req.Clients...)
 		if err != nil {
 			return clientsPageRes{}, err
 		}
+
 		res := clientsPageRes{
 			pageRes: pageRes{
 				Total: uint64(len(page)),
@@ -52,6 +54,7 @@ func createClientsEndpoint(svc things.Service) endpoint.Endpoint {
 		for _, c := range page {
 			res.Clients = append(res.Clients, viewClientRes{Client: c})
 		}
+
 		return res, nil
 	}
 }
@@ -67,6 +70,7 @@ func viewClientEndpoint(svc things.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+
 		return viewClientRes{Client: c}, nil
 	}
 }
@@ -115,10 +119,12 @@ func listMembersEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return memberPageRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		page, err := svc.ListClientsByGroup(ctx, req.token, req.groupID, req.Page)
 		if err != nil {
 			return memberPageRes{}, err
 		}
+
 		return buildMembersResponse(page), nil
 	}
 }
@@ -139,6 +145,7 @@ func updateClientEndpoint(svc things.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -158,6 +165,7 @@ func updateClientTagsEndpoint(svc things.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -168,10 +176,12 @@ func updateClientSecretEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.UpdateClientSecret(ctx, req.token, req.id, req.Secret)
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -187,11 +197,11 @@ func updateClientOwnerEndpoint(svc things.Service) endpoint.Endpoint {
 			ID:    req.id,
 			Owner: req.Owner,
 		}
-
 		client, err := svc.UpdateClientOwner(ctx, req.token, cli)
 		if err != nil {
 			return nil, err
 		}
+
 		return updateClientRes{Client: client}, nil
 	}
 }
@@ -202,10 +212,12 @@ func enableClientEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.EnableClient(ctx, req.token, req.id)
 		if err != nil {
 			return nil, err
 		}
+
 		return deleteClientRes{Client: client}, nil
 	}
 }
@@ -216,10 +228,12 @@ func disableClientEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		client, err := svc.DisableClient(ctx, req.token, req.id)
 		if err != nil {
 			return nil, err
 		}
+
 		return deleteClientRes{Client: client}, nil
 	}
 }
@@ -236,6 +250,7 @@ func buildMembersResponse(cp mfclients.MembersPage) memberPageRes {
 	for _, c := range cp.Members {
 		res.Members = append(res.Members, viewMembersRes{Client: c})
 	}
+
 	return res
 }
 
@@ -245,9 +260,11 @@ func assignUsersGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
 			return nil, err
 		}
+
 		return assignUsersGroupsRes{}, nil
 	}
 }
@@ -258,9 +275,11 @@ func unassignUsersGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Unassign(ctx, req.token, req.groupID, req.Relation, req.MemberKind, req.Members...); err != nil {
 			return nil, err
 		}
+
 		return unassignUsersGroupsRes{}, nil
 	}
 }
@@ -270,9 +289,11 @@ func assignUsersEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, "users", req.UserIDs...); err != nil {
 			return nil, err
 		}
+
 		return assignUsersRes{}, nil
 	}
 }
@@ -283,9 +304,11 @@ func unassignUsersEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Unassign(ctx, req.token, req.groupID, req.Relation, "users", req.UserIDs...); err != nil {
 			return nil, err
 		}
+
 		return unassignUsersRes{}, nil
 	}
 }
@@ -296,9 +319,11 @@ func assignUserGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Assign(ctx, req.token, req.groupID, "parent_group", "groups", req.UserGroupIDs...); err != nil {
 			return nil, err
 		}
+
 		return assignUserGroupsRes{}, nil
 	}
 }
@@ -309,9 +334,11 @@ func unassignUserGroupsEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Unassign(ctx, req.token, req.groupID, "parent_group", "groups", req.UserGroupIDs...); err != nil {
 			return nil, err
 		}
+
 		return unassignUserGroupsRes{}, nil
 	}
 }
@@ -322,9 +349,11 @@ func connectChannelThingEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Assign(ctx, req.token, req.ChannelID, "group", "things", req.ThingID); err != nil {
 			return nil, err
 		}
+
 		return connectChannelThingRes{}, nil
 	}
 }
@@ -335,9 +364,11 @@ func disconnectChannelThingEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Unassign(ctx, req.token, req.ChannelID, "group", "things", req.ThingID); err != nil {
 			return nil, err
 		}
+
 		return disconnectChannelThingRes{}, nil
 	}
 }
@@ -348,6 +379,7 @@ func connectEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return connectChannelThingRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Assign(ctx, req.token, req.ChannelID, "group", "things", req.ThingID); err != nil {
 			return connectChannelThingRes{}, err
 		}
@@ -362,6 +394,7 @@ func disconnectEndpoint(svc groups.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return disconnectChannelThingRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Unassign(ctx, req.token, req.ChannelID, "group", "things", req.ThingID); err != nil {
 			return disconnectChannelThingRes{}, err
 		}
@@ -376,9 +409,11 @@ func thingShareEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return thingShareRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Share(ctx, req.token, req.thingID, req.Relation, req.UserIDs...); err != nil {
 			return thingShareRes{}, err
 		}
+
 		return thingShareRes{}, nil
 	}
 }
@@ -389,9 +424,11 @@ func thingUnshareEndpoint(svc things.Service) endpoint.Endpoint {
 		if err := req.validate(); err != nil {
 			return thingUnshareRes{}, errors.Wrap(apiutil.ErrValidation, err)
 		}
+
 		if err := svc.Unshare(ctx, req.token, req.thingID, req.Relation, req.UserIDs...); err != nil {
 			return thingShareRes{}, err
 		}
+
 		return thingUnshareRes{}, nil
 	}
 }

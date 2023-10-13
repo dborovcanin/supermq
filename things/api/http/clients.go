@@ -123,6 +123,12 @@ func clientsHandler(svc things.Service, r *chi.Mux, logger mflog.Logger) http.Ha
 		opts...,
 	), "list_things_by_channel_id").ServeHTTP)
 
+	r.Get("/users/{userID}/things", otelhttp.NewHandler(kithttp.NewServer(
+		listClientsEndpoint(svc),
+		decodeListClients,
+		api.EncodeResponse,
+		opts...,
+	), "list_user_things").ServeHTTP)
 	return r
 }
 
@@ -186,6 +192,7 @@ func decodeListClients(_ context.Context, r *http.Request) (interface{}, error) 
 		name:       n,
 		tag:        t,
 		permission: p,
+		userID:     chi.URLParam(r, "userID"),
 		owner:      ownerID,
 	}
 	return req, nil

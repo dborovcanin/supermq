@@ -137,67 +137,77 @@ func (svc service) ViewClient(ctx context.Context, token string, id string) (mfc
 	return svc.clients.RetrieveByID(ctx, id)
 }
 
-func (svc service) ListClients(ctx context.Context, token string, pm mfclients.Page) (mfclients.ClientsPage, error) {
+func (svc service) ListClients(ctx context.Context, token string, reqUserID string, pm mfclients.Page) (mfclients.ClientsPage, error) {
+	var ids []string
+
 	userID, err := svc.identify(ctx, token)
 	if err != nil {
 		return mfclients.ClientsPage{}, err
 	}
 
-	tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
-		SubjectType: userType,
-		Subject:     userID,
-		Permission:  pm.Permission,
-		ObjectType:  thingType,
-	})
-	if err != nil {
-		return mfclients.ClientsPage{}, err
+	switch {
+	case (reqUserID != "" && reqUserID != userID):
+		if _, err := svc.authorize(ctx, userType, tokenKind, userID, ownerPermission, userType, reqUserID); err != nil {
+			return mfclients.ClientsPage{}, err
+		}
+		rtids, err := svc.listClientIDs(ctx, reqUserID, pm.Permission)
+		if err != nil {
+			return mfclients.ClientsPage{}, err
+		}
+		ids, err = svc.filterAllowedThingIDs(ctx, userID, pm.Permission, rtids)
+		if err != nil {
+			return mfclients.ClientsPage{}, err
+		}
+	default:
+		ids, err = svc.listClientIDs(ctx, userID, pm.Permission)
+		if err != nil {
+			return mfclients.ClientsPage{}, err
+		}
 	}
 
-	pm.IDs = tids.Policies
-	// switch err {
-	// // If the user is admin, fetch all things from database.
-	// case nil:
-	// 	switch {
-	// 	// visibility = all
-	// 	case pm.SharedBy == myKey && pm.Owner == myKey:
-	// 		pm.SharedBy = ""
-	// 		pm.Owner = ""
-	// 	// visibility = shared
-	// 	case pm.SharedBy == myKey && pm.Owner != myKey:
-	// 		pm.SharedBy = userID
-	// 		pm.Owner = ""
-	// 	// visibility = mine
-	// 	case pm.Owner == myKey && pm.SharedBy != myKey:
-	// 		pm.Owner = userID
-	// 		pm.SharedBy = ""
-	// 	}
+	if len(ids) <= 0 {
+		return mfclients.ClientsPage{}, errors.ErrNotFound
+	}
 
-	// default:
-	// 	// If the user is not admin, check 'sharedby' parameter from page metadata.
-	// 	// If user provides 'sharedby' key, fetch things from policies. Otherwise,
-	// 	// fetch things from the database based on thing's 'owner' field.
-	// 	switch {
-	// 	// visibility = all
-	// 	case pm.SharedBy == myKey && pm.Owner == myKey:
-	// 		pm.SharedBy = userID
-	// 		pm.Owner = userID
-	// 	// visibility = shared
-	// 	case pm.SharedBy == myKey && pm.Owner != myKey:
-	// 		pm.SharedBy = userID
-	// 		pm.Owner = ""
-	// 	// visibility = mine
-	// 	case pm.Owner == myKey && pm.SharedBy != myKey:
-	// 		pm.Owner = userID
-	// 		pm.SharedBy = ""
-	// 	default:
-	// 		pm.Owner = userID
-	// 	}
-	// 	pm.Action = listRelationKey
-	// }
+	pm.IDs = ids
 
 	return svc.clients.RetrieveAllByIDs(ctx, pm)
 }
 
+func (svc service) listClientIDs(ctx context.Context, userID, permission string) ([]string, error) {
+
+	tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+		SubjectType: userType,
+		Subject:     userID,
+		Permission:  permission,
+		ObjectType:  thingType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return tids.Policies, nil
+}
+
+func (svc service) filterAllowedThingIDs(ctx context.Context, userID, permission string, thingIDs []string) ([]string, error) {
+	var ids []string
+	tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
+		SubjectType: userType,
+		Subject:     userID,
+		Permission:  permission,
+		ObjectType:  thingType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, thingID := range thingIDs {
+		for _, tid := range tids.Policies {
+			if thingID == tid {
+				ids = append(ids, thingID)
+			}
+		}
+	}
+	return ids, nil
+}
 func (svc service) UpdateClient(ctx context.Context, token string, cli mfclients.Client) (mfclients.Client, error) {
 	userID, err := svc.authorize(ctx, userType, tokenKind, token, editPermission, thingType, cli.ID)
 	if err != nil {

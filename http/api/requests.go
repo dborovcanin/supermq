@@ -4,6 +4,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/mainflux/mainflux/internal/apiutil"
 	"github.com/mainflux/mainflux/pkg/messaging"
 )
@@ -17,6 +19,6 @@ func (req publishReq) validate() error {
 	if req.token == "" {
 		return apiutil.ErrBearerKey
 	}
-
+	fmt.Println("test")
 	return nil
 }

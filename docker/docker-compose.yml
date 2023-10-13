@@ -160,6 +160,8 @@ services:
       POSTGRES_DB: ${MF_THINGS_DB_NAME}
     networks:
       - mainflux-base-net
+    ports:
+      - 6006:5432
     volumes:
       - mainflux-things-db-volume:/var/lib/postgresql/data
 
@@ -267,6 +269,8 @@ services:
       POSTGRES_USER: ${MF_USERS_DB_USER}
       POSTGRES_PASSWORD: ${MF_USERS_DB_PASS}
       POSTGRES_DB: ${MF_USERS_DB_NAME}
+    ports:
+      - 6005:5432
     networks:
       - mainflux-base-net
     volumes:

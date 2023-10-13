@@ -4,7 +4,7 @@ definition user {
 
 definition thing {
 	relation owner: user
-	relation group: group // potentially separate pub and sub
+	relation group: group
 	permission delete = owner + group->admin
 	permission edit = owner + group->edit
 	permission view = edit + group->view
@@ -29,6 +29,6 @@ definition group {
 	permission administrator = owner + admin + parent_group->admin + role_group->admin
 	permission delete = administrator
 	permission edit = administrator + editor + parent_group->editor + role_group->editor
-	permission view = viewer + edit + parent_group->view + role_group->editor
+	permission view = viewer + edit + parent_group->view + role_group->viewer + role_group->editor
 	permission share = edit
 }

@@ -122,7 +122,6 @@ func (cs *certsService) RevokeCert(ctx context.Context, token, thingID string) (
 		return revoke, errors.Wrap(ErrFailedCertRevocation, err)
 	}
 
-	// TODO: Replace offset and limit
 	offset, limit := uint64(0), uint64(10000)
 	cp, err := cs.certsRepo.RetrieveByThing(ctx, u.GetId(), thing.ID, offset, limit)
 	if err != nil {

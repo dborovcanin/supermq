@@ -365,10 +365,9 @@ func (req unassignUserGroupsRequest) validate() error {
 }
 
 type connectChannelThingRequest struct {
-	token      string
-	ThingID    string `json:"thing_id,omitempty"`
-	ChannelID  string `json:"channel_id,omitempty"`
-	Permission string `json:"permission,omitempty"`
+	token     string
+	ThingID   string
+	ChannelID string
 }
 
 func (req *connectChannelThingRequest) validate() error {

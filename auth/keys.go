@@ -22,7 +22,24 @@ var (
 	ErrAPIKeyExpired = errors.New("use of expired API key")
 )
 
+type Token struct {
+	AccessToken  string // AccessToken contains the security credentials for a login session and identifies the client.
+	RefreshToken string // RefreshToken is a credential artifact that OAuth can use to get a new access token without client interaction.
+	AccessType   string // AccessType is the specific type of access token issued. It can be Bearer, Client or Basic.
+}
+
 type KeyType uint32
+
+const (
+	// AccessKey is temporary User key received on successfull login.
+	AccessKey KeyType = iota
+	// RefreshKey is a temporary User key used to generate a new access key.
+	RefreshKey
+	// RecoveryKey represents a key for resseting password.
+	RecoveryKey
+	// APIKey enables the one to act on behalf of the user.
+	APIKey
+)
 
 func (kt KeyType) String() string {
 	switch kt {
@@ -39,24 +56,12 @@ func (kt KeyType) String() string {
 	}
 }
 
-const (
-	// AccessKey is temporary User key received on successfull login.
-	AccessKey KeyType = iota
-	// RefreshKey is a temporary User key used to generate a new access key.
-	RefreshKey
-	// RecoveryKey represents a key for resseting password.
-	RecoveryKey
-	// APIKey enables the one to act on behalf of the user.
-	APIKey
-)
-
 // Key represents API key.
 type Key struct {
 	ID        string    `json:"id,omitempty"`
 	Type      KeyType   `json:"type,omitempty"`
 	Issuer    string    `json:"issuer,omitempty"`
-	SubjectID string    `json:"subject_id,omitempty"` // internal ID in our system
-	Subject   string    `json:"subject,omitempty"`    // email or username or other unique identifier
+	Subject   string    `json:"subject,omitempty"` // user ID
 	IssuedAt  time.Time `json:"issued_at,omitempty"`
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 }
@@ -66,42 +71,29 @@ func (key Key) String() string {
 	id: %s,
 	type: %s,
 	issuer_id: %s,
-	subject_id: %s,
 	subject: %s,
 	iat: %v,
 	eat: %v
-}`, key.ID, key.Type, key.Issuer, key.SubjectID, key.Subject, key.IssuedAt, key.ExpiresAt)
-}
-
-type Token struct {
-	AccessToken  string // AccessToken contains the security credentials for a login session and identifies the client.
-	RefreshToken string // RefreshToken is a credential artifact that OAuth can use to get a new access token without client interaction.
-	AccessType   string // AccessType is the specific type of access token issued. It can be Bearer, Client or Basic.
-}
-
-// Identity contains ID and Email.
-type Identity struct {
-	ID    string
-	Email string
+}`, key.ID, key.Type, key.Issuer, key.Subject, key.IssuedAt, key.ExpiresAt)
 }
 
 // Expired verifies if the key is expired.
-func (k Key) Expired() bool {
-	if k.Type == APIKey && k.ExpiresAt.IsZero() {
+func (key Key) Expired() bool {
+	if key.Type == APIKey && key.ExpiresAt.IsZero() {
 		return false
 	}
-	return k.ExpiresAt.UTC().Before(time.Now().UTC())
+	return key.ExpiresAt.UTC().Before(time.Now().UTC())
 }
 
 // KeyRepository specifies Key persistence API.
 type KeyRepository interface {
 	// Save persists the Key. A non-nil error is returned to indicate
 	// operation failure
-	Save(context.Context, Key) (string, error)
+	Save(ctx context.Context, key Key) (id string, err error)
 
 	// Retrieve retrieves Key by its unique identifier.
-	Retrieve(context.Context, string, string) (Key, error)
+	Retrieve(ctx context.Context, issuer string, id string) (key Key, err error)
 
 	// Remove removes Key with provided ID.
-	Remove(context.Context, string, string) error
+	Remove(ctx context.Context, issuer string, id string) error
 }

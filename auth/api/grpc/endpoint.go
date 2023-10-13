@@ -19,8 +19,8 @@ func issueEndpoint(svc auth.Service) endpoint.Endpoint {
 		}
 
 		key := auth.Key{
-			Type:      req.keyType,
-			SubjectID: req.id,
+			Type:    req.keyType,
+			Subject: req.id,
 		}
 		tkn, err := svc.Issue(ctx, "", key)
 		if err != nil {
@@ -43,9 +43,9 @@ func loginEndpoint(svc auth.Service) endpoint.Endpoint {
 		}
 
 		key := auth.Key{
-			Type:      req.keyType,
-			SubjectID: req.id,
-			IssuedAt:  time.Now().UTC(),
+			Type:     req.keyType,
+			Subject:  req.id,
+			IssuedAt: time.Now().UTC(),
 		}
 		tkn, err := svc.Issue(ctx, "", key)
 		if err != nil {
@@ -93,11 +93,7 @@ func identifyEndpoint(svc auth.Service) endpoint.Endpoint {
 			return identityRes{}, err
 		}
 
-		ret := identityRes{
-			id:    id.ID,
-			email: id.Email,
-		}
-		return ret, nil
+		return identityRes{id: id}, nil
 	}
 }
 
@@ -288,55 +284,5 @@ func countSubjectsEndpoint(svc auth.Service) endpoint.Endpoint {
 			return countSubjectsRes{}, err
 		}
 		return countSubjectsRes{count: count}, nil
-	}
-}
-
-func assignEndpoint(svc auth.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(assignReq)
-
-		if err := req.validate(); err != nil {
-			return emptyRes{}, err
-		}
-
-		_, err := svc.Identify(ctx, req.token)
-		if err != nil {
-			return emptyRes{}, err
-		}
-
-		err = svc.Assign(ctx, req.token, req.memberID, req.groupID, req.groupType)
-		if err != nil {
-			return emptyRes{}, err
-		}
-		return emptyRes{}, nil
-
-	}
-}
-
-func membersEndpoint(svc auth.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(membersReq)
-		if err := req.validate(); err != nil {
-			return membersRes{}, err
-		}
-
-		pm := auth.PageMetadata{
-			Offset: req.offset,
-			Limit:  req.limit,
-		}
-		mp, err := svc.ListMembers(ctx, req.token, req.groupID, req.memberType, pm)
-		if err != nil {
-			return membersRes{}, err
-		}
-		var members []string
-		for _, m := range mp.Members {
-			members = append(members, m.ID)
-		}
-		return membersRes{
-			offset:  req.offset,
-			limit:   req.limit,
-			total:   mp.PageMetadata.Total,
-			members: members,
-		}, nil
 	}
 }

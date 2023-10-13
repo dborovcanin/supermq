@@ -47,44 +47,6 @@ func (req refreshReq) validate() error {
 	return nil
 }
 
-type assignReq struct {
-	token     string
-	groupID   string
-	memberID  string
-	groupType string
-}
-
-func (req assignReq) validate() error {
-	if req.token == "" {
-		return apiutil.ErrBearerToken
-	}
-	if req.groupID == "" || req.memberID == "" {
-		return apiutil.ErrMissingID
-	}
-	return nil
-}
-
-type membersReq struct {
-	token      string
-	groupID    string
-	offset     uint64
-	limit      uint64
-	memberType string
-}
-
-func (req membersReq) validate() error {
-	if req.token == "" {
-		return apiutil.ErrBearerToken
-	}
-	if req.groupID == "" {
-		return apiutil.ErrMissingID
-	}
-	if req.memberType == "" {
-		return apiutil.ErrMissingMemberType
-	}
-	return nil
-}
-
 // authReq represents authorization request. It contains:
 // 1. subject - an action invoker
 // 2. object - an entity over which action will be executed

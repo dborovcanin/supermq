@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	ExperimentalService_BulkImportRelationships_FullMethodName = "/authzed.api.v1.ExperimentalService/BulkImportRelationships"
 	ExperimentalService_BulkExportRelationships_FullMethodName = "/authzed.api.v1.ExperimentalService/BulkExportRelationships"
+	ExperimentalService_BulkCheckPermission_FullMethodName     = "/authzed.api.v1.ExperimentalService/BulkCheckPermission"
 )
 
 // ExperimentalServiceClient is the client API for ExperimentalService service.
@@ -41,6 +42,7 @@ type ExperimentalServiceClient interface {
 	// relationships from the server. It is resumable, and will return results
 	// in an order determined by the server.
 	BulkExportRelationships(ctx context.Context, in *BulkExportRelationshipsRequest, opts ...grpc.CallOption) (ExperimentalService_BulkExportRelationshipsClient, error)
+	BulkCheckPermission(ctx context.Context, in *BulkCheckPermissionRequest, opts ...grpc.CallOption) (*BulkCheckPermissionResponse, error)
 }
 
 type experimentalServiceClient struct {
@@ -117,6 +119,15 @@ func (x *experimentalServiceBulkExportRelationshipsClient) Recv() (*BulkExportRe
 	return m, nil
 }
 
+func (c *experimentalServiceClient) BulkCheckPermission(ctx context.Context, in *BulkCheckPermissionRequest, opts ...grpc.CallOption) (*BulkCheckPermissionResponse, error) {
+	out := new(BulkCheckPermissionResponse)
+	err := c.cc.Invoke(ctx, ExperimentalService_BulkCheckPermission_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ExperimentalServiceServer is the server API for ExperimentalService service.
 // All implementations must embed UnimplementedExperimentalServiceServer
 // for forward compatibility
@@ -135,6 +146,7 @@ type ExperimentalServiceServer interface {
 	// relationships from the server. It is resumable, and will return results
 	// in an order determined by the server.
 	BulkExportRelationships(*BulkExportRelationshipsRequest, ExperimentalService_BulkExportRelationshipsServer) error
+	BulkCheckPermission(context.Context, *BulkCheckPermissionRequest) (*BulkCheckPermissionResponse, error)
 	mustEmbedUnimplementedExperimentalServiceServer()
 }
 
@@ -147,6 +159,9 @@ func (UnimplementedExperimentalServiceServer) BulkImportRelationships(Experiment
 }
 func (UnimplementedExperimentalServiceServer) BulkExportRelationships(*BulkExportRelationshipsRequest, ExperimentalService_BulkExportRelationshipsServer) error {
 	return status.Errorf(codes.Unimplemented, "method BulkExportRelationships not implemented")
+}
+func (UnimplementedExperimentalServiceServer) BulkCheckPermission(context.Context, *BulkCheckPermissionRequest) (*BulkCheckPermissionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BulkCheckPermission not implemented")
 }
 func (UnimplementedExperimentalServiceServer) mustEmbedUnimplementedExperimentalServiceServer() {}
 
@@ -208,13 +223,36 @@ func (x *experimentalServiceBulkExportRelationshipsServer) Send(m *BulkExportRel
 	return x.ServerStream.SendMsg(m)
 }
 
+func _ExperimentalService_BulkCheckPermission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkCheckPermissionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExperimentalServiceServer).BulkCheckPermission(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ExperimentalService_BulkCheckPermission_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExperimentalServiceServer).BulkCheckPermission(ctx, req.(*BulkCheckPermissionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ExperimentalService_ServiceDesc is the grpc.ServiceDesc for ExperimentalService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ExperimentalService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "authzed.api.v1.ExperimentalService",
 	HandlerType: (*ExperimentalServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "BulkCheckPermission",
+			Handler:    _ExperimentalService_BulkCheckPermission_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "BulkImportRelationships",

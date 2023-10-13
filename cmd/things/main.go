@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	callhome "github.com/mainflux/callhome/pkg/client"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
@@ -33,8 +35,9 @@ import (
 	"github.com/mainflux/mainflux/pkg/groups"
 	"github.com/mainflux/mainflux/pkg/uuid"
 	"github.com/mainflux/mainflux/things"
-	capi "github.com/mainflux/mainflux/things/api"
+	"github.com/mainflux/mainflux/things/api"
 	grpcapi "github.com/mainflux/mainflux/things/api/grpc"
+	httpapi "github.com/mainflux/mainflux/things/api/http"
 	thcache "github.com/mainflux/mainflux/things/cache"
 	thevents "github.com/mainflux/mainflux/things/events"
 	thingspg "github.com/mainflux/mainflux/things/postgres"
@@ -176,7 +179,7 @@ func main() {
 		return
 	}
 	mux := chi.NewRouter()
-	httpSvc := httpserver.New(ctx, cancel, "things-clients", httpServerConfig, capi.MakeHandler(csvc, gsvc, mux, logger, cfg.InstanceID), logger)
+	httpSvc := httpserver.New(ctx, cancel, "things-clients", httpServerConfig, httpapi.MakeHandler(csvc, gsvc, mux, logger, cfg.InstanceID), logger)
 
 	grpcServerConfig := server.Config{Port: defSvcAuthGRPCPort}
 	if err := env.Parse(&grpcServerConfig, env.Options{Prefix: envPrefixGRPC}); err != nil {
@@ -190,10 +193,10 @@ func main() {
 	}
 	gs := grpcserver.New(ctx, cancel, svcName, grpcServerConfig, regiterAuthzServer, logger)
 
-	// if cfg.SendTelemetry {
-	// 	chc := chclient.New(svcName, mainflux.Version, logger, cancel)
-	// 	go chc.CallHome(ctx)
-	// }
+	if cfg.SendTelemetry {
+		chc := callhome.New(svcName, mainflux.Version, logger, cancel)
+		go chc.CallHome(ctx)
+	}
 
 	// Start all servers
 	g.Go(func() error {
@@ -236,9 +239,9 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 	}
 
 	csvc = ctracing.New(csvc, tracer)
-	csvc = capi.LoggingMiddleware(csvc, logger)
+	csvc = api.LoggingMiddleware(csvc, logger)
 	counter, latency := internal.MakeMetrics(svcName, "api")
-	csvc = capi.MetricsMiddleware(csvc, counter, latency)
+	csvc = api.MetricsMiddleware(csvc, counter, latency)
 
 	gsvc = gtracing.New(gsvc, tracer)
 	gsvc = gapi.LoggingMiddleware(gsvc, logger)

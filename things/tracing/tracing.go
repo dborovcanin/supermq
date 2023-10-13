@@ -113,12 +113,14 @@ func (tm *tracingMiddleware) ListClientsByGroup(ctx context.Context, token, grou
 func (tm *tracingMiddleware) Identify(ctx context.Context, key string) (string, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_identify", trace.WithAttributes(attribute.String("key", key)))
 	defer span.End()
+
 	return tm.svc.Identify(ctx, key)
 }
 
 func (tm *tracingMiddleware) Authorize(ctx context.Context, req *mainflux.AuthorizeReq) (string, error) {
 	ctx, span := tm.tracer.Start(ctx, "connect", trace.WithAttributes(attribute.String("subject", req.Subject), attribute.String("object", req.Object)))
 	defer span.End()
+
 	return tm.svc.Authorize(ctx, req)
 }
 
@@ -126,6 +128,7 @@ func (tm *tracingMiddleware) Authorize(ctx context.Context, req *mainflux.Author
 func (tm *tracingMiddleware) Share(ctx context.Context, token, id string, relation string, userids ...string) error {
 	ctx, span := tm.tracer.Start(ctx, "share", trace.WithAttributes(attribute.String("id", id), attribute.String("relation", relation), attribute.StringSlice("user_ids", userids)))
 	defer span.End()
+
 	return tm.svc.Share(ctx, token, id, relation, userids...)
 }
 
@@ -133,5 +136,6 @@ func (tm *tracingMiddleware) Share(ctx context.Context, token, id string, relati
 func (tm *tracingMiddleware) Unshare(ctx context.Context, token, id string, relation string, userids ...string) error {
 	ctx, span := tm.tracer.Start(ctx, "unshare", trace.WithAttributes(attribute.String("id", id), attribute.String("relation", relation), attribute.StringSlice("user_ids", userids)))
 	defer span.End()
+
 	return tm.svc.Unshare(ctx, token, id, relation, userids...)
 }

@@ -42,16 +42,7 @@ func (client grpcClient) Authorize(ctx context.Context, req *mainflux.AuthorizeR
 	ctx, close := context.WithTimeout(ctx, client.timeout)
 	defer close()
 
-	res, err := client.authorize(ctx, authReq{
-		Namespace:   req.GetNamespace(),
-		SubjectType: req.GetSubjectType(),
-		Subject:     req.GetSubject(),
-		SubjectKind: req.GetSubjectKind(),
-		Relation:    req.GetRelation(),
-		Permission:  req.GetPermission(),
-		ObjectType:  req.GetObjectType(),
-		Object:      req.GetObject(),
-	})
+	res, err := client.authorize(ctx, req)
 	if err != nil {
 		return &mainflux.AuthorizeRes{}, err
 	}
@@ -66,15 +57,15 @@ func decodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{
 }
 
 func encodeAuthorizeRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(authReq)
+	req := grpcReq.(*mainflux.AuthorizeReq)
 	return &mainflux.AuthorizeReq{
-		Namespace:   req.Namespace,
-		SubjectType: req.SubjectType,
-		Subject:     req.Subject,
-		SubjectKind: req.SubjectKind,
-		Relation:    req.Relation,
-		Permission:  req.Permission,
-		ObjectType:  req.ObjectType,
-		Object:      req.Object,
+		Namespace:   req.GetNamespace(),
+		SubjectType: req.GetSubjectType(),
+		Subject:     req.GetSubject(),
+		SubjectKind: req.GetSubjectKind(),
+		Relation:    req.GetRelation(),
+		Permission:  req.GetPermission(),
+		ObjectType:  req.GetObjectType(),
+		Object:      req.GetObject(),
 	}, nil
 }

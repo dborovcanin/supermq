@@ -6,6 +6,8 @@ package jwt
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strconv"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
@@ -13,17 +15,24 @@ import (
 	"github.com/mainflux/mainflux/pkg/errors"
 )
 
-var errInvalidIssuer = errors.New("invalid token issuer value")
+var (
+	errInvalidIssuer = errors.New("invalid token issuer value")
+	// errJWTExpiryKey is used to check if the token is expired.
+	errJWTExpiryKey = errors.New(`"exp" not satisfied`)
+	// ErrExpiry indicates that the token is expired.
+	ErrExpiry = errors.New("token is expired")
+)
 
 const (
 	issuerName = "mainflux.auth"
-	identity   = "subject_id"
 	tokenType  = "type"
 )
 
 type tokenizer struct {
 	secret []byte
 }
+
+var _ auth.Tokenizer = (*tokenizer)(nil)
 
 // NewRepository instantiates an implementation of Token repository.
 func New(secret []byte) auth.Tokenizer {
@@ -32,15 +41,14 @@ func New(secret []byte) auth.Tokenizer {
 	}
 }
 
-func (t tokenizer) Issue(key auth.Key) (string, error) {
+func (repo *tokenizer) Issue(key auth.Key) (string, error) {
 	builder := jwt.NewBuilder()
 	builder.
 		Issuer(issuerName).
 		IssuedAt(key.IssuedAt).
 		Subject(key.Subject).
-		Claim(identity, key.SubjectID).
 		Claim(tokenType, key.Type).
-		Expiration(key.ExpiresAt).Build()
+		Expiration(key.ExpiresAt)
 	if key.ID != "" {
 		builder.JwtID(key.ID)
 	}
@@ -48,20 +56,24 @@ func (t tokenizer) Issue(key auth.Key) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(errors.ErrAuthentication, err)
 	}
-	signedTkn, err := jwt.Sign(tkn, jwt.WithKey(jwa.HS512, t.secret))
+	signedTkn, err := jwt.Sign(tkn, jwt.WithKey(jwa.HS512, repo.secret))
 	if err != nil {
 		return "", err
 	}
 	return string(signedTkn), nil
 }
 
-func (t tokenizer) Parse(token string) (auth.Key, error) {
+func (repo *tokenizer) Parse(token string) (auth.Key, error) {
 	tkn, err := jwt.Parse(
 		[]byte(token),
 		jwt.WithValidate(true),
-		jwt.WithKey(jwa.HS512, t.secret),
+		jwt.WithKey(jwa.HS512, repo.secret),
 	)
 	if err != nil {
+		if errors.Contains(err, errJWTExpiryKey) {
+			return auth.Key{}, ErrExpiry
+		}
+
 		return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
 	}
 	validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) jwt.ValidationError {
@@ -83,7 +95,17 @@ func (t tokenizer) Parse(token string) (auth.Key, error) {
 		return auth.Key{}, err
 	}
 
+	tType, ok := tkn.Get(tokenType)
+	if !ok {
+		return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
+	}
+	ktype, err := strconv.ParseInt(fmt.Sprintf("%v", tType), 10, 64)
+	if err != nil {
+		return auth.Key{}, errors.Wrap(errors.ErrAuthentication, err)
+	}
+
 	key.ID = tkn.JwtID()
+	key.Type = auth.KeyType(ktype)
 	key.Issuer = tkn.Issuer()
 	key.Subject = tkn.Subject()
 	key.IssuedAt = tkn.IssuedAt()

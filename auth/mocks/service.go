@@ -6,7 +6,6 @@ import (
 	"github.com/mainflux/mainflux"
 	"github.com/stretchr/testify/mock"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var _ mainflux.AuthServiceClient = (*Service)(nil)
@@ -91,16 +90,4 @@ func (m *Service) CountSubjects(ctx context.Context, in *mainflux.CountSubjectsR
 	ret := m.Called(ctx, in)
 
 	return ret.Get(0).(*mainflux.CountSubjectsRes), ret.Error(1)
-}
-
-func (m *Service) Assign(ctx context.Context, in *mainflux.Assignment, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	ret := m.Called(ctx, in)
-
-	return ret.Get(0).(*emptypb.Empty), ret.Error(1)
-}
-
-func (m *Service) Members(ctx context.Context, in *mainflux.MembersReq, opts ...grpc.CallOption) (*mainflux.MembersRes, error) {
-	ret := m.Called(ctx, in)
-
-	return ret.Get(0).(*mainflux.MembersRes), ret.Error(1)
 }

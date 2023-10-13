@@ -17,11 +17,13 @@ import (
 )
 
 const (
-	userKind  = "users"
-	tokenKind = "token"
+	userKind   = "users"
+	tokenKind  = "token"
+	thingsKind = "things"
 
 	userType  = "user"
 	groupType = "group"
+	thingType = "thing"
 )
 
 var (
@@ -413,18 +415,29 @@ func (svc service) changeClientStatus(ctx context.Context, token string, client 
 	return svc.clients.ChangeStatus(ctx, client)
 }
 
-func (svc service) ListMembers(ctx context.Context, token, groupID string, pm mfclients.Page) (mfclients.MembersPage, error) {
-	if _, err := svc.authorize(ctx, userType, tokenKind, token, pm.Permission, groupType, groupID); err != nil {
+func (svc service) ListMembers(ctx context.Context, token, objectKind string, objectID string, pm mfclients.Page) (mfclients.MembersPage, error) {
+	var objectType string
+	switch objectKind {
+	case thingsKind:
+		objectType = thingType
+	default:
+		objectType = groupType
+	}
+
+	if _, err := svc.authorize(ctx, userType, tokenKind, token, pm.Permission, objectType, objectID); err != nil {
 		return mfclients.MembersPage{}, err
 	}
 	uids, err := svc.auth.ListAllSubjects(ctx, &mainflux.ListSubjectsReq{
 		SubjectType: userType,
 		Permission:  pm.Permission,
-		Object:      groupID,
-		ObjectType:  groupType,
+		Object:      objectID,
+		ObjectType:  objectType,
 	})
 	if err != nil {
 		return mfclients.MembersPage{}, err
+	}
+	if len(uids.Policies) <= 0 {
+		return mfclients.MembersPage{}, errors.ErrNotFound
 	}
 
 	pm.IDs = uids.Policies
@@ -433,6 +446,7 @@ func (svc service) ListMembers(ctx context.Context, token, groupID string, pm mf
 	if err != nil {
 		return mfclients.MembersPage{}, err
 	}
+
 	return mfclients.MembersPage{
 		Page:    cp.Page,
 		Members: cp.Clients,

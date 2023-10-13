@@ -14,6 +14,8 @@ const (
 	connectEndpoint    = "connect"
 	disconnectEndpoint = "disconnect"
 	identifyEndpoint   = "identify"
+	shareEndpoint      = "share"
+	unshareEndpoint    = "unshare"
 )
 
 // Thing represents mainflux thing.
@@ -251,13 +253,41 @@ func (sdk mfSDK) IdentifyThing(key string) (string, errors.SDKError) {
 	return i.ID, nil
 }
 
-func (sdk mfSDK) ShareThing(groupID, userID string, actions []string, token string) errors.SDKError {
-	policy := Policy{
-		Subject:  userID,
-		Object:   groupID,
-		Actions:  actions,
-		External: true,
+func (sdk mfSDK) ShareThing(thingID, token string, req shareThingReq) errors.SDKError {
+	data, err := json.Marshal(req)
+	if err != nil {
+		return errors.NewSDKError(err)
 	}
 
-	return sdk.CreateThingPolicy(policy, token)
+	url := fmt.Sprintf("%s/%s/%s/%s", sdk.thingsURL, thingsEndpoint, thingID, unshareEndpoint)
+
+	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusOK)
+	return sdkerr
+}
+
+func (sdk mfSDK) UnshareThing(thingID, token string, req unshareThingReq) errors.SDKError {
+	data, err := json.Marshal(req)
+	if err != nil {
+		return errors.NewSDKError(err)
+	}
+
+	url := fmt.Sprintf("%s/%s/%s/%s", sdk.thingsURL, thingsEndpoint, thingID, shareEndpoint)
+
+	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusOK)
+	return sdkerr
+}
+
+func (sdk mfSDK) ListThingUsers(token, thingID string) (UsersPage, errors.SDKError) {
+	url := fmt.Sprintf("%s/%s/%s/%s", sdk.thingsURL, thingsEndpoint, thingID, usersEndpoint)
+
+	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
+	if sdkerr != nil {
+		return UsersPage{}, sdkerr
+	}
+	up := UsersPage{}
+	if err := json.Unmarshal(body, &up); err != nil {
+		return UsersPage{}, errors.NewSDKError(err)
+	}
+
+	return up, nil
 }

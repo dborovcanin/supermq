@@ -75,6 +75,7 @@ type listClientsReq struct {
 	owner      string
 	permission string
 	visibility string
+	userID     string
 	metadata   mfclients.Metadata
 }
 

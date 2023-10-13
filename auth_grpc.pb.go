@@ -14,7 +14,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -130,8 +129,6 @@ const (
 	AuthService_ListSubjects_FullMethodName    = "/mainflux.AuthService/ListSubjects"
 	AuthService_ListAllSubjects_FullMethodName = "/mainflux.AuthService/ListAllSubjects"
 	AuthService_CountSubjects_FullMethodName   = "/mainflux.AuthService/CountSubjects"
-	AuthService_Assign_FullMethodName          = "/mainflux.AuthService/Assign"
-	AuthService_Members_FullMethodName         = "/mainflux.AuthService/Members"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -151,8 +148,6 @@ type AuthServiceClient interface {
 	ListSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error)
 	ListAllSubjects(ctx context.Context, in *ListSubjectsReq, opts ...grpc.CallOption) (*ListSubjectsRes, error)
 	CountSubjects(ctx context.Context, in *CountSubjectsReq, opts ...grpc.CallOption) (*CountSubjectsRes, error)
-	Assign(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Members(ctx context.Context, in *MembersReq, opts ...grpc.CallOption) (*MembersRes, error)
 }
 
 type authServiceClient struct {
@@ -280,24 +275,6 @@ func (c *authServiceClient) CountSubjects(ctx context.Context, in *CountSubjects
 	return out, nil
 }
 
-func (c *authServiceClient) Assign(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, AuthService_Assign_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) Members(ctx context.Context, in *MembersReq, opts ...grpc.CallOption) (*MembersRes, error) {
-	out := new(MembersRes)
-	err := c.cc.Invoke(ctx, AuthService_Members_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility
@@ -315,8 +292,6 @@ type AuthServiceServer interface {
 	ListSubjects(context.Context, *ListSubjectsReq) (*ListSubjectsRes, error)
 	ListAllSubjects(context.Context, *ListSubjectsReq) (*ListSubjectsRes, error)
 	CountSubjects(context.Context, *CountSubjectsReq) (*CountSubjectsRes, error)
-	Assign(context.Context, *Assignment) (*emptypb.Empty, error)
-	Members(context.Context, *MembersReq) (*MembersRes, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -362,12 +337,6 @@ func (UnimplementedAuthServiceServer) ListAllSubjects(context.Context, *ListSubj
 }
 func (UnimplementedAuthServiceServer) CountSubjects(context.Context, *CountSubjectsReq) (*CountSubjectsRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CountSubjects not implemented")
-}
-func (UnimplementedAuthServiceServer) Assign(context.Context, *Assignment) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Assign not implemented")
-}
-func (UnimplementedAuthServiceServer) Members(context.Context, *MembersReq) (*MembersRes, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Members not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 
@@ -616,42 +585,6 @@ func _AuthService_CountSubjects_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_Assign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Assignment)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).Assign(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_Assign_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Assign(ctx, req.(*Assignment))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_Members_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MembersReq)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).Members(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_Members_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).Members(ctx, req.(*MembersReq))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -710,14 +643,6 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CountSubjects",
 			Handler:    _AuthService_CountSubjects_Handler,
-		},
-		{
-			MethodName: "Assign",
-			Handler:    _AuthService_Assign_Handler,
-		},
-		{
-			MethodName: "Members",
-			Handler:    _AuthService_Members_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

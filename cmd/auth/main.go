@@ -18,20 +18,20 @@ import (
 	grpcapi "github.com/mainflux/mainflux/auth/api/grpc"
 	httpapi "github.com/mainflux/mainflux/auth/api/http"
 	"github.com/mainflux/mainflux/auth/jwt"
-	"github.com/mainflux/mainflux/auth/keto"
-	"github.com/mainflux/mainflux/auth/postgres"
+	apostgres "github.com/mainflux/mainflux/auth/postgres"
 	"github.com/mainflux/mainflux/auth/spicedb"
 	"github.com/mainflux/mainflux/auth/tracing"
 	"github.com/mainflux/mainflux/internal"
 	jaegerclient "github.com/mainflux/mainflux/internal/clients/jaeger"
 	pgclient "github.com/mainflux/mainflux/internal/clients/postgres"
+	"github.com/mainflux/mainflux/internal/postgres"
+
 	"github.com/mainflux/mainflux/internal/env"
 	"github.com/mainflux/mainflux/internal/server"
 	grpcserver "github.com/mainflux/mainflux/internal/server/grpc"
 	httpserver "github.com/mainflux/mainflux/internal/server/http"
 	mflog "github.com/mainflux/mainflux/logger"
 	"github.com/mainflux/mainflux/pkg/uuid"
-	acl "github.com/ory/keto/proto/ory/keto/relation_tuples/v1alpha2"
 	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -56,10 +56,6 @@ type config struct {
 	JaegerURL         string `env:"MF_JAEGER_URL"                   envDefault:"http://jaeger:14268/api/traces"`
 	SendTelemetry     bool   `env:"MF_SEND_TELEMETRY"               envDefault:"true"`
 	InstanceID        string `env:"MF_AUTH_ADAPTER_INSTANCE_ID"     envDefault:""`
-	KetoReadHost      string `env:"MF_KETO_READ_REMOTE_HOST"        envDefault:"mainflux-keto"`
-	KetoWriteHost     string `env:"MF_KETO_WRITE_REMOTE_HOST"       envDefault:"mainflux-keto"`
-	KetoWritePort     string `env:"MF_KETO_WRITE_REMOTE_PORT"       envDefault:"4467"`
-	KetoReadPort      string `env:"MF_KETO_READ_REMOTE_PORT"        envDefault:"4466"`
 	AccessDuration    string `env:"MF_AUTH_ACCESS_TOKEN_DURATION"  envDefault:"30m"`
 	RefreshDuration   string `env:"MF_AUTH_REFRESH_TOKEN_DURATION" envDefault:"24h"`
 	SpicedbHost       string `env:"MF_SPICEDB_HOST"                 envDefault:"localhost"`
@@ -96,7 +92,7 @@ func main() {
 	if err := dbConfig.LoadEnv(envPrefixDB); err != nil {
 		logger.Fatal(err.Error())
 	}
-	db, err := pgclient.SetupWithConfig(envPrefixDB, *postgres.Migration(), dbConfig)
+	db, err := pgclient.SetupWithConfig(envPrefixDB, *apostgres.Migration(), dbConfig)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
@@ -117,13 +113,6 @@ func main() {
 	}()
 	tracer := tp.Tracer(svcName)
 
-	readerConn, writerConn, err := initKeto(cfg.KetoReadHost, cfg.KetoReadPort, cfg.KetoWriteHost, cfg.KetoWritePort)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to init keto grpc client : %s\n", err.Error()))
-		exitCode = 1
-		return
-	}
-
 	spicedbclient, err := initSpiceDB(cfg)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to init spicedb grpc client : %s\n", err.Error()))
@@ -131,7 +120,7 @@ func main() {
 		return
 	}
 
-	svc := newService(db, tracer, cfg, logger, readerConn, writerConn, spicedbclient)
+	svc := newService(db, tracer, cfg, dbConfig, logger, spicedbclient)
 
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.Parse(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
@@ -175,20 +164,6 @@ func main() {
 	}
 }
 
-func initKeto(hostReadAddress, readPort, hostWriteAddress, writePort string) (readerConnection, writerConnection *grpc.ClientConn, err error) {
-	readConn, err := grpc.Dial(fmt.Sprintf("%s:%s", hostReadAddress, readPort), grpc.WithInsecure())
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to dial %s:%s for Keto Read Service: %s", hostReadAddress, readPort, err)
-	}
-
-	writeConn, err := grpc.Dial(fmt.Sprintf("%s:%s", hostWriteAddress, writePort), grpc.WithInsecure())
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to dial %s:%s for Keto Write Service: %s", hostWriteAddress, writePort, err)
-	}
-
-	return readConn, writeConn, nil
-}
-
 func initSpiceDB(cfg config) (*authzed.Client, error) {
 	client, err := authzed.NewClient(
 		fmt.Sprintf("%s:%s", cfg.SpicedbHost, cfg.SpicedbPort),
@@ -219,15 +194,11 @@ func initSchema(client *authzed.Client, schemaFilePath string) error {
 	return nil
 }
 
-func newService(db *sqlx.DB, tracer trace.Tracer, cfg config, logger mflog.Logger, readerConn, writerConn *grpc.ClientConn, spicedbClient *authzed.Client) auth.Service {
-	database := postgres.NewDatabase(db)
-	keysRepo := tracing.New(postgres.New(database), tracer)
+func newService(db *sqlx.DB, tracer trace.Tracer, cfg config, dbConfig pgclient.Config, logger mflog.Logger, spicedbClient *authzed.Client) auth.Service {
+	database := postgres.NewDatabase(db, dbConfig, tracer)
+	keysRepo := apostgres.New(database)
 
-	groupsRepo := postgres.NewGroupRepo(database)
-
-	pa := keto.NewPolicyAgent(acl.NewCheckServiceClient(readerConn), acl.NewWriteServiceClient(writerConn), acl.NewReadServiceClient(readerConn))
-
-	pa = spicedb.NewPolicyAgent(spicedbClient)
+	pa := spicedb.NewPolicyAgent(spicedbClient, logger)
 	idProvider := uuid.New()
 	t := jwt.New([]byte(cfg.SecretKey))
 
@@ -240,10 +211,11 @@ func newService(db *sqlx.DB, tracer trace.Tracer, cfg config, logger mflog.Logge
 		logger.Error(fmt.Sprintf("failed to parse refresh token duration: %s", err.Error()))
 	}
 
-	svc := auth.New(keysRepo, groupsRepo, idProvider, t, pa, aDuration, rDuration)
+	svc := auth.New(keysRepo, idProvider, t, pa, aDuration, rDuration)
 	svc = api.LoggingMiddleware(svc, logger)
 	counter, latency := internal.MakeMetrics("groups", "api")
 	svc = api.MetricsMiddleware(svc, counter, latency)
+	svc = tracing.New(svc, tracer)
 
 	return svc
 }

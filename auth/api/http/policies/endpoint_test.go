@@ -62,13 +62,12 @@ func (tr testRequest) make() (*http.Response, error) {
 
 func newService() auth.Service {
 	krepo := new(mocks.Keys)
-	grepo := new(mocks.Repository)
 	prepo := new(mocks.PolicyAgent)
 	idProvider := uuid.NewMock()
 
 	t := jwt.New([]byte(secret))
 
-	return auth.New(krepo, grepo, idProvider, t, prepo, loginDuration, refreshDuration)
+	return auth.New(krepo, idProvider, t, prepo, loginDuration, refreshDuration)
 }
 
 func newServer(svc auth.Service) *httptest.Server {
@@ -90,10 +89,10 @@ type addPolicyRequest struct {
 
 func TestAddPolicies(t *testing.T) {
 	svc := newService()
-	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing user key expected to succeed: %s", err))
 
-	userLoginToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: unauthzID, Subject: unauthzEmail})
+	userLoginToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: unauthzID})
 	assert.Nil(t, err, fmt.Sprintf("Issuing unauthorized user's key expected to succeed: %s", err))
 
 	ts := newServer(svc)
@@ -210,10 +209,10 @@ func TestAddPolicies(t *testing.T) {
 
 func TestDeletePolicies(t *testing.T) {
 	svc := newService()
-	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: id, Subject: email})
+	token, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: id})
 	assert.Nil(t, err, fmt.Sprintf("Issuing user key expected to succeed: %s", err))
 
-	userLoginToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), SubjectID: unauthzID, Subject: unauthzEmail})
+	userLoginToken, err := svc.Issue(context.Background(), "", auth.Key{Type: auth.AccessKey, IssuedAt: time.Now(), Subject: unauthzID})
 	assert.Nil(t, err, fmt.Sprintf("Issuing unauthorized user's key expected to succeed: %s", err))
 
 	ts := newServer(svc)

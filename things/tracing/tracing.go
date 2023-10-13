@@ -41,10 +41,10 @@ func (tm *tracingMiddleware) ViewClient(ctx context.Context, token string, id st
 }
 
 // ListClients traces the "ListClients" operation of the wrapped policies.Service.
-func (tm *tracingMiddleware) ListClients(ctx context.Context, token string, pm mfclients.Page) (mfclients.ClientsPage, error) {
+func (tm *tracingMiddleware) ListClients(ctx context.Context, token string, reqUserID string, pm mfclients.Page) (mfclients.ClientsPage, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_list_clients")
 	defer span.End()
-	return tm.svc.ListClients(ctx, token, pm)
+	return tm.svc.ListClients(ctx, token, reqUserID, pm)
 }
 
 // UpdateClient traces the "UpdateClient" operation of the wrapped policies.Service.

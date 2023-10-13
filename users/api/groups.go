@@ -87,28 +87,6 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 			opts...,
 		), "disable_group").ServeHTTP)
 
-		// Instead of this endpoint /{groupID}/members separately, we can simply use /{groupID}/users
-		// because this group is intended exclusively for users. No other entity could not be added
-		// Instead of this endpoint /{groupID}/members separately, we can simply use /{groupID}/users
-		// because this group is intended exclusively for users. No other entity could not be added
-		r.Post("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.AssignMembersEndpoint(svc, "", "users"),
-			gapi.DecodeAssignMembersRequest,
-			api.EncodeResponse,
-			opts...,
-		), "assign_members").ServeHTTP)
-
-		// Instead of maintaining this endpoint /{groupID}/members separately, we can simply use /{groupID}/users
-		// because this group is intended exclusively for users. No other entity could not be added
-		// Instead of maintaining this endpoint /{groupID}/members separately, we can simply use /{groupID}/users
-		// because this group is intended exclusively for users. No other entity could not be added
-		r.Delete("/{groupID}/members", otelhttp.NewHandler(kithttp.NewServer(
-			gapi.UnassignMembersEndpoint(svc, "", "users"),
-			gapi.DecodeUnassignMembersRequest,
-			api.EncodeResponse,
-			opts...,
-		), "unassign_members").ServeHTTP)
-
 		r.Post("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
 			assignUsersEndpoint(svc),
 			decodeAssignUsersRequest,

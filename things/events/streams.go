@@ -244,11 +244,3 @@ func (es *eventStore) Unshare(ctx context.Context, token, id string, relation st
 
 	return es.Publish(ctx, event)
 }
-
-func (es *eventStore) Share(ctx context.Context, token, id string, relation string, userids ...string) error {
-	return es.svc.Share(ctx, token, id, relation, userids...)
-}
-
-func (es *eventStore) Unshare(ctx context.Context, token, id string, relation string, userids ...string) error {
-	return es.svc.Unshare(ctx, token, id, relation, userids...)
-}

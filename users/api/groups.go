@@ -6,19 +6,15 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/mainflux/mainflux/internal/api"
 	"github.com/mainflux/mainflux/internal/apiutil"
 	gapi "github.com/mainflux/mainflux/internal/groups/api"
 	"github.com/mainflux/mainflux/logger"
-	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/errors"
 	"github.com/mainflux/mainflux/pkg/groups"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -97,16 +93,6 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 		r.Delete("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
 			unassignUsersEndpoint(svc),
 			decodeUnassignUsersRequest,
-		r.Post("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
-			assignUsersEndpoint(svc),
-			decodeAssignUsersRequest,
-			api.EncodeResponse,
-			opts...,
-		), "assign_users").ServeHTTP)
-
-		r.Delete("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
-			unassignUsersEndpoint(svc),
-			decodeUnassignUsersRequest,
 			api.EncodeResponse,
 			opts...,
 		), "unassign_users").ServeHTTP)
@@ -128,57 +114,6 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 		opts...,
 	), "list_groups_by_user_id").ServeHTTP)
 	return r
-}
-
-func decodeAssignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	req := assignUsersReq{
-		token:   apiutil.ExtractBearerToken(r),
-		groupID: chi.URLParam(r, "groupID"),
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
-	}
-	return req, nil
-}
-
-func decodeUnassignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	req := unassignUsersReq{
-		token:   apiutil.ExtractBearerToken(r),
-		groupID: chi.URLParam(r, "groupID"),
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))
-	}
-	return req, nil
-}
-
-func assignUsersEndpoint(svc groups.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(assignUsersReq)
-
-		if err := req.validate(); err != nil {
-			return assignUsersRes{}, errors.Wrap(apiutil.ErrValidation, err)
-		}
-		if err := svc.Assign(ctx, req.token, req.groupID, req.Relation, "users", req.UserIDs...); err != nil {
-			return assignUsersRes{}, err
-		}
-		return assignUsersRes{}, nil
-	}
-}
-
-func unassignUsersEndpoint(svc groups.Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(unassignUsersReq)
-
-		if err := req.validate(); err != nil {
-			return unassignUsersRes{}, errors.Wrap(apiutil.ErrValidation, err)
-		}
-
-		if err := svc.Unassign(ctx, req.token, req.groupID, req.Relation, "users", req.UserIDs...); err != nil {
-			return nil, err
-		}
-		return unassignUsersRes{}, nil
-	}
 }
 
 func decodeAssignUsersRequest(_ context.Context, r *http.Request) (interface{}, error) {

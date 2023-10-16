@@ -145,7 +145,7 @@ func (sdk mfSDK) DisableGroup(id, token string) (Group, errors.SDKError) {
 	return sdk.changeGroupStatus(id, disableEndpoint, token)
 }
 
-func (sdk mfSDK) AddUsersToGroup(groupID string, req addUsersToGroupReq, token string) errors.SDKError {
+func (sdk mfSDK) AddUsersToGroup(groupID string, req UsersRelationRequest, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
@@ -157,7 +157,7 @@ func (sdk mfSDK) AddUsersToGroup(groupID string, req addUsersToGroupReq, token s
 	return sdkerr
 }
 
-func (sdk mfSDK) RemoveUsersToGroup(groupID string, req removeUsersToGroupReq, token string) errors.SDKError {
+func (sdk mfSDK) RemoveUsersToGroup(groupID string, req UsersRelationRequest, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)

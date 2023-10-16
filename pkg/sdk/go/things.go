@@ -256,7 +256,7 @@ func (sdk mfSDK) IdentifyThing(key string) (string, errors.SDKError) {
 	return i.ID, nil
 }
 
-func (sdk mfSDK) ShareThing(thingID, token string, req shareThingReq) errors.SDKError {
+func (sdk mfSDK) ShareThing(thingID string, req UsersRelationRequest, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
@@ -268,7 +268,7 @@ func (sdk mfSDK) ShareThing(thingID, token string, req shareThingReq) errors.SDK
 	return sdkerr
 }
 
-func (sdk mfSDK) UnshareThing(thingID, token string, req unshareThingReq) errors.SDKError {
+func (sdk mfSDK) UnshareThing(thingID string, req UsersRelationRequest, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
@@ -280,8 +280,11 @@ func (sdk mfSDK) UnshareThing(thingID, token string, req unshareThingReq) errors
 	return sdkerr
 }
 
-func (sdk mfSDK) ListThingUsers(token, thingID string) (UsersPage, errors.SDKError) {
-	url := fmt.Sprintf("%s/%s/%s/%s", sdk.thingsURL, thingsEndpoint, thingID, usersEndpoint)
+func (sdk mfSDK) ListThingUsers(thingID string, pm PageMetadata, token string) (UsersPage, errors.SDKError) {
+	url, err := sdk.withQueryParams(sdk.thingsURL, fmt.Sprintf("%s/%s/%s", thingsEndpoint, thingID, usersEndpoint), pm)
+	if err != nil {
+		return UsersPage{}, errors.NewSDKError(err)
+	}
 
 	_, body, sdkerr := sdk.processRequest(http.MethodGet, url, token, nil, nil, http.StatusOK)
 	if sdkerr != nil {

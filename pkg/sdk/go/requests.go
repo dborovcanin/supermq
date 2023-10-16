@@ -49,40 +49,11 @@ type tokenReq struct {
 	Secret   string `json:"secret"`
 }
 
-type shareThingReq struct {
+type UsersRelationRequest struct {
 	Relation string   `json:"relation"`
 	UserIDs  []string `json:"user_ids"`
 }
 
-type unshareThingReq struct {
-	Relation string   `json:"relation"`
-	UserIDs  []string `json:"user_ids"`
-}
-
-type addUsersToChannelReq struct {
-	Relation string   `json:"relation"`
-	UserIDs  []string `json:"user_ids"`
-}
-
-type removeUsersFromChannelReq struct {
-	Relation string   `json:"relation"`
-	UserIDs  []string `json:"user_ids"`
-}
-
-type addUserGroupsToChannelReq struct {
+type UserGroupsRequest struct {
 	UserGroupIDs []string `json:"group_ids"`
-}
-
-type removeUserGroupsFromChannelReq struct {
-	UserGroupIDs []string `json:"group_ids"`
-}
-
-type addUsersToGroupReq struct {
-	Relation string   `json:"relation"`
-	UserIDs  []string `json:"user_ids"`
-}
-
-type removeUsersToGroupReq struct {
-	Relation string   `json:"relation"`
-	UserIDs  []string `json:"user_ids"`
 }

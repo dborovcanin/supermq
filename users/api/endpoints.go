@@ -122,7 +122,7 @@ func listMembersByGroupEndpoint(svc users.Service) endpoint.Endpoint {
 func listMembersByChannelEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listMembersByObjectReq)
-		// in spiceDB channel is group kind
+		// In spiceDB schema, using the same 'group' type for both channels and groups, rather than having a separate type for channels.
 		req.objectKind = "groups"
 		if err := req.validate(); err != nil {
 			return memberPageRes{}, errors.Wrap(apiutil.ErrValidation, err)

@@ -146,7 +146,7 @@ func (sdk mfSDK) UpdateChannel(c Channel, token string) (Channel, errors.SDKErro
 	return c, nil
 }
 
-func (sdk mfSDK) AddUsersToChannel(channelID string, req UsersRelationRequest, token string) errors.SDKError {
+func (sdk mfSDK) AddUserToChannel(channelID string, req UsersRelationRequest, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
@@ -158,7 +158,7 @@ func (sdk mfSDK) AddUsersToChannel(channelID string, req UsersRelationRequest, t
 	return sdkerr
 }
 
-func (sdk mfSDK) RemoveUsersFromChannel(channelID string, req UsersRelationRequest, token string) errors.SDKError {
+func (sdk mfSDK) RemoveUserFromChannel(channelID string, req UsersRelationRequest, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
@@ -187,7 +187,7 @@ func (sdk mfSDK) ListChannelUsers(channelID string, pm PageMetadata, token strin
 	return up, nil
 }
 
-func (sdk mfSDK) AddUserGroupsToChannel(channelID string, req UserGroupsRequest, token string) errors.SDKError {
+func (sdk mfSDK) AddUserGroupToChannel(channelID string, req UserGroupsRequest, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
@@ -199,7 +199,7 @@ func (sdk mfSDK) AddUserGroupsToChannel(channelID string, req UserGroupsRequest,
 	return sdkerr
 }
 
-func (sdk mfSDK) RemoveUserGroupsToChannel(channelID string, req UserGroupsRequest, token string) errors.SDKError {
+func (sdk mfSDK) RemoveUserGroupFromChannel(channelID string, req UserGroupsRequest, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)

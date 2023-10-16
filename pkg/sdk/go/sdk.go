@@ -530,27 +530,27 @@ type SDK interface {
 	//  fmt.Println(group)
 	DisableGroup(id, token string) (Group, errors.SDKError)
 
-	// AddUsersToGroup add users to a group.
+	// AddUserToGroup add user to a group.
 	//
 	// example:
 	// req := sdk.UsersRelationRequest{
 	//		Relation: "viewer", // available options: "owner", "admin", "editor", "viewer"
 	//  	UserIDs: ["user_id_1", "user_id_2", "user_id_3"]
 	// }
-	// group, _ := sdk.AddUsersToGroup("groupID",req, "token")
+	// group, _ := sdk.AddUserToGroup("groupID",req, "token")
 	// fmt.Println(group)
-	AddUsersToGroup(groupID string, req UsersRelationRequest, token string) errors.SDKError
+	AddUserToGroup(groupID string, req UsersRelationRequest, token string) errors.SDKError
 
-	// RemoveUsersToGroup remove users to a group.
+	// RemoveUserFromGroup remove user from a group.
 	//
 	// example:
 	// req := sdk.UsersRelationRequest{
 	//		Relation: "viewer", // available options: "owner", "admin", "editor", "viewer"
 	//  	UserIDs: ["user_id_1", "user_id_2", "user_id_3"]
 	// }
-	// group, _ := sdk.RemoveUsersToGroup("groupID",req, "token")
+	// group, _ := sdk.RemoveUserFromGroup("groupID",req, "token")
 	// fmt.Println(group)
-	RemoveUsersToGroup(groupID string, req UsersRelationRequest, token string) errors.SDKError
+	RemoveUserFromGroup(groupID string, req UsersRelationRequest, token string) errors.SDKError
 
 	// ListGroupUsers list all users in the group id .
 	//
@@ -669,27 +669,27 @@ type SDK interface {
 	//  fmt.Println(channel)
 	DisableChannel(id, token string) (Channel, errors.SDKError)
 
-	// AddUsersToChannel add users to a channel.
+	// AddUserToChannel add user to a channel.
 	//
 	// example:
 	// req := sdk.UsersRelationRequest{
 	//		Relation: "viewer", // available options: "owner", "admin", "editor", "viewer"
 	// 		UserIDs: ["user_id_1", "user_id_2", "user_id_3"]
 	// }
-	// err := sdk.AddUsersToChannel("channel_id", req, "token")
+	// err := sdk.AddUserToChannel("channel_id", req, "token")
 	// fmt.Println(err)
-	AddUsersToChannel(channelID string, req UsersRelationRequest, token string) errors.SDKError
+	AddUserToChannel(channelID string, req UsersRelationRequest, token string) errors.SDKError
 
-	// RemoveUsersFromChannel remove users from a group.
+	// RemoveUserFromChannel remove user from a group.
 	//
 	// example:
 	// req := sdk.UsersRelationRequest{
 	//		Relation: "viewer", // available options: "owner", "admin", "editor", "viewer"
 	//  	UserIDs: ["user_id_1", "user_id_2", "user_id_3"]
 	// }
-	// err := sdk.RemoveUsersFromChannel("channel_id", req, "token")
+	// err := sdk.RemoveUserFromChannel("channel_id", req, "token")
 	// fmt.Println(err)
-	RemoveUsersFromChannel(channelID string, req UsersRelationRequest, token string) errors.SDKError
+	RemoveUserFromChannel(channelID string, req UsersRelationRequest, token string) errors.SDKError
 
 	// ListChannelUsers list all users in a channel .
 	//
@@ -703,25 +703,25 @@ type SDK interface {
 	//  fmt.Println(users)
 	ListChannelUsers(channelID string, pm PageMetadata, token string) (UsersPage, errors.SDKError)
 
-	// AddUserGroupsToChannel add user group to a channel.
+	// AddUserGroupToChannel add user group to a channel.
 	//
 	// example:
 	// req := sdk.UserGroupsRequest{
 	//  	GroupsIDs: ["group_id_1", "group_id_2", "group_id_3"]
 	// }
-	// err := sdk.AddUserGroupsToChannel("channel_id",req, "token")
+	// err := sdk.AddUserGroupToChannel("channel_id",req, "token")
 	// fmt.Println(err)
-	AddUserGroupsToChannel(channelID string, req UserGroupsRequest, token string) errors.SDKError
+	AddUserGroupToChannel(channelID string, req UserGroupsRequest, token string) errors.SDKError
 
-	// RemoveUserGroupsToChannel remove user group from a channel.
+	// RemoveUserGroupFromChannel remove user group from a channel.
 	//
 	// example:
 	// req := sdk.UserGroupsRequest{
 	//  	GroupsIDs: ["group_id_1", "group_id_2", "group_id_3"]
 	// }
-	// err := sdk.RemoveUserGroupsToChannel("channel_id",req, "token")
+	// err := sdk.RemoveUserGroupFromChannel("channel_id",req, "token")
 	// fmt.Println(err)
-	RemoveUserGroupsToChannel(channelID string, req UserGroupsRequest, token string) errors.SDKError
+	RemoveUserGroupFromChannel(channelID string, req UserGroupsRequest, token string) errors.SDKError
 
 	// ListChannelUserGroups list all user groups in a channel.
 	//

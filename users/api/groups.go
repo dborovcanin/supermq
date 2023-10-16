@@ -83,14 +83,14 @@ func groupsHandler(svc groups.Service, r *chi.Mux, logger logger.Logger) http.Ha
 			opts...,
 		), "disable_group").ServeHTTP)
 
-		r.Post("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+		r.Post("/{groupID}/users/assign", otelhttp.NewHandler(kithttp.NewServer(
 			assignUsersEndpoint(svc),
 			decodeAssignUsersRequest,
 			api.EncodeResponse,
 			opts...,
 		), "assign_users").ServeHTTP)
 
-		r.Delete("/{groupID}/users", otelhttp.NewHandler(kithttp.NewServer(
+		r.Post("/{groupID}/users/unassign", otelhttp.NewHandler(kithttp.NewServer(
 			unassignUsersEndpoint(svc),
 			decodeUnassignUsersRequest,
 			api.EncodeResponse,

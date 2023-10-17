@@ -560,7 +560,7 @@ type SDK interface {
 	//		Limit:  10,
 	//		Permission: "edit", // available Options:  "administrator", "delete", edit", "view", "share", "owner", "admin", "editor", "viewer"
 	//	}
-	//  groups, _ := sdk.ListGroupUsers("user_id_1", pm, "token")
+	//  groups, _ := sdk.ListGroupUsers("groupID", pm, "token")
 	//  fmt.Println(groups)
 	ListGroupUsers(groupID string, pm PageMetadata, token string) (GroupsPage, errors.SDKError)
 
@@ -572,7 +572,7 @@ type SDK interface {
 	//		Limit:  10,
 	//		Permission: "edit", // available Options:  "administrator", "delete", edit", "view", "share", "owner", "admin", "editor", "viewer"
 	//	}
-	//  groups, _ := sdk.ListGroupChannels("user_id_1", pm, "token")
+	//  groups, _ := sdk.ListGroupChannels("groupID", pm, "token")
 	//  fmt.Println(groups)
 	ListGroupChannels(groupID string, pm PageMetadata, token string) (GroupsPage, errors.SDKError)
 
@@ -739,9 +739,8 @@ type SDK interface {
 	//
 	// example:
 	//  conns := sdk.Connection{
-	//    ChannelIDs: []string{"thingID:1", "thingID:2"},
-	//    ThingIDs:   []string{"channelID:1", "channelID:2"},
-	//    Actions:    []string{"m_read"},
+	//    ChannelID: "channel_id_1",
+	//    ThingID:   "thing_id_1",
 	//  }
 	//  err := sdk.Connect(conns, "token")
 	//  fmt.Println(err)
@@ -751,8 +750,8 @@ type SDK interface {
 	//
 	// example:
 	//  conns := sdk.Connection{
-	//    ChannelIDs: []string{"thingID:1", "thingID:2"},
-	//    ThingIDs:   []string{"channelID:1", "channelID:2"},
+	//    ChannelID: "channel_id_1",
+	//    ThingID:   "thing_id_1",
 	//  }
 	//  err := sdk.Disconnect(conns, "token")
 	//  fmt.Println(err)

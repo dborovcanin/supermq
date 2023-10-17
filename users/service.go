@@ -147,52 +147,11 @@ func (svc service) ListClients(ctx context.Context, token string, pm mfclients.P
 	if err != nil {
 		return mfclients.ClientsPage{}, err
 	}
-
-	// switch err := svc.authorize(ctx, id, clientsObjectKey, listRelationKey); err {
-	// // If the user is admin, fetch all users from database.
-	// case nil:
-	// 	switch {
-	// 	// visibility = all
-	// 	case pm.SharedBy == myKey && pm.Owner == myKey:
-	// 		pm.SharedBy = ""
-	// 		pm.Owner = ""
-	// 	// visibility = shared
-	// 	case pm.SharedBy == myKey && pm.Owner != myKey:
-	// 		pm.SharedBy = id
-	// 		pm.Owner = ""
-	// 	// visibility = mine
-	// 	case pm.Owner == myKey && pm.SharedBy != myKey:
-	// 		pm.Owner = id
-	// 		pm.SharedBy = ""
-	// 	}
-
-	// // If the user is not admin, fetch users that they own or are shared with them.
-	// default:
-	// 	switch {
-	// 	// visibility = all
-	// 	case pm.SharedBy == myKey && pm.Owner == myKey:
-	// 		pm.SharedBy = id
-	// 		pm.Owner = id
-	// 	// visibility = shared
-	// 	case pm.SharedBy == myKey && pm.Owner != myKey:
-	// 		pm.SharedBy = id
-	// 		pm.Owner = ""
-	// 	// visibility = mine
-	// 	case pm.Owner == myKey && pm.SharedBy != myKey:
-	// 		pm.Owner = id
-	// 		pm.SharedBy = ""
-	// 	default:
-	// 		pm.Owner = id
-	// 	}
-	// 	pm.Action = listRelationKey
-	// }
 	pm.Owner = id
-
 	clients, err := svc.clients.RetrieveAll(ctx, pm)
 	if err != nil {
 		return mfclients.ClientsPage{}, err
 	}
-
 	return clients, nil
 }
 

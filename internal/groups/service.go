@@ -217,10 +217,9 @@ func (svc service) ListGroups(ctx context.Context, token string, memberKind, mem
 	}
 
 	if len(ids) <= 0 {
-		return groups.Page{}, errors.ErrNotFound
-	}
-	if len(ids) <= 0 {
-		return groups.Page{}, errors.ErrNotFound
+		return groups.Page{
+			PageMeta: gm.PageMeta,
+		}, nil
 	}
 	return svc.groups.RetrieveByIDs(ctx, gm, ids...)
 }

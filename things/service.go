@@ -162,7 +162,9 @@ func (svc service) ListClients(ctx context.Context, token string, reqUserID stri
 	}
 
 	if len(ids) <= 0 {
-		return mfclients.ClientsPage{}, errors.ErrNotFound
+		return mfclients.ClientsPage{
+			Page: mfclients.Page{Total: 0, Limit: pm.Limit, Offset: pm.Offset},
+		}, nil
 	}
 
 	pm.IDs = ids
@@ -171,7 +173,6 @@ func (svc service) ListClients(ctx context.Context, token string, reqUserID stri
 }
 
 func (svc service) listClientIDs(ctx context.Context, userID, permission string) ([]string, error) {
-
 	tids, err := svc.auth.ListAllObjects(ctx, &mainflux.ListObjectsReq{
 		SubjectType: userType,
 		Subject:     userID,

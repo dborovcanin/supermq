@@ -395,8 +395,10 @@ func (svc service) ListMembers(ctx context.Context, token, objectKind string, ob
 	if err != nil {
 		return mfclients.MembersPage{}, err
 	}
-	if len(uids.Policies) <= 0 {
-		return mfclients.MembersPage{}, errors.ErrNotFound
+	if len(uids.Policies) == 0 {
+		return mfclients.MembersPage{
+			Page: mfclients.Page{Total: 0, Offset: pm.Offset, Limit: pm.Limit},
+		}, nil
 	}
 
 	pm.IDs = uids.Policies

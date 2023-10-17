@@ -161,7 +161,7 @@ func (svc service) ListClients(ctx context.Context, token string, reqUserID stri
 		}
 	}
 
-	if len(ids) <= 0 {
+	if len(ids) == 0 {
 		return mfclients.ClientsPage{
 			Page: mfclients.Page{Total: 0, Limit: pm.Limit, Offset: pm.Offset},
 		}, nil

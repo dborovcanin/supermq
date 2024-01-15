@@ -5,15 +5,27 @@
 # It used when running nats both as an MQTT and Message broker.
 services:
   nats:
-    extends:
-      file: ../nats.yml
-      service: broker
+    # extends:
+    #   file: ../nats.yml
+    #   service: broker
+    image: nats:2.9.21-alpine
+    command: "--config=/etc/nats/nats.conf"
+    environment:
+      - MG_NATS_PORT=${MG_NATS_PORT}
+      - MG_NATS_HTTP_PORT=${MG_NATS_HTTP_PORT}
+      - MG_NATS_JETSTREAM_KEY=${MG_NATS_JETSTREAM_KEY}
+    ports:
+      - ${MG_NATS_PORT}:${MG_NATS_PORT}
+      - ${MG_NATS_HTTP_PORT}:${MG_NATS_HTTP_PORT}
+      - 1883:1883
+
     container_name: magistrala-nats
     restart: on-failure
     networks:
       - magistrala-base-net
     volumes:
       - magistrala-broker-volume:/data
+      - ./../../nats/:/etc/nats
     profiles:
       - nats_nats
       - nats_rabbitmq

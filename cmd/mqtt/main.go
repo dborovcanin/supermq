@@ -174,6 +174,7 @@ func main() {
 	logger.Info("Successfully connected to things grpc server " + authHandler.Secure())
 
 	h := mqtt.NewHandler(np, logger, authClient)
+	ic := mqtt.NewInterceptor()
 	// h = handler.NewTracing(tracer, h)
 
 	if cfg.SendTelemetry {
@@ -183,7 +184,7 @@ func main() {
 
 	logger.Info(fmt.Sprintf("Starting MQTT proxy on port %s", cfg.MQTTPort))
 	g.Go(func() error {
-		return proxyMQTT(ctx, cfg, logger, h)
+		return proxyMQTT(ctx, cfg, logger, h, ic)
 	})
 
 	// logger.Info(fmt.Sprintf("Starting MQTT over WS  proxy on port %s", cfg.HTTPPort))
@@ -200,10 +201,10 @@ func main() {
 	}
 }
 
-func proxyMQTT(ctx context.Context, cfg config, logger mglog.Logger, sessionHandler session.Handler) error {
+func proxyMQTT(ctx context.Context, cfg config, logger mglog.Logger, sessionHandler session.Handler, ic session.Interceptor) error {
 	address := fmt.Sprintf(":%s", cfg.MQTTPort)
 	target := fmt.Sprintf("%s:%s", cfg.MQTTTargetHost, cfg.MQTTTargetPort)
-	mproxy := mp.New(address, target, sessionHandler, logger)
+	mproxy := mp.New(address, target, sessionHandler, ic, logger)
 
 	errCh := make(chan error)
 	go func() {
@@ -219,9 +220,9 @@ func proxyMQTT(ctx context.Context, cfg config, logger mglog.Logger, sessionHand
 	}
 }
 
-func proxyWS(ctx context.Context, cfg config, logger mglog.Logger, sessionHandler session.Handler) error {
+func proxyWS(ctx context.Context, cfg config, logger mglog.Logger, sessionHandler session.Handler, ic session.Interceptor) error {
 	target := fmt.Sprintf("%s:%s", cfg.HTTPTargetHost, cfg.HTTPTargetPort)
-	wp := websocket.New(target, cfg.HTTPTargetPath, "ws", sessionHandler, logger)
+	wp := websocket.New(target, cfg.HTTPTargetPath, "ws", sessionHandler, ic, logger)
 	http.Handle("/mqtt", wp.Handler())
 
 	errCh := make(chan error)

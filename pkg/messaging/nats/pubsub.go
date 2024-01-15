@@ -93,6 +93,7 @@ func (ps *pubsub) Subscribe(ctx context.Context, cfg messaging.SubscriberConfig)
 	if cfg.Topic == "" {
 		return ErrEmptyTopic
 	}
+	fmt.Println("Subscribing topic:", cfg.Topic)
 
 	nh := ps.natsHandler(cfg.Handler)
 

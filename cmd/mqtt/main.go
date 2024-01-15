@@ -17,17 +17,11 @@ import (
 	"time"
 
 	"github.com/absmach/magistrala"
-	jaegerclient "github.com/absmach/magistrala/internal/clients/jaeger"
-	"github.com/absmach/magistrala/internal/server"
 	mglog "github.com/absmach/magistrala/logger"
 	"github.com/absmach/magistrala/mqtt"
-	"github.com/absmach/magistrala/mqtt/events"
-	mqtttracing "github.com/absmach/magistrala/mqtt/tracing"
 	"github.com/absmach/magistrala/pkg/auth"
 	"github.com/absmach/magistrala/pkg/errors"
 	"github.com/absmach/magistrala/pkg/messaging/brokers"
-	brokerstracing "github.com/absmach/magistrala/pkg/messaging/brokers/tracing"
-	"github.com/absmach/magistrala/pkg/messaging/handler"
 	mqttpub "github.com/absmach/magistrala/pkg/messaging/mqtt"
 	"github.com/absmach/magistrala/pkg/uuid"
 	mp "github.com/absmach/mproxy/pkg/mqtt"
@@ -103,23 +97,23 @@ func main() {
 		}
 	}
 
-	serverConfig := server.Config{
-		Host: cfg.HTTPTargetHost,
-		Port: cfg.HTTPTargetPort,
-	}
+	// serverConfig := server.Config{
+	// 	Host: cfg.HTTPTargetHost,
+	// 	Port: cfg.HTTPTargetPort,
+	// }
 
-	tp, err := jaegerclient.NewProvider(ctx, svcName, cfg.JaegerURL, cfg.InstanceID, cfg.TraceRatio)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Failed to init Jaeger: %s", err))
-		exitCode = 1
-		return
-	}
-	defer func() {
-		if err := tp.Shutdown(ctx); err != nil {
-			logger.Error(fmt.Sprintf("Error shutting down tracer provider: %v", err))
-		}
-	}()
-	tracer := tp.Tracer(svcName)
+	// tp, err := jaegerclient.NewProvider(ctx, svcName, cfg.JaegerURL, cfg.InstanceID, cfg.TraceRatio)
+	// if err != nil {
+	// 	logger.Error(fmt.Sprintf("Failed to init Jaeger: %s", err))
+	// 	exitCode = 1
+	// 	return
+	// }
+	// defer func() {
+	// 	if err := tp.Shutdown(ctx); err != nil {
+	// 		logger.Error(fmt.Sprintf("Error shutting down tracer provider: %v", err))
+	// 	}
+	// }()
+	// tracer := tp.Tracer(svcName)
 
 	bsub, err := brokers.NewPubSub(ctx, cfg.BrokerURL, logger)
 	if err != nil {
@@ -128,7 +122,7 @@ func main() {
 		return
 	}
 	defer bsub.Close()
-	bsub = brokerstracing.NewPubSub(serverConfig, tracer, bsub)
+	// bsub = brokerstracing.NewPubSub(serverConfig, tracer, bsub)
 
 	mpub, err := mqttpub.NewPublisher(fmt.Sprintf("mqtt://%s:%s", cfg.MQTTTargetHost, cfg.MQTTTargetPort), cfg.MQTTQoS, cfg.MQTTForwarderTimeout)
 	if err != nil {
@@ -138,13 +132,13 @@ func main() {
 	}
 	defer mpub.Close()
 
-	fwd := mqtt.NewForwarder(brokers.SubjectAllChannels, logger)
-	fwd = mqtttracing.New(serverConfig, tracer, fwd, brokers.SubjectAllChannels)
-	if err := fwd.Forward(ctx, svcName, bsub, mpub); err != nil {
-		logger.Error(fmt.Sprintf("failed to forward message broker messages: %s", err))
-		exitCode = 1
-		return
-	}
+	// fwd := mqtt.NewForwarder(brokers.SubjectAllChannels, logger)
+	// fwd = mqtttracing.New(serverConfig, tracer, fwd, brokers.SubjectAllChannels)
+	// if err := fwd.Forward(ctx, svcName, bsub, mpub); err != nil {
+	// 	logger.Error(fmt.Sprintf("failed to forward message broker messages: %s", err))
+	// 	exitCode = 1
+	// 	return
+	// }
 
 	np, err := brokers.NewPublisher(ctx, cfg.BrokerURL)
 	if err != nil {
@@ -153,14 +147,14 @@ func main() {
 		return
 	}
 	defer np.Close()
-	np = brokerstracing.NewPublisher(serverConfig, tracer, np)
+	// np = brokerstracing.NewPublisher(serverConfig, tracer, np)
 
-	es, err := events.NewEventStore(ctx, cfg.ESURL, cfg.Instance)
-	if err != nil {
-		logger.Error(fmt.Sprintf("failed to create %s event store : %s", svcName, err))
-		exitCode = 1
-		return
-	}
+	// es, err := events.NewEventStore(ctx, cfg.ESURL, cfg.Instance)
+	// if err != nil {
+	// 	logger.Error(fmt.Sprintf("failed to create %s event store : %s", svcName, err))
+	// 	exitCode = 1
+	// 	return
+	// }
 
 	authConfig := auth.Config{}
 	if err := env.ParseWithOptions(&authConfig, env.Options{Prefix: envPrefixAuthz}); err != nil {
@@ -179,8 +173,8 @@ func main() {
 
 	logger.Info("Successfully connected to things grpc server " + authHandler.Secure())
 
-	h := mqtt.NewHandler(np, es, logger, authClient)
-	h = handler.NewTracing(tracer, h)
+	h := mqtt.NewHandler(np, logger, authClient)
+	// h = handler.NewTracing(tracer, h)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, magistrala.Version, logger, cancel)
@@ -192,10 +186,10 @@ func main() {
 		return proxyMQTT(ctx, cfg, logger, h)
 	})
 
-	logger.Info(fmt.Sprintf("Starting MQTT over WS  proxy on port %s", cfg.HTTPPort))
-	g.Go(func() error {
-		return proxyWS(ctx, cfg, logger, h)
-	})
+	// logger.Info(fmt.Sprintf("Starting MQTT over WS  proxy on port %s", cfg.HTTPPort))
+	// g.Go(func() error {
+	// 	return proxyWS(ctx, cfg, logger, h)
+	// })
 
 	g.Go(func() error {
 		return stopSignalHandler(ctx, cancel, logger)

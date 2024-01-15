@@ -160,7 +160,7 @@ func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) e
 	}
 	msg.Publisher = res.GetId()
 
-	if err := h.publisher.Publish(ctx, msg.Channel, &msg); err != nil {
+	if err := h.publisher.Publish(ctx, msg.Channel+".messages", &msg); err != nil {
 		return errors.Wrap(ErrFailedPublishToMsgBroker, err)
 	}
 

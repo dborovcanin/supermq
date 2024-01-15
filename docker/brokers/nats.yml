@@ -14,3 +14,4 @@ services:
     ports:
       - ${MG_NATS_PORT}:${MG_NATS_PORT}
       - ${MG_NATS_HTTP_PORT}:${MG_NATS_HTTP_PORT}
+      - 1883:1883

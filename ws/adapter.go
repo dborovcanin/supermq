@@ -76,7 +76,7 @@ func (svc *adapterService) Subscribe(ctx context.Context, thingKey, chanID, subt
 
 	c.id = thingID
 
-	subject := fmt.Sprintf("%s.%s", chansPrefix, chanID)
+	subject := fmt.Sprintf("%s.%s.messages", chansPrefix, chanID)
 	if subtopic != "" {
 		subject = fmt.Sprintf("%s.%s", subject, subtopic)
 	}

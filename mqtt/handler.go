@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/absmach/magistrala"
 	"github.com/absmach/magistrala/auth"
@@ -63,9 +62,9 @@ type handler struct {
 }
 
 // NewHandler creates new Handler entity.
-func NewHandler(publisher messaging.Publisher, es events.EventStore, logger mglog.Logger, authClient magistrala.AuthzServiceClient) session.Handler {
+func NewHandler(publisher messaging.Publisher, logger mglog.Logger, authClient magistrala.AuthzServiceClient) session.Handler {
 	return &handler{
-		es:        es,
+		// es:        es,
 		logger:    logger,
 		publisher: publisher,
 		auth:      authClient,
@@ -84,11 +83,11 @@ func (h *handler) AuthConnect(ctx context.Context) error {
 		return ErrMissingClientID
 	}
 
-	pwd := string(s.Password)
+	// pwd := string(s.Password)
 
-	if err := h.es.Connect(ctx, pwd); err != nil {
-		h.logger.Error(errors.Wrap(ErrFailedPublishConnectEvent, err).Error())
-	}
+	// if err := h.es.Connect(ctx, pwd); err != nil {
+	// 	h.logger.Error(errors.Wrap(ErrFailedPublishConnectEvent, err).Error())
+	// }
 
 	return nil
 }
@@ -139,39 +138,39 @@ func (h *handler) Connect(ctx context.Context) error {
 
 // Publish - after client successfully published.
 func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) error {
-	s, ok := session.FromContext(ctx)
-	if !ok {
-		return errors.Wrap(ErrFailedPublish, ErrClientNotInitialized)
-	}
-	h.logger.Info(fmt.Sprintf(LogInfoPublished, s.ID, *topic))
-	// Topics are in the format:
-	// channels/<channel_id>/messages/<subtopic>/.../ct/<content_type>
+	// s, ok := session.FromContext(ctx)
+	// if !ok {
+	// 	return errors.Wrap(ErrFailedPublish, ErrClientNotInitialized)
+	// }
+	// h.logger.Info(fmt.Sprintf(LogInfoPublished, s.ID, *topic))
+	// // Topics are in the format:
+	// // channels/<channel_id>/messages/<subtopic>/.../ct/<content_type>
 
-	channelParts := channelRegExp.FindStringSubmatch(*topic)
-	if len(channelParts) < 2 {
-		return errors.Wrap(ErrFailedPublish, ErrMalformedTopic)
-	}
+	// channelParts := channelRegExp.FindStringSubmatch(*topic)
+	// if len(channelParts) < 2 {
+	// 	return errors.Wrap(ErrFailedPublish, ErrMalformedTopic)
+	// }
 
-	chanID := channelParts[1]
-	subtopic := channelParts[2]
+	// chanID := channelParts[1]
+	// subtopic := channelParts[2]
 
-	subtopic, err := parseSubtopic(subtopic)
-	if err != nil {
-		return errors.Wrap(ErrFailedParseSubtopic, err)
-	}
+	// subtopic, err := parseSubtopic(subtopic)
+	// if err != nil {
+	// 	return errors.Wrap(ErrFailedParseSubtopic, err)
+	// }
 
-	msg := messaging.Message{
-		Protocol:  protocol,
-		Channel:   chanID,
-		Subtopic:  subtopic,
-		Publisher: s.Username,
-		Payload:   *payload,
-		Created:   time.Now().UnixNano(),
-	}
+	// msg := messaging.Message{
+	// 	Protocol:  protocol,
+	// 	Channel:   chanID,
+	// 	Subtopic:  subtopic,
+	// 	Publisher: s.Username,
+	// 	Payload:   *payload,
+	// 	Created:   time.Now().UnixNano(),
+	// }
 
-	if err := h.publisher.Publish(ctx, msg.Channel, &msg); err != nil {
-		return errors.Wrap(ErrFailedPublishToMsgBroker, err)
-	}
+	// if err := h.publisher.Publish(ctx, msg.Channel, &msg); err != nil {
+	// 	return errors.Wrap(ErrFailedPublishToMsgBroker, err)
+	// }
 
 	return nil
 }
@@ -203,9 +202,9 @@ func (h *handler) Disconnect(ctx context.Context) error {
 		return errors.Wrap(ErrFailedDisconnect, ErrClientNotInitialized)
 	}
 	h.logger.Error(fmt.Sprintf(LogInfoDisconnected, s.ID, s.Password))
-	if err := h.es.Disconnect(ctx, string(s.Password)); err != nil {
-		return errors.Wrap(ErrFailedPublishDisconnectEvent, err)
-	}
+	// if err := h.es.Disconnect(ctx, string(s.Password)); err != nil {
+	// 	return errors.Wrap(ErrFailedPublishDisconnectEvent, err)
+	// }
 	return nil
 }
 

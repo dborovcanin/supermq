@@ -38,6 +38,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nats-io/nats.go v1.32.0
 	github.com/oklog/ulid/v2 v2.1.0
+	github.com/ory/client-go v1.5.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/plgd-dev/go-coap/v2 v2.6.0

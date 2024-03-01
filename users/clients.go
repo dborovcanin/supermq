@@ -80,3 +80,20 @@ type Service interface {
 	// It processes the OAuth tokens and either signs in or signs up the user based on the provided state.
 	OAuthCallback(ctx context.Context, provider string, state mgoauth2.State, token oauth2.Token, client clients.Client) (*magistrala.Token, error)
 }
+
+// Repository defines the required dependencies for Client repository.
+//
+//go:generate mockery --name Repository --output=./mocks --filename repository.go --quiet --note "Copyright (c) Abstract Machines"
+type Repository interface {
+	clients.Repository
+
+	// Save persists the client account. A non-nil error is returned to indicate
+	// operation failure.
+	Save(ctx context.Context, client clients.Client) (clients.Client, error)
+
+	RetrieveByID(ctx context.Context, id string) (clients.Client, error)
+
+	UpdateRole(ctx context.Context, client clients.Client) (clients.Client, error)
+
+	CheckSuperAdmin(ctx context.Context, adminID string) error
+}

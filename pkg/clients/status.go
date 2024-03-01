@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/absmach/magistrala/internal/apiutil"
+	ory "github.com/ory/client-go"
 )
 
 // Status represents Client status.
@@ -88,4 +89,15 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 	val, err := ToStatus(str)
 	*s = val
 	return err
+}
+
+func ToOryState(status Status) ory.IdentityState {
+	switch status {
+	case EnabledStatus:
+		return ory.IDENTITYSTATE_ACTIVE
+	case DisabledStatus:
+		return ory.IDENTITYSTATE_INACTIVE
+	default: // AllStatus
+		return ory.IDENTITYSTATE_ACTIVE
+	}
 }

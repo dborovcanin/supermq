@@ -132,13 +132,13 @@ mocks:
 	@which mockery > /dev/null || go install github.com/vektra/mockery/v2@$(MOCKERY_VERSION)
 	@unset MOCKERY_VERSION && go generate ./...
 
-DIRS = consumers readers postgres internal opcua
+DIRS = consumers readers events cache messaging postgres internal opcua
 test: mocks
 	mkdir -p coverage
 	@for dir in $(DIRS); do \
         go test -v --race -count 1 -tags test -coverprofile=coverage/$$dir.out $$(go list ./... | grep $$dir | grep -v 'cmd'); \
     done
-	go test -v --race -count 1 -tags test -coverprofile=coverage/coverage.out $$(go list ./... | grep -v 'consumers\|readers\|postgres\|internal\|opcua\|cmd')
+	go test -v --race -count 1 -tags test -coverprofile=coverage/coverage.out $$(go list ./... | grep -v 'consumers\|readers\|events\|cache\|messaging\|postgres\|mongodb\|internal\|opcua\|cmd')
 
 proto:
 	protoc -I. --go_out=. --go_opt=paths=source_relative pkg/messaging/*.proto

@@ -16,7 +16,6 @@ import (
 	repoerr "github.com/absmach/magistrala/pkg/errors/repository"
 	svcerr "github.com/absmach/magistrala/pkg/errors/service"
 	mgoauth2 "github.com/absmach/magistrala/pkg/oauth2"
-	"github.com/absmach/magistrala/users/postgres"
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 )
@@ -45,23 +44,19 @@ var (
 )
 
 type service struct {
-	clients      postgres.Repository
-	idProvider   magistrala.IDProvider
+	clients      Repository
 	auth         magistrala.AuthServiceClient
-	hasher       Hasher
 	email        Emailer
 	passRegex    *regexp.Regexp
 	selfRegister bool
 }
 
 // NewService returns a new Users service implementation.
-func NewService(crepo postgres.Repository, authClient magistrala.AuthServiceClient, emailer Emailer, hasher Hasher, idp magistrala.IDProvider, pr *regexp.Regexp, selfRegister bool) Service {
+func NewService(crepo Repository, authClient magistrala.AuthServiceClient, emailer Emailer, pr *regexp.Regexp, selfRegister bool) Service {
 	return service{
 		clients:      crepo,
 		auth:         authClient,
-		hasher:       hasher,
 		email:        emailer,
-		idProvider:   idp,
 		passRegex:    pr,
 		selfRegister: selfRegister,
 	}
@@ -78,42 +73,21 @@ func (svc service) RegisterClient(ctx context.Context, token string, cli mgclien
 		}
 	}
 
-	clientID, err := svc.idProvider.ID()
-	if err != nil {
-		return mgclients.Client{}, err
-	}
-
-	if cli.Credentials.Secret != "" {
-		hash, err := svc.hasher.Hash(cli.Credentials.Secret)
-		if err != nil {
-			return mgclients.Client{}, errors.Wrap(repoerr.ErrMalformedEntity, err)
-		}
-		cli.Credentials.Secret = hash
-	}
-
 	if cli.Status != mgclients.DisabledStatus && cli.Status != mgclients.EnabledStatus {
 		return mgclients.Client{}, svcerr.ErrInvalidStatus
 	}
 	if cli.Role != mgclients.UserRole && cli.Role != mgclients.AdminRole {
 		return mgclients.Client{}, svcerr.ErrInvalidRole
 	}
-	cli.ID = clientID
-	cli.CreatedAt = time.Now()
-
-	if err := svc.addClientPolicy(ctx, cli.ID, cli.Role); err != nil {
-		return mgclients.Client{}, err
-	}
-	defer func() {
-		if err != nil {
-			if errRollback := svc.addClientPolicyRollback(ctx, cli.ID, cli.Role); errRollback != nil {
-				err = errors.Wrap(err, errors.Wrap(repoerr.ErrRollbackTx, errRollback))
-			}
-		}
-	}()
 	client, err := svc.clients.Save(ctx, cli)
 	if err != nil {
 		return mgclients.Client{}, errors.Wrap(repoerr.ErrCreateEntity, err)
 	}
+
+	if err := svc.addClientPolicy(ctx, client.ID, cli.Role); err != nil {
+		return client, err
+	}
+
 	return client, nil
 }
 
@@ -121,9 +95,6 @@ func (svc service) IssueToken(ctx context.Context, identity, secret, domainID st
 	dbUser, err := svc.clients.RetrieveByIdentity(ctx, identity)
 	if err != nil {
 		return &magistrala.Token{}, errors.Wrap(repoerr.ErrNotFound, err)
-	}
-	if err := svc.hasher.Compare(secret, dbUser.Credentials.Secret); err != nil {
-		return &magistrala.Token{}, errors.Wrap(svcerr.ErrLogin, err)
 	}
 
 	var d string
@@ -316,10 +287,7 @@ func (svc service) ResetSecret(ctx context.Context, resetToken, secret string) e
 	if !svc.passRegex.MatchString(secret) {
 		return ErrPasswordFormat
 	}
-	secret, err = svc.hasher.Hash(secret)
-	if err != nil {
-		return err
-	}
+
 	c = mgclients.Client{
 		Credentials: mgclients.Credentials{
 			Identity: c.Credentials.Identity,
@@ -349,10 +317,7 @@ func (svc service) UpdateClientSecret(ctx context.Context, token, oldSecret, new
 	if _, err := svc.IssueToken(ctx, dbClient.Credentials.Identity, oldSecret, ""); err != nil {
 		return mgclients.Client{}, errors.Wrap(ErrIssueToken, err)
 	}
-	newSecret, err = svc.hasher.Hash(newSecret)
-	if err != nil {
-		return mgclients.Client{}, errors.Wrap(repoerr.ErrMalformedEntity, err)
-	}
+
 	dbClient.Credentials.Secret = newSecret
 	dbClient.UpdatedAt = time.Now()
 	dbClient.UpdatedBy = id
@@ -655,41 +620,12 @@ func (svc service) addClientPolicy(ctx context.Context, userID string, role mgcl
 			Object:      auth.MagistralaObject,
 		})
 	}
+
 	resp, err := svc.auth.AddPolicies(ctx, &policies)
 	if err != nil {
 		return err
 	}
 	if !resp.Added {
-		return svcerr.ErrAuthorization
-	}
-	return nil
-}
-
-func (svc service) addClientPolicyRollback(ctx context.Context, userID string, role mgclients.Role) error {
-	var policies magistrala.DeletePoliciesReq
-
-	policies.DeletePoliciesReq = append(policies.DeletePoliciesReq, &magistrala.DeletePolicyReq{
-		SubjectType: auth.UserType,
-		Subject:     userID,
-		Relation:    auth.MemberRelation,
-		ObjectType:  auth.PlatformType,
-		Object:      auth.MagistralaObject,
-	})
-
-	if role == mgclients.AdminRole {
-		policies.DeletePoliciesReq = append(policies.DeletePoliciesReq, &magistrala.DeletePolicyReq{
-			SubjectType: auth.UserType,
-			Subject:     userID,
-			Relation:    auth.AdministratorRelation,
-			ObjectType:  auth.PlatformType,
-			Object:      auth.MagistralaObject,
-		})
-	}
-	resp, err := svc.auth.DeletePolicies(ctx, &policies)
-	if err != nil {
-		return err
-	}
-	if !resp.Deleted {
 		return svcerr.ErrAuthorization
 	}
 	return nil

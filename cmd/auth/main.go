@@ -31,7 +31,7 @@ import (
 	httpserver "github.com/absmach/magistrala/internal/server/http"
 	mglog "github.com/absmach/magistrala/logger"
 	"github.com/absmach/magistrala/pkg/oauth2"
-	"github.com/absmach/magistrala/pkg/oauth2/google"
+	"github.com/absmach/magistrala/pkg/oauth2/kratos"
 	"github.com/absmach/magistrala/pkg/uuid"
 	v1 "github.com/authzed/authzed-go/proto/authzed/api/v1"
 	"github.com/authzed/authzed-go/v1"
@@ -50,7 +50,7 @@ const (
 	envPrefixHTTP   = "MG_AUTH_HTTP_"
 	envPrefixGrpc   = "MG_AUTH_GRPC_"
 	envPrefixDB     = "MG_AUTH_DB_"
-	envPrefixGoogle = "MG_GOOGLE_"
+	envPrefixKratos = "MG_KRATOS_"
 	defDB           = "auth"
 	defSvcHTTPPort  = "8180"
 	defSvcGRPCPort  = "8181"
@@ -70,6 +70,8 @@ type config struct {
 	SpicedbSchemaFile   string        `env:"MG_SPICEDB_SCHEMA_FILE"          envDefault:"./docker/spicedb/schema.zed"`
 	SpicedbPreSharedKey string        `env:"MG_SPICEDB_PRE_SHARED_KEY"       envDefault:"12345678"`
 	TraceRatio          float64       `env:"MG_JAEGER_TRACE_RATIO"           envDefault:"1.0"`
+	KratosURL           string        `env:"MG_KRATOS_URL"                   envDefault:"http://localhost:4433"`
+	KratosAPIKey        string        `env:"MG_KRATOS_API_KEY"               envDefault:""`
 }
 
 func main() {
@@ -131,12 +133,12 @@ func main() {
 	}
 
 	oauthConfig := oauth2.Config{}
-	if err := env.ParseWithOptions(&oauthConfig, env.Options{Prefix: envPrefixGoogle}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load %s Google configuration : %s", svcName, err.Error()))
+	if err := env.ParseWithOptions(&oauthConfig, env.Options{Prefix: envPrefixKratos}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s Kratos configuration : %s", svcName, err.Error()))
 		exitCode = 1
 		return
 	}
-	oauthProvider := google.NewProvider(oauthConfig, "", "")
+	oauthProvider := kratos.NewProvider(oauthConfig, cfg.KratosURL, "", "", cfg.KratosAPIKey)
 
 	svc := newService(db, tracer, cfg, dbConfig, logger, spicedbclient, oauthProvider)
 

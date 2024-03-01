@@ -6,6 +6,7 @@ package users
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"regexp"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	repoerr "github.com/absmach/magistrala/pkg/errors/repository"
 	svcerr "github.com/absmach/magistrala/pkg/errors/service"
 	mgoauth2 "github.com/absmach/magistrala/pkg/oauth2"
+	ory "github.com/ory/client-go"
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 )
@@ -49,16 +51,18 @@ type service struct {
 	email        Emailer
 	passRegex    *regexp.Regexp
 	selfRegister bool
+	oryClient    *ory.APIClient
 }
 
 // NewService returns a new Users service implementation.
-func NewService(crepo Repository, authClient magistrala.AuthServiceClient, emailer Emailer, pr *regexp.Regexp, selfRegister bool) Service {
+func NewService(crepo Repository, authClient magistrala.AuthServiceClient, emailer Emailer, pr *regexp.Regexp, selfRegister bool, oryClient *ory.APIClient) Service {
 	return service{
 		clients:      crepo,
 		auth:         authClient,
 		email:        emailer,
 		passRegex:    pr,
 		selfRegister: selfRegister,
+		oryClient:    oryClient,
 	}
 }
 
@@ -79,6 +83,8 @@ func (svc service) RegisterClient(ctx context.Context, token string, cli mgclien
 	if cli.Role != mgclients.UserRole && cli.Role != mgclients.AdminRole {
 		return mgclients.Client{}, svcerr.ErrInvalidRole
 	}
+	cli.CreatedAt = time.Now()
+
 	client, err := svc.clients.Save(ctx, cli)
 	if err != nil {
 		return mgclients.Client{}, errors.Wrap(repoerr.ErrCreateEntity, err)
@@ -95,6 +101,10 @@ func (svc service) IssueToken(ctx context.Context, identity, secret, domainID st
 	dbUser, err := svc.clients.RetrieveByIdentity(ctx, identity)
 	if err != nil {
 		return &magistrala.Token{}, errors.Wrap(repoerr.ErrNotFound, err)
+	}
+
+	if !svc.kratosLogin(ctx, identity, secret) {
+		return &magistrala.Token{}, svcerr.ErrAuthentication
 	}
 
 	var d string
@@ -666,4 +676,40 @@ func (svc service) updateClientPolicy(ctx context.Context, userID string, role m
 		}
 		return nil
 	}
+}
+
+func (svc service) kratosLogin(ctx context.Context, email, secret string) bool {
+	if svc.oryClient == nil {
+		return true // This is for testing purposes the default ory client can't be nil in production
+	}
+
+	flow, res, err := svc.oryClient.FrontendAPI.CreateNativeLoginFlow(ctx).Refresh(true).Aal("aal1").ReturnSessionTokenExchangeCode(true).Execute()
+	if err != nil {
+		return false
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return false
+	}
+
+	session, res, err := svc.oryClient.FrontendAPI.UpdateLoginFlow(ctx).Flow(flow.Id).UpdateLoginFlowBody(
+		ory.UpdateLoginFlowBody{
+			UpdateLoginFlowWithPasswordMethod: &ory.UpdateLoginFlowWithPasswordMethod{
+				Identifier:         email,
+				Method:             "password",
+				Password:           secret,
+				PasswordIdentifier: &email,
+			},
+		},
+	).Execute()
+	if err != nil {
+		return false
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return false
+	}
+
+	return session.SessionToken != nil
 }

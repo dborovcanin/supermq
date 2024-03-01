@@ -116,10 +116,21 @@ install:
 		cp $$file $(GOBIN)/magistrala-`basename $$file`; \
 	done
 
+check-generated-files:
+	$(MAKE) proto
+	@if git diff --name-only | grep .pb.go; then \
+		echo "Error generated files are out of sync. Please run 'make proto' and commit the changes."; \
+		exit 1; \
+	fi
+	$(MAKE) mocks
+	@if git diff --name-only | grep mocks; then \
+		echo "Error mocks are out of sync. Please run 'make mocks' and commit the changes."; \
+		exit 1; \
+	fi
+
 mocks:
 	@which mockery > /dev/null || go install github.com/vektra/mockery/v2@$(MOCKERY_VERSION)
 	@unset MOCKERY_VERSION && go generate ./...
-
 
 DIRS = consumers readers postgres internal opcua
 test: mocks

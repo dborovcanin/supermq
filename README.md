@@ -1,8 +1,5 @@
 # Magistrala
 
-[![Check License Header](https://github.com/absmach/magistrala/actions/workflows/check-license.yaml/badge.svg?branch=main)](https://github.com/absmach/magistrala/actions/workflows/check-license.yaml)
-[![Check the consistency of generated files](https://github.com/absmach/magistrala/actions/workflows/check-generated-files.yml/badge.svg?branch=main)](https://github.com/absmach/magistrala/actions/workflows/check-generated-files.yml)
-[![Continuous Delivery](https://github.com/absmach/magistrala/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/absmach/magistrala/actions/workflows/build.yml)
 [![go report card][grc-badge]][grc-url]
 [![coverage][cov-badge]][cov-url]
 [![license][license]](LICENSE)
@@ -60,12 +57,11 @@ This will bring up the Magistrala docker services and interconnect them. This co
 make run
 ```
 
-If you want to run services from specific release checkout code from github and make sure that
-`MG_RELEASE_TAG` in [.env](.env) is being set to match the release version
+If you want to run services from specific release checkout code from github and make sure that `MG_RELEASE_TAG` in [.env](.env) is being set to match the release version
 
 ```bash
 git checkout tags/<release_number> -b <release_number>
-# e.g. `git checkout tags/0.13.0 -b 0.13.0`
+# e.g. `git checkout tags/0.14.0 -b 0.14.0`
 ```
 
 Check that `.env` file contains:
@@ -120,12 +116,6 @@ Thank you for your interest in Magistrala and the desire to contribute!
 1. Take a look at our [open issues](https://github.com/absmach/magistrala/issues). The [good-first-issue](https://github.com/absmach/magistrala/labels/good-first-issue) label is specifically for issues that are great for getting started.
 2. Checkout the [contribution guide](CONTRIBUTING.md) to learn more about our style and conventions.
 3. Make your changes compatible to our workflow.
-
-### We're Hiring
-
-You like Magistrala and you would like to make it your day job? We're always looking for talented engineers interested in open-source, IoT and distributed systems. If you recognize yourself, reach out to [@drasko][drasko] - he will contact you back.
-
-> The best way to grab our attention is, of course, by sending PRs :sunglasses:.
 
 ## Community
 

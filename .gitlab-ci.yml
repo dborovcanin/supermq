@@ -1,0 +1,53 @@
+default:
+  before_script:
+    - apt-get update -qy
+    - curl -OL https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
+    - rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
+    - export PATH=$PATH:/usr/local/go/bin
+    - export GOBIN=$HOME/go/bin
+    - export PATH=$PATH:$GOBIN
+    - go version
+    - go mod download
+
+stages:
+  - test
+  - build
+
+lint:
+  image: golangci/golangci-lint:v1.56.1
+  stage: test
+  allow_failure: false
+  script:
+    - golangci-lint run -v
+
+test:
+  stage: test
+  script:
+    - mkdir -p coverage
+    - touch coverage/coverage.out
+    - go test -v --race -count 1 -tags test -coverprofile=coverage/coverage.out $(go list ./... | grep -v 'consumers\|readers\|events\|cache\|messaging\|postgres\|mongodb\|internal\|opcua\|cmd')
+
+check-generated-files:
+  stage: test
+  script:
+    - PROTOC_VERSION=25.3
+    - PROTOC_GEN_VERSION=v1.32.0
+    - PROTOC_GRPC_VERSION=v1.3.0
+    - PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
+    - curl -0L -o $PROTOC_ZIP https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
+    - unzip -o $PROTOC_ZIP -d protoc3
+    - mv protoc3/bin/* /usr/local/bin/
+    - mv protoc3/include/* /usr/local/include/
+    - rm -rf $PROTOC_ZIP protoc3
+    - go install google.golang.org/protobuf/cmd/protoc-gen-go@$PROTOC_GEN_VERSION
+    - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$PROTOC_GRPC_VERSION
+    - export PATH=$PATH:/usr/local/bin/protoc
+
+    - make check-generated-files
+
+build:
+  stage: build
+  script:
+    - MG_MESSAGE_BROKER_TYPE=rabbitmq make mqtt
+    - MG_ES_TYPE=redis make mqtt
+    - make all -j $(nproc)

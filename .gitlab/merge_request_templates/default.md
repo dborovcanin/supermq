@@ -1,12 +1,9 @@
-<!-- Copyright (c) Abstract Machines
-SPDX-License-Identifier: Apache-2.0 -->
-
 <!--
 
 Pull request title should be `MG-XXX - description` or `NOISSUE - description` where XXX is ID of the issue that this PR relate to.
-Please review the [CONTRIBUTING.md](https://github.com/absmach/magistrala/blob/master/CONTRIBUTING.md) file for detailed contributing guidelines.
+Please review the [CONTRIBUTING.md](https://gitlab.com/DAVEEmbeddedSystems/innovation-lab/tlm/tlml/abstract-machines/magistrala/-/blob/main/CONTRIBUTING.md?ref_type=heads) file for detailed contributing guidelines.
 
-For Work In Progress Pull Requests, please use the Draft PR feature, see https://github.blog/2019-02-14-introducing-draft-pull-requests/ for further details.
+For Work In Progress Pull Requests, please use the Draft PR feature.
 
 For a timely review/response, please avoid force-pushing additional commits if your PR already received reviews or comments.
 
@@ -17,17 +14,17 @@ For a timely review/response, please avoid force-pushing additional commits if y
 - Update any related documentation.
 -->
 
-# What type of PR is this?
+## What type of PR is this?
 
 <!--This represents the type of PR you are submitting.
 
 For example:
-This is a bug fix because it fixes the following issue: #1234
-This is a feature because it adds the following functionality: ...
-This is a refactor because it changes the following functionality: ...
-This is a documentation update because it updates the following documentation: ...
-This is a dependency update because it updates the following dependencies: ...
-This is an optimization because it improves the following functionality: ...
+This PR is a bug fix because it fixes the following issue: #1234
+This PR is a feature because it adds the following functionality: ...
+This PR is a refactor because it changes the following functionality: ...
+This PR is a documentation update because it updates the following documentation: ...
+This PR is a dependency update because it updates the following dependencies: ...
+This PR is an optimization because it improves the following functionality: ...
 -->
 
 ## What does this do?
@@ -45,8 +42,10 @@ For pull requests that relate or close an issue, please include them below.  We 
 For example having the text: "Resolves #1234" would connect the current pull request to issue 1234.  And when we merge the pull request, Github will automatically close the issue.
 -->
 
+<!--
 - Related Issue #
 - Resolves #
+-->
 
 ## Have you included tests for your changes?
 

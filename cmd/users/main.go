@@ -35,7 +35,7 @@ import (
 	svcerr "github.com/absmach/magistrala/pkg/errors/service"
 	"github.com/absmach/magistrala/pkg/groups"
 	"github.com/absmach/magistrala/pkg/oauth2"
-	googleoauth "github.com/absmach/magistrala/pkg/oauth2/google"
+	kratosoauth "github.com/absmach/magistrala/pkg/oauth2/kratos"
 	"github.com/absmach/magistrala/pkg/uuid"
 	"github.com/absmach/magistrala/users"
 	capi "github.com/absmach/magistrala/users/api"
@@ -57,7 +57,7 @@ const (
 	envPrefixDB     = "MG_USERS_DB_"
 	envPrefixHTTP   = "MG_USERS_HTTP_"
 	envPrefixAuth   = "MG_AUTH_GRPC_"
-	envPrefixGoogle = "MG_GOOGLE_"
+	envPrefixKratos = "MG_KRATOS_"
 	defDB           = "users"
 	defSvcHTTPPort  = "9002"
 
@@ -76,11 +76,11 @@ type config struct {
 	ESURL              string  `env:"MG_ES_URL"                    envDefault:"nats://localhost:4222"`
 	TraceRatio         float64 `env:"MG_JAEGER_TRACE_RATIO"        envDefault:"1.0"`
 	SelfRegister       bool    `env:"MG_USERS_ALLOW_SELF_REGISTER" envDefault:"false"`
+	OAuthUIRedirectURL string  `env:"MG_OAUTH_UI_REDIRECT_URL"     envDefault:"http://localhost:9095/domains"`
+	OAuthUIErrorURL    string  `env:"MG_OAUTH_UI_ERROR_URL"        envDefault:"http://localhost:9095/error"`
 	KratosURL          string  `env:"MG_KRATOS_URL"                envDefault:"http://localhost:4433"`
 	KratosAPIKey       string  `env:"MG_KRATOS_API_KEY"            envDefault:""`
 	KratosSchemaID     string  `env:"MG_KRATOS_SCHEMA_ID"          envDefault:""`
-	OAuthUIRedirectURL string  `env:"MG_OAUTH_UI_REDIRECT_URL"     envDefault:"http://localhost:9095/domains"`
-	OAuthUIErrorURL    string  `env:"MG_OAUTH_UI_ERROR_URL"        envDefault:"http://localhost:9095/error"`
 	PassRegex          *regexp.Regexp
 }
 
@@ -180,12 +180,12 @@ func main() {
 	}
 
 	oauthConfig := oauth2.Config{}
-	if err := env.ParseWithOptions(&oauthConfig, env.Options{Prefix: envPrefixGoogle}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load %s Google configuration : %s", svcName, err.Error()))
+	if err := env.ParseWithOptions(&oauthConfig, env.Options{Prefix: envPrefixKratos}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s Kratos configuration : %s", svcName, err.Error()))
 		exitCode = 1
 		return
 	}
-	oauthProvider := googleoauth.NewProvider(oauthConfig, cfg.OAuthUIRedirectURL, cfg.OAuthUIErrorURL)
+	oauthProvider := kratosoauth.NewProvider(oauthConfig, cfg.KratosURL, cfg.OAuthUIRedirectURL, cfg.OAuthUIErrorURL, cfg.KratosAPIKey)
 
 	mux := chi.NewRouter()
 	httpSrv := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, gsvc, mux, logger, cfg.InstanceID, oauthProvider), logger)
@@ -227,7 +227,7 @@ func newService(ctx context.Context, authClient magistrala.AuthServiceClient, db
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
 
-	csvc := users.NewService(cRepo, authClient, emailerClient, c.PassRegex, c.SelfRegister)
+	csvc := users.NewService(cRepo, authClient, emailerClient, c.PassRegex, c.SelfRegister, client)
 	gsvc := mggroups.NewService(gRepo, idp, authClient)
 
 	csvc, err = uevents.NewEventStoreMiddleware(ctx, csvc, c.ESURL)

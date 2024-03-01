@@ -53,7 +53,7 @@ func newService(selfRegister bool) (users.Service, *mocks.Repository, *authmocks
 	cRepo := new(mocks.Repository)
 	auth := new(authmocks.AuthClient)
 	e := mocks.NewEmailer()
-	return users.NewService(cRepo, auth, e, passRegex, selfRegister), cRepo, auth, e
+	return users.NewService(cRepo, auth, e, passRegex, selfRegister, nil), cRepo, auth, e
 }
 
 func TestRegisterClient(t *testing.T) {

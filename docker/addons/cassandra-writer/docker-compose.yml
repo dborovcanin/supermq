@@ -38,7 +38,7 @@ services:
       - magistrala-base-net
 
   cassandra-writer:
-    image: magistrala/cassandra-writer:${MG_RELEASE_TAG}
+    image: registry.gitlab.com/daveembeddedsystems/innovation-lab/tlm/tlml/abstract-machines/magistrala/cassandra-writer:${MG_RELEASE_TAG}
     container_name: magistrala-cassandra-writer
     depends_on:
       - cassandra

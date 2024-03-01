@@ -33,7 +33,7 @@ services:
       - magistrala-mongodb-configdb-volume:/data/configdb
 
   mongodb-writer:
-    image: magistrala/mongodb-writer:${MG_RELEASE_TAG}
+    image: registry.gitlab.com/daveembeddedsystems/innovation-lab/tlm/tlml/abstract-machines/magistrala/mongodb-writer:${MG_RELEASE_TAG}
     container_name: magistrala-mongodb-writer
     depends_on:
       - mongodb

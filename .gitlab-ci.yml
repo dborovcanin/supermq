@@ -1,38 +1,42 @@
-default:
-  before_script:
-    - apt-get update -qy
-    - curl -OL https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
-    - rm -rf /usr/local/go && tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
-    - export PATH=$PATH:/usr/local/go/bin
-    - export GOBIN=$HOME/go/bin
-    - export PATH=$PATH:$GOBIN
-    - go version
-    - go mod download
+variables:
+  DOCKER_HOST: tcp://docker:2375/
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  GOLANGCI_LINT_VERSION: "v1.55.2"
+  PROTOC_VERSION: "25.3"
+  PROTOC_GEN_VERSION: "v1.32.0"
+  PROTOC_GRPC_VERSION: "v1.3.0"
 
 stages:
   - test
   - build
+  - publish
 
 lint:
-  image: golangci/golangci-lint:v1.56.1
+  image: golang:1.21.6-bookworm
   stage: test
-  allow_failure: false
+  before_script:
+    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
+    - export PATH=$PATH:$HOME/go/bin
   script:
     - golangci-lint run -v
 
 test:
+  image: golang:1.21.6-bookworm
   stage: test
-  script:
+  before_script:
+    - go mod download
+    - make mocks
     - mkdir -p coverage
     - touch coverage/coverage.out
+  script:
     - go test -v --race -count 1 -tags test -coverprofile=coverage/coverage.out $(go list ./... | grep -v 'consumers\|readers\|events\|cache\|messaging\|postgres\|mongodb\|internal\|opcua\|cmd')
 
 check-generated-files:
+  image: golang:1.21.6-bookworm
   stage: test
-  script:
-    - PROTOC_VERSION=25.3
-    - PROTOC_GEN_VERSION=v1.32.0
-    - PROTOC_GRPC_VERSION=v1.3.0
+  before_script:
+    - apt-get update && apt-get install -y unzip curl
     - PROTOC_ZIP=protoc-$PROTOC_VERSION-linux-x86_64.zip
     - curl -0L -o $PROTOC_ZIP https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/$PROTOC_ZIP
     - unzip -o $PROTOC_ZIP -d protoc3
@@ -42,12 +46,33 @@ check-generated-files:
     - go install google.golang.org/protobuf/cmd/protoc-gen-go@$PROTOC_GEN_VERSION
     - go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$PROTOC_GRPC_VERSION
     - export PATH=$PATH:/usr/local/bin/protoc
-
+    - go mod download
+  script:
     - make check-generated-files
 
 build:
+  image: golang:1.21.6-bookworm
   stage: build
+  before_script:
+    - go mod download
   script:
     - MG_MESSAGE_BROKER_TYPE=rabbitmq make mqtt
     - MG_ES_TYPE=redis make mqtt
     - make all -j $(nproc)
+
+publish:
+  image: docker:latest
+  stage: publish
+  services:
+    - name: docker:dind
+      entrypoint: ["env", "-u", "DOCKER_HOST"]
+      command: ["dockerd-entrypoint.sh"]
+  before_script:
+    - apk add --no-cache make go git
+    - echo $CI_REGISTRY_PASSWORD | docker login $CI_REGISTRY --username $CI_REGISTRY_USER --password-stdin
+    - go mod download
+  script:
+    - make all -j $(nproc)
+    - MG_DOCKER_IMAGE_NAME_PREFIX=registry.gitlab.com/daveembeddedsystems/innovation-lab/tlm/tlml/abstract-machines/magistrala make latest -j $(nproc)
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

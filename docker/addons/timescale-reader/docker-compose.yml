@@ -14,7 +14,7 @@ networks:
 
 services:
   timescale-reader:
-    image: magistrala/timescale-reader:${MG_RELEASE_TAG}
+    image: registry.gitlab.com/daveembeddedsystems/innovation-lab/tlm/tlml/abstract-machines/magistrala/timescale-reader:${MG_RELEASE_TAG}
     container_name: magistrala-timescale-reader
     restart: on-failure
     environment:

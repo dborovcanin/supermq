@@ -165,7 +165,8 @@ endef
 changelog:
 	git log $(shell git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s"
 
-latest: dockers
+# using dev since it takes less time to build for CI
+latest: dockers_dev
 	$(call docker_push,latest)
 
 release:

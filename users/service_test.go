@@ -6,7 +6,6 @@ package users_test
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -25,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/oauth2"
 )
 
 var (
@@ -40,7 +38,6 @@ var (
 		Metadata:    validCMetadata,
 		Status:      mgclients.EnabledStatus,
 	}
-	passRegex         = regexp.MustCompile("^.{8,}$")
 	validToken        = "token"
 	inValidToken      = "invalid"
 	validID           = "d4ebb847-5d0e-4e46-bdd9-b6aceaaa3a22"
@@ -53,7 +50,7 @@ func newService(selfRegister bool) (users.Service, *mocks.Repository, *authmocks
 	cRepo := new(mocks.Repository)
 	auth := new(authmocks.AuthClient)
 	e := mocks.NewEmailer()
-	return users.NewService(cRepo, auth, e, passRegex, selfRegister, nil), cRepo, auth, e
+	return users.NewService(cRepo, auth, e, selfRegister, nil), cRepo, auth, e
 }
 
 func TestRegisterClient(t *testing.T) {
@@ -150,18 +147,6 @@ func TestRegisterClient(t *testing.T) {
 				Credentials: mgclients.Credentials{
 					Identity: "clientwithmissingsecret@example.com",
 					Secret:   "",
-				},
-			},
-			addPoliciesResponse: &magistrala.AddPoliciesRes{Added: true},
-			err:                 nil,
-		},
-		{
-			desc: "register a new client with a weak secret",
-			client: mgclients.Client{
-				Name: "clientWithWeakSecret",
-				Credentials: mgclients.Credentials{
-					Identity: "clientwithweaksecret@example.com",
-					Secret:   "weak",
 				},
 			},
 			addPoliciesResponse: &magistrala.AddPoliciesRes{Added: true},
@@ -1133,14 +1118,6 @@ func TestUpdateClientSecret(t *testing.T) {
 			identifyResponse: &magistrala.IdentityRes{},
 			identifyErr:      svcerr.ErrAuthentication,
 			err:              svcerr.ErrAuthentication,
-		},
-		{
-			desc:             "update client secret with weak secret",
-			oldSecret:        client.Credentials.Secret,
-			newSecret:        "weak",
-			token:            validToken,
-			identifyResponse: &magistrala.IdentityRes{UserId: client.ID},
-			err:              users.ErrPasswordFormat,
 		},
 		{
 			desc:                 "update client secret with failed to retrieve client by ID",
@@ -2313,14 +2290,6 @@ func TestResetSecret(t *testing.T) {
 			err: repoerr.ErrNotFound,
 		},
 		{
-			desc:                 "reset secret with invalid secret format",
-			token:                validToken,
-			newSecret:            "weak",
-			identifyResponse:     &magistrala.IdentityRes{UserId: client.ID},
-			retrieveByIDResponse: client,
-			err:                  users.ErrPasswordFormat,
-		},
-		{
 			desc:                 "reset secret with failed to update secret",
 			token:                validToken,
 			newSecret:            "newStrongSecret",
@@ -2420,9 +2389,7 @@ func TestOAuthCallback(t *testing.T) {
 
 	cases := []struct {
 		desc                       string
-		provider                   string
 		state                      mgoauth2.State
-		token                      oauth2.Token
 		client                     mgclients.Client
 		retrieveByIdentityResponse mgclients.Client
 		retrieveByIdentityErr      error
@@ -2437,13 +2404,8 @@ func TestOAuthCallback(t *testing.T) {
 		err                        error
 	}{
 		{
-			desc:     "oauth signin callback with successfully",
-			provider: "google",
-			state:    mgoauth2.SignIn,
-			token: oauth2.Token{
-				AccessToken:  strings.Repeat("a", 10),
-				RefreshToken: strings.Repeat("b", 10),
-			},
+			desc:  "oauth signin callback with successfully",
+			state: mgoauth2.SignIn,
 			client: mgclients.Client{
 				Credentials: mgclients.Credentials{
 					Identity: "test@example.com",
@@ -2460,13 +2422,8 @@ func TestOAuthCallback(t *testing.T) {
 			err: nil,
 		},
 		{
-			desc:     "oauth signin callback with error",
-			provider: "google",
-			state:    mgoauth2.SignIn,
-			token: oauth2.Token{
-				AccessToken:  strings.Repeat("a", 10),
-				RefreshToken: strings.Repeat("b", 10),
-			},
+			desc:  "oauth signin callback with error",
+			state: mgoauth2.SignIn,
 			client: mgclients.Client{
 				Credentials: mgclients.Credentials{
 					Identity: "test@example.com",
@@ -2478,13 +2435,8 @@ func TestOAuthCallback(t *testing.T) {
 			err:                        errors.New("user not signed up"),
 		},
 		{
-			desc:     "oauth signup callback with successfully",
-			provider: "google",
-			state:    mgoauth2.SignUp,
-			token: oauth2.Token{
-				AccessToken:  strings.Repeat("a", 10),
-				RefreshToken: strings.Repeat("b", 10),
-			},
+			desc:  "oauth signup callback with successfully",
+			state: mgoauth2.SignUp,
 			client: mgclients.Client{
 				Credentials: mgclients.Credentials{
 					Identity: "test@example.com",
@@ -2509,13 +2461,8 @@ func TestOAuthCallback(t *testing.T) {
 			err: nil,
 		},
 		{
-			desc:     "oauth signup callback with error",
-			provider: "google",
-			state:    mgoauth2.SignUp,
-			token: oauth2.Token{
-				AccessToken:  strings.Repeat("a", 10),
-				RefreshToken: strings.Repeat("b", 10),
-			},
+			desc:  "oauth signup callback with error",
+			state: mgoauth2.SignUp,
 			client: mgclients.Client{
 				Credentials: mgclients.Credentials{
 					Identity: "test@example.com",
@@ -2546,7 +2493,7 @@ func TestOAuthCallback(t *testing.T) {
 			repoCall1 := auth.On("AddPolicies", mock.Anything, mock.Anything).Return(tc.addPoliciesResponse, tc.addPoliciesErr)
 			repoCall2 := auth.On("DeletePolicies", mock.Anything, mock.Anything).Return(tc.deletePoliciesResponse, tc.deletePoliciesErr)
 			repoCall3 := auth.On("Issue", mock.Anything, mock.Anything).Return(tc.issueResponse, tc.issueErr)
-			token, err := svc.OAuthCallback(context.Background(), tc.provider, tc.state, tc.token, tc.client)
+			token, err := svc.OAuthCallback(context.Background(), tc.state, tc.client)
 			if err == nil {
 				assert.Equal(t, tc.issueResponse.AccessToken, token.AccessToken)
 				assert.Equal(t, tc.issueResponse.RefreshToken, token.RefreshToken)
@@ -2559,7 +2506,7 @@ func TestOAuthCallback(t *testing.T) {
 		case mgoauth2.SignIn:
 			repoCall := cRepo.On("RetrieveByIdentity", context.Background(), tc.client.Credentials.Identity).Return(tc.retrieveByIdentityResponse, tc.retrieveByIdentityErr)
 			repoCall1 := auth.On("Issue", mock.Anything, mock.Anything).Return(tc.issueResponse, tc.issueErr)
-			token, err := svc.OAuthCallback(context.Background(), tc.provider, tc.state, tc.token, tc.client)
+			token, err := svc.OAuthCallback(context.Background(), tc.state, tc.client)
 			if err == nil {
 				assert.Equal(t, tc.issueResponse.AccessToken, token.AccessToken)
 				assert.Equal(t, tc.issueResponse.RefreshToken, token.RefreshToken)

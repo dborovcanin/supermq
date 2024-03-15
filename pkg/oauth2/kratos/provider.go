@@ -92,28 +92,29 @@ func (cfg *config) IsEnabled() bool {
 	return cfg.config.ClientID != "" && cfg.config.ClientSecret != ""
 }
 
-func (cfg *config) UserDetails(ctx context.Context, code string) (mfclients.Client, oauth2.Token, error) {
+func (cfg *config) Exchange(ctx context.Context, code string) (oauth2.Token, error) {
 	token, err := cfg.config.Exchange(ctx, code)
 	if err != nil {
-		return mfclients.Client{}, oauth2.Token{}, err
-	}
-	if token.RefreshToken == "" {
-		return mfclients.Client{}, oauth2.Token{}, svcerr.ErrAuthentication
+		return oauth2.Token{}, err
 	}
 
-	resp, err := http.Get(cfg.baseURL + userInfoEndpoint + url.QueryEscape(token.AccessToken))
+	return *token, nil
+}
+
+func (cfg *config) UserInfo(accessToken string) (mfclients.Client, error) {
+	resp, err := http.Get(cfg.baseURL + userInfoEndpoint + url.QueryEscape(accessToken))
 	if err != nil {
-		return mfclients.Client{}, oauth2.Token{}, err
+		return mfclients.Client{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return mfclients.Client{}, oauth2.Token{}, svcerr.ErrAuthentication
+		return mfclients.Client{}, svcerr.ErrAuthentication
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return mfclients.Client{}, oauth2.Token{}, err
+		return mfclients.Client{}, err
 	}
 
 	var user struct {
@@ -122,11 +123,11 @@ func (cfg *config) UserDetails(ctx context.Context, code string) (mfclients.Clie
 		Email string `json:"email"`
 	}
 	if err := json.Unmarshal(data, &user); err != nil {
-		return mfclients.Client{}, oauth2.Token{}, err
+		return mfclients.Client{}, err
 	}
 
 	if user.ID == "" || user.Name == "" || user.Email == "" {
-		return mfclients.Client{}, oauth2.Token{}, svcerr.ErrAuthentication
+		return mfclients.Client{}, svcerr.ErrAuthentication
 	}
 
 	client := mfclients.Client{
@@ -141,7 +142,7 @@ func (cfg *config) UserDetails(ctx context.Context, code string) (mfclients.Clie
 		Status: mfclients.EnabledStatus,
 	}
 
-	return client, *token, nil
+	return client, nil
 }
 
 func (cfg *config) Validate(ctx context.Context, token string) error {

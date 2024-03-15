@@ -188,7 +188,7 @@ func main() {
 	oauthProvider := kratosoauth.NewProvider(oauthConfig, cfg.KratosURL, cfg.OAuthUIRedirectURL, cfg.OAuthUIErrorURL, cfg.KratosAPIKey)
 
 	mux := chi.NewRouter()
-	httpSrv := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, gsvc, mux, logger, cfg.InstanceID, oauthProvider), logger)
+	httpSrv := httpserver.New(ctx, cancel, svcName, httpServerConfig, capi.MakeHandler(csvc, gsvc, mux, logger, cfg.InstanceID, cfg.PassRegex, oauthProvider), logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, magistrala.Version, logger, cancel)
@@ -227,7 +227,7 @@ func newService(ctx context.Context, authClient magistrala.AuthServiceClient, db
 		logger.Error(fmt.Sprintf("failed to configure e-mailing util: %s", err.Error()))
 	}
 
-	csvc := users.NewService(cRepo, authClient, emailerClient, c.PassRegex, c.SelfRegister, client)
+	csvc := users.NewService(cRepo, authClient, emailerClient, c.SelfRegister, client)
 	gsvc := mggroups.NewService(gRepo, idp, authClient)
 
 	csvc, err = uevents.NewEventStoreMiddleware(ctx, csvc, c.ESURL)

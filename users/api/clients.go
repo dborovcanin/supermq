@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/absmach/magistrala/auth"
@@ -22,8 +23,12 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
+var passRegex = regexp.MustCompile("^.{8,}$")
+
 // MakeHandler returns a HTTP handler for API endpoints.
-func clientsHandler(svc users.Service, r *chi.Mux, logger *slog.Logger, providers ...oauth2.Provider) http.Handler {
+func clientsHandler(svc users.Service, r *chi.Mux, logger *slog.Logger, pr *regexp.Regexp, providers ...oauth2.Provider) http.Handler {
+	passRegex = pr
+
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorEncoder(apiutil.LoggingErrorEncoder(logger, api.EncodeError)),
 	}
@@ -548,13 +553,19 @@ func oauth2CallbackHandler(oauth oauth2.Provider, svc users.Service) http.Handle
 		}
 
 		if code := r.FormValue("code"); code != "" {
-			client, token, err := oauth.UserDetails(r.Context(), code)
+			token, err := oauth.Exchange(r.Context(), code)
 			if err != nil {
 				http.Redirect(w, r, oauth.ErrorURL()+"?error="+err.Error(), http.StatusSeeOther)
 				return
 			}
 
-			jwt, err := svc.OAuthCallback(r.Context(), oauth.Name(), flow, token, client)
+			client, err := oauth.UserInfo(token.AccessToken)
+			if err != nil {
+				http.Redirect(w, r, oauth.ErrorURL()+"?error="+err.Error(), http.StatusSeeOther)
+				return
+			}
+
+			jwt, err := svc.OAuthCallback(r.Context(), flow, client)
 			if err != nil {
 				http.Redirect(w, r, oauth.ErrorURL()+"?error="+err.Error(), http.StatusSeeOther)
 				return

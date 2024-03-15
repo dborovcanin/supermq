@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/absmach/magistrala"
@@ -18,16 +17,12 @@ import (
 	svcerr "github.com/absmach/magistrala/pkg/errors/service"
 	mgoauth2 "github.com/absmach/magistrala/pkg/oauth2"
 	ory "github.com/ory/client-go"
-	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 )
 
 var (
 	// ErrRecoveryToken indicates error in generating password recovery token.
 	ErrRecoveryToken = errors.New("failed to generate password recovery token")
-
-	// ErrPasswordFormat indicates weak password.
-	ErrPasswordFormat = errors.New("password does not meet the requirements")
 
 	// ErrFailedPolicyUpdate indicates a failure to update user policy.
 	ErrFailedPolicyUpdate = errors.New("failed to update user policy")
@@ -49,18 +44,16 @@ type service struct {
 	clients      Repository
 	auth         magistrala.AuthServiceClient
 	email        Emailer
-	passRegex    *regexp.Regexp
 	selfRegister bool
 	oryClient    *ory.APIClient
 }
 
 // NewService returns a new Users service implementation.
-func NewService(crepo Repository, authClient magistrala.AuthServiceClient, emailer Emailer, pr *regexp.Regexp, selfRegister bool, oryClient *ory.APIClient) Service {
+func NewService(crepo Repository, authClient magistrala.AuthServiceClient, emailer Emailer, selfRegister bool, oryClient *ory.APIClient) Service {
 	return service{
 		clients:      crepo,
 		auth:         authClient,
 		email:        emailer,
-		passRegex:    pr,
 		selfRegister: selfRegister,
 		oryClient:    oryClient,
 	}
@@ -78,10 +71,10 @@ func (svc service) RegisterClient(ctx context.Context, token string, cli mgclien
 	}
 
 	if cli.Status != mgclients.DisabledStatus && cli.Status != mgclients.EnabledStatus {
-		return mgclients.Client{}, svcerr.ErrInvalidStatus
+		return mgclients.Client{}, errors.Wrap(svcerr.ErrMalformedEntity, svcerr.ErrInvalidStatus)
 	}
 	if cli.Role != mgclients.UserRole && cli.Role != mgclients.AdminRole {
-		return mgclients.Client{}, svcerr.ErrInvalidRole
+		return mgclients.Client{}, errors.Wrap(svcerr.ErrMalformedEntity, svcerr.ErrInvalidRole)
 	}
 	cli.CreatedAt = time.Now()
 
@@ -111,7 +104,7 @@ func (svc service) IssueToken(ctx context.Context, identity, secret, domainID st
 	if domainID != "" {
 		d = domainID
 	}
-	return svc.auth.Issue(ctx, &magistrala.IssueReq{UserId: dbUser.ID, DomainId: &d, Type: 0})
+	return svc.auth.Issue(ctx, &magistrala.IssueReq{UserId: dbUser.ID, DomainId: &d, Type: uint32(auth.AccessKey)})
 }
 
 func (svc service) RefreshToken(ctx context.Context, refreshToken, domainID string) (*magistrala.Token, error) {
@@ -294,9 +287,6 @@ func (svc service) ResetSecret(ctx context.Context, resetToken, secret string) e
 	if c.Credentials.Identity == "" {
 		return repoerr.ErrNotFound
 	}
-	if !svc.passRegex.MatchString(secret) {
-		return ErrPasswordFormat
-	}
 
 	c = mgclients.Client{
 		Credentials: mgclients.Credentials{
@@ -316,9 +306,6 @@ func (svc service) UpdateClientSecret(ctx context.Context, token, oldSecret, new
 	id, err := svc.Identify(ctx, token)
 	if err != nil {
 		return mgclients.Client{}, err
-	}
-	if !svc.passRegex.MatchString(newSecret) {
-		return mgclients.Client{}, ErrPasswordFormat
 	}
 	dbClient, err := svc.clients.RetrieveByID(ctx, id)
 	if err != nil {
@@ -563,7 +550,7 @@ func (svc *service) authorize(ctx context.Context, subjType, subjKind, subj, per
 	return res.GetId(), nil
 }
 
-func (svc service) OAuthCallback(ctx context.Context, provider string, state mgoauth2.State, token oauth2.Token, client mgclients.Client) (*magistrala.Token, error) {
+func (svc service) OAuthCallback(ctx context.Context, state mgoauth2.State, client mgclients.Client) (*magistrala.Token, error) {
 	switch state {
 	case mgoauth2.SignIn:
 		rclient, err := svc.clients.RetrieveByIdentity(ctx, client.Credentials.Identity)
@@ -574,11 +561,8 @@ func (svc service) OAuthCallback(ctx context.Context, provider string, state mgo
 			return &magistrala.Token{}, err
 		}
 		claims := &magistrala.IssueReq{
-			UserId:            rclient.ID,
-			Type:              0,
-			OauthProvider:     provider,
-			OauthAccessToken:  token.AccessToken,
-			OauthRefreshToken: token.RefreshToken,
+			UserId: rclient.ID,
+			Type:   uint32(auth.AccessKey),
 		}
 		return svc.auth.Issue(ctx, claims)
 	case mgoauth2.SignUp:
@@ -590,11 +574,8 @@ func (svc service) OAuthCallback(ctx context.Context, provider string, state mgo
 			return &magistrala.Token{}, err
 		}
 		claims := &magistrala.IssueReq{
-			UserId:            rclient.ID,
-			Type:              0,
-			OauthProvider:     provider,
-			OauthAccessToken:  token.AccessToken,
-			OauthRefreshToken: token.RefreshToken,
+			UserId: rclient.ID,
+			Type:   uint32(auth.AccessKey),
 		}
 		return svc.auth.Issue(ctx, claims)
 	default:

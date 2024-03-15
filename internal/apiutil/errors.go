@@ -132,6 +132,9 @@ var (
 	// ErrMissingSecret indicates missing secret.
 	ErrMissingSecret = errors.New("missing secret")
 
+	// ErrPasswordFormat indicates weak password.
+	ErrPasswordFormat = errors.New("password does not meet the requirements")
+
 	// ErrMissingOwner indicates missing entity owner.
 	ErrMissingOwner = errors.New("missing entity owner")
 
@@ -143,9 +146,6 @@ var (
 
 	// ErrMissingName indicates missing identity name.
 	ErrMissingName = errors.New("missing identity name")
-
-	// ErrInvalidSecret indicates invalid secret.
-	ErrInvalidSecret = errors.New("missing secret")
 
 	// ErrInvalidLevel indicates an invalid group level.
 	ErrInvalidLevel = errors.New("invalid group level (should be between 0 and 5)")
@@ -164,4 +164,16 @@ var (
 
 	// ErrRollbackTx indicates failed to rollback transaction.
 	ErrRollbackTx = errors.New("failed to rollback transaction")
+
+	// ErrInvalidAggregation indicates invalid aggregation value.
+	ErrInvalidAggregation = errors.New("invalid aggregation value")
+
+	// ErrInvalidInterval indicates invalid interval value.
+	ErrInvalidInterval = errors.New("invalid interval value")
+
+	// ErrMissingFrom indicates missing from value.
+	ErrMissingFrom = errors.New("missing from time value")
+
+	// ErrMissingTo indicates missing to value.
+	ErrMissingTo = errors.New("missing to time value")
 )

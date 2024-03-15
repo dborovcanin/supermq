@@ -37,14 +37,14 @@ func setupGroups() (*httptest.Server, *mocks.Repository, *authmocks.AuthClient) 
 	grepo := new(mocks.Repository)
 
 	auth := new(authmocks.AuthClient)
-	csvc := users.NewService(crepo, auth, emailer, passRegex, true, nil)
+	csvc := users.NewService(crepo, auth, emailer, true, nil)
 	gsvc := groups.NewService(grepo, idProvider, auth)
 
 	logger := mglog.NewMock()
 	mux := chi.NewRouter()
 	provider := new(oauth2mocks.Provider)
 	provider.On("Name").Return("test")
-	api.MakeHandler(csvc, gsvc, mux, logger, "", provider)
+	api.MakeHandler(csvc, gsvc, mux, logger, "", passRegex, provider)
 
 	return httptest.NewServer(mux), grepo, auth
 }

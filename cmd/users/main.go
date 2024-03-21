@@ -46,6 +46,7 @@ import (
 	ctracing "github.com/absmach/magistrala/users/tracing"
 	"github.com/caarlos0/env/v10"
 	"github.com/go-chi/chi/v5"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/jmoiron/sqlx"
 	ory "github.com/ory/client-go"
 	"go.opentelemetry.io/otel/trace"
@@ -60,6 +61,9 @@ const (
 	envPrefixKratos = "MG_KRATOS_"
 	defDB           = "users"
 	defSvcHTTPPort  = "9002"
+
+	defKratosRetryCount   = 10
+	defKratosRetryWaitMax = 1 * time.Minute
 
 	streamID = "magistrala.users"
 )
@@ -216,6 +220,13 @@ func newService(ctx context.Context, authClient magistrala.AuthServiceClient, db
 	conf := ory.NewConfiguration()
 	conf.Servers = []ory.ServerConfiguration{{URL: c.KratosURL}}
 	conf.AddDefaultHeader("Authorization", "Bearer "+c.KratosAPIKey)
+
+	retryClient := retryablehttp.NewClient()
+	retryClient.Logger = logger
+	retryClient.RetryMax = defKratosRetryCount
+	retryClient.RetryWaitMax = defKratosRetryWaitMax
+	conf.HTTPClient = retryClient.StandardClient()
+
 	client := ory.NewAPIClient(conf)
 	cRepo := kratos.NewRepository(client, c.KratosSchemaID, hsr)
 	gRepo := gpostgres.New(database)

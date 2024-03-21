@@ -374,6 +374,10 @@ func (repo *repository) CheckSuperAdmin(ctx context.Context, adminID string) err
 }
 
 func decodeError(response *http.Response) error {
+	if response == nil {
+		return nil
+	}
+
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response body: %w", err)

@@ -287,7 +287,6 @@ func (svc service) ResetSecret(ctx context.Context, resetToken, secret string) e
 	if c.Credentials.Identity == "" {
 		return repoerr.ErrNotFound
 	}
-
 	c = mgclients.Client{
 		Credentials: mgclients.Credentials{
 			Identity: c.Credentials.Identity,

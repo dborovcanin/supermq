@@ -5,13 +5,10 @@ package kratos
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	mfclients "github.com/absmach/magistrala/pkg/clients"
@@ -101,8 +98,8 @@ func (cfg *config) Exchange(ctx context.Context, code string) (oauth2.Token, err
 	return *token, nil
 }
 
-func (cfg *config) UserInfo(accessToken string) (mfclients.Client, error) {
-	resp, err := http.Get(cfg.baseURL + userInfoEndpoint + url.QueryEscape(accessToken))
+func (cfg *config) UserInfo(token string) (mfclients.Client, error) {
+	resp, err := http.Get(cfg.baseURL + userInfoEndpoint + url.QueryEscape(token))
 	if err != nil {
 		return mfclients.Client{}, err
 	}
@@ -143,71 +140,4 @@ func (cfg *config) UserInfo(accessToken string) (mfclients.Client, error) {
 	}
 
 	return client, nil
-}
-
-func (cfg *config) Validate(ctx context.Context, token string) error {
-	introspectedToken, resp, err := cfg.client.OAuth2API.IntrospectOAuth2Token(ctx).Token(token).Execute()
-	if err != nil {
-		return decodeError(resp)
-	}
-	if !introspectedToken.Active {
-		return svcerr.ErrAuthentication
-	}
-
-	return nil
-}
-
-func (cfg *config) Refresh(ctx context.Context, token string) (oauth2.Token, error) {
-	payload := strings.NewReader(fmt.Sprintf("grant_type=refresh_token&refresh_token=" + token + "&scope=" + strings.Join(scopes, "%20")))
-	client := &http.Client{
-		Timeout: defTimeout,
-	}
-	req, err := http.NewRequest(http.MethodPost, cfg.config.Endpoint.TokenURL, payload)
-	if err != nil {
-		return oauth2.Token{}, err
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Authorization", "Basic "+basicAuth(cfg.config.ClientID, cfg.config.ClientSecret))
-
-	res, err := client.Do(req)
-	if err != nil {
-		return oauth2.Token{}, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return oauth2.Token{}, svcerr.ErrAuthentication
-	}
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return oauth2.Token{}, err
-	}
-	var tokenData oauth2.Token
-	if err := json.Unmarshal(body, &tokenData); err != nil {
-		return oauth2.Token{}, err
-	}
-
-	return tokenData, nil
-}
-
-func basicAuth(id, secret string) string {
-	auth := id + ":" + secret
-	return base64.StdEncoding.EncodeToString([]byte(auth))
-}
-
-func decodeError(response *http.Response) error {
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return fmt.Errorf("error reading response body: %w", err)
-	}
-
-	var content struct {
-		Error ory.GenericError `json:"error,omitempty"`
-	}
-	if err := json.Unmarshal(body, &content); err != nil {
-		return fmt.Errorf("error unmarshalling response body: %w", err)
-	}
-
-	return fmt.Errorf("error: %s, reason: %s", content.Error.Message, *content.Error.Reason)
 }

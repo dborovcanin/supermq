@@ -175,12 +175,24 @@ func (repo *repository) filterUsers(ctx context.Context, page mgclients.Page) (m
 		}
 		clients = append(clients, client)
 	}
+	length := uint64(len(clients))
+	if page.Offset >= length {
+		return mgclients.ClientsPage{}, nil
+	}
+	if page.Limit > length {
+		page.Limit = length
+	}
+
 	clientPage := mgclients.ClientsPage{
 		Page: mgclients.Page{
 			Total:  total,
 			Offset: page.Offset,
 			Limit:  page.Limit,
 		},
+	}
+	if page.Offset+page.Limit > length {
+		clientPage.Clients = clients[page.Offset:]
+		return clientPage, nil
 	}
 
 	if len(clients) < int(page.Limit) {

@@ -783,7 +783,7 @@ func convertGRPCStatusToError(st *status.Status) error {
 	case codes.AlreadyExists:
 		return errors.Wrap(repoerr.ErrConflict, errors.New(st.Message()))
 	case codes.Unauthenticated:
-		return errors.Wrap(svcerr.ErrAuthentication, errors.New(st.Message()))
+		return svcerr.NewUserAuthNError(errors.New(st.Message()))
 	case codes.Internal:
 		return errors.Wrap(errInternal, errors.New(st.Message()))
 	case codes.OK:

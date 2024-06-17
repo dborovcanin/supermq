@@ -27,7 +27,7 @@ type SDKError interface {
 var _ SDKError = (*sdkError)(nil)
 
 type sdkError struct {
-	*customError
+	*CustomError
 	statusCode int
 }
 
@@ -35,10 +35,10 @@ func (ce *sdkError) Error() string {
 	if ce == nil {
 		return ""
 	}
-	if ce.customError == nil {
+	if ce.CustomError == nil {
 		return http.StatusText(ce.statusCode)
 	}
-	return fmt.Sprintf("Status: %s: %s", http.StatusText(ce.statusCode), ce.customError.Error())
+	return fmt.Sprintf("Status: %s: %s", http.StatusText(ce.statusCode), ce.CustomError.Error())
 }
 
 func (ce *sdkError) StatusCode() int {
@@ -54,16 +54,16 @@ func NewSDKError(err error) SDKError {
 	if e, ok := err.(Error); ok {
 		return &sdkError{
 			statusCode: 0,
-			customError: &customError{
-				msg: e.Msg(),
-				err: Cast(e.Err()),
+			CustomError: &CustomError{
+				Details: e.Msg(),
+				Err:     Cast(e),
 			},
 		}
 	}
 	return &sdkError{
-		customError: &customError{
-			msg: err.Error(),
-			err: nil,
+		CustomError: &CustomError{
+			Details: err.Error(),
+			Err:     nil,
 		},
 		statusCode: 0,
 	}
@@ -78,17 +78,17 @@ func NewSDKErrorWithStatus(err error, statusCode int) SDKError {
 	if e, ok := err.(Error); ok {
 		return &sdkError{
 			statusCode: statusCode,
-			customError: &customError{
-				msg: e.Msg(),
-				err: Cast(e.Err()),
+			CustomError: &CustomError{
+				Details: e.Msg(),
+				Err:     Cast(e),
 			},
 		}
 	}
 	return &sdkError{
 		statusCode: statusCode,
-		customError: &customError{
-			msg: err.Error(),
-			err: nil,
+		CustomError: &CustomError{
+			Details: err.Error(),
+			Err:     nil,
 		},
 	}
 }

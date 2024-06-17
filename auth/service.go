@@ -173,10 +173,10 @@ func (svc service) Identify(ctx context.Context, token string) (Key, error) {
 	key, err := svc.tokenizer.Parse(token)
 	if errors.Contains(err, ErrExpiry) {
 		err = svc.keys.Remove(ctx, key.Issuer, key.ID)
-		return Key{}, errors.Wrap(svcerr.ErrAuthentication, errors.Wrap(ErrKeyExpired, err))
+		return Key{}, svcerr.NewUserAuthNError(errors.Wrap(ErrKeyExpired, err))
 	}
 	if err != nil {
-		return Key{}, errors.Wrap(svcerr.ErrAuthentication, errors.Wrap(errIdentify, err))
+		return Key{}, svcerr.NewUserAuthNError(errors.Wrap(errIdentify, err))
 	}
 
 	switch key.Type {
@@ -185,11 +185,11 @@ func (svc service) Identify(ctx context.Context, token string) (Key, error) {
 	case APIKey:
 		_, err := svc.keys.Retrieve(ctx, key.Issuer, key.ID)
 		if err != nil {
-			return Key{}, svcerr.ErrAuthentication
+			return Key{}, svcerr.NewUserAuthNError(nil)
 		}
 		return key, nil
 	default:
-		return Key{}, svcerr.ErrAuthentication
+		return Key{}, svcerr.NewUserAuthNError(nil)
 	}
 }
 
@@ -200,13 +200,13 @@ func (svc service) Authorize(ctx context.Context, pr PolicyReq) error {
 	if pr.SubjectKind == TokenKind {
 		key, err := svc.Identify(ctx, pr.Subject)
 		if err != nil {
-			return errors.Wrap(svcerr.ErrAuthentication, err)
+			return svcerr.NewUserAuthNError(err)
 		}
 		if key.Subject == "" {
 			if pr.ObjectType == GroupType || pr.ObjectType == ThingType || pr.ObjectType == DomainType {
 				return svcerr.ErrDomainAuthorization
 			}
-			return svcerr.ErrAuthentication
+			return svcerr.NewUserAuthNError(nil)
 		}
 		pr.Subject = key.Subject
 		pr.Domain = key.Domain
@@ -554,11 +554,11 @@ func (svc service) userKey(ctx context.Context, token string, key Key) (Token, e
 func (svc service) authenticate(token string) (string, string, error) {
 	key, err := svc.tokenizer.Parse(token)
 	if err != nil {
-		return "", "", errors.Wrap(svcerr.ErrAuthentication, err)
+		return "", "", svcerr.NewUserAuthNError(err)
 	}
 	// Only login key token is valid for login.
 	if key.Type != AccessKey || key.Issuer == "" {
-		return "", "", svcerr.ErrAuthentication
+		return "", "", svcerr.NewUserAuthNError(nil)
 	}
 
 	return key.Issuer, key.Subject, nil
@@ -585,7 +585,7 @@ func SwitchToPermission(relation string) string {
 func (svc service) CreateDomain(ctx context.Context, token string, d Domain) (do Domain, err error) {
 	key, err := svc.Identify(ctx, token)
 	if err != nil {
-		return Domain{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return Domain{}, svcerr.NewUserAuthNError(err)
 	}
 	d.CreatedBy = key.User
 
@@ -622,7 +622,7 @@ func (svc service) CreateDomain(ctx context.Context, token string, d Domain) (do
 func (svc service) RetrieveDomain(ctx context.Context, token, id string) (Domain, error) {
 	res, err := svc.Identify(ctx, token)
 	if err != nil {
-		return Domain{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return Domain{}, svcerr.NewUserAuthNError(err)
 	}
 	domain, err := svc.domains.RetrieveByID(ctx, id)
 	if err != nil {
@@ -696,7 +696,7 @@ func (svc service) UpdateDomain(ctx context.Context, token, id string, d DomainR
 func (svc service) ChangeDomainStatus(ctx context.Context, token, id string, d DomainReq) (Domain, error) {
 	key, err := svc.Identify(ctx, token)
 	if err != nil {
-		return Domain{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return Domain{}, svcerr.NewUserAuthNError(err)
 	}
 	if err := svc.Authorize(ctx, PolicyReq{
 		Subject:     key.Subject,
@@ -719,7 +719,7 @@ func (svc service) ChangeDomainStatus(ctx context.Context, token, id string, d D
 func (svc service) ListDomains(ctx context.Context, token string, p Page) (DomainsPage, error) {
 	key, err := svc.Identify(ctx, token)
 	if err != nil {
-		return DomainsPage{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return DomainsPage{}, svcerr.NewUserAuthNError(err)
 	}
 	p.SubjectID = key.User
 	if err := svc.Authorize(ctx, PolicyReq{
@@ -840,7 +840,7 @@ func (svc service) UnassignUsers(ctx context.Context, token, id string, userIds 
 func (svc service) ListUserDomains(ctx context.Context, token, userID string, p Page) (DomainsPage, error) {
 	res, err := svc.Identify(ctx, token)
 	if err != nil {
-		return DomainsPage{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return DomainsPage{}, svcerr.NewUserAuthNError(err)
 	}
 	if err := svc.Authorize(ctx, PolicyReq{
 		Subject:     res.User,

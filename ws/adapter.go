@@ -55,7 +55,7 @@ func New(authClient magistrala.AuthzServiceClient, pubsub messaging.PubSub) Serv
 
 func (svc *adapterService) Subscribe(ctx context.Context, thingKey, chanID, subtopic string, c *Client) error {
 	if chanID == "" || thingKey == "" {
-		return svcerr.ErrAuthentication
+		return svcerr.NewUserAuthNError(nil)
 	}
 
 	thingID, err := svc.authorize(ctx, thingKey, chanID, auth.SubscribePermission)

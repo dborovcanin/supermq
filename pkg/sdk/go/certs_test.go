@@ -192,7 +192,7 @@ func TestViewCert(t *testing.T) {
 			token:  "",
 			cRes:   c,
 			err:    errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrBearerToken), http.StatusUnauthorized),
-			svcerr: errors.Wrap(svcerr.ErrAuthentication, apiutil.ErrBearerToken),
+			svcerr: svcerr.NewUserAuthNError(apiutil.ErrBearerToken),
 		},
 	}
 
@@ -250,7 +250,7 @@ func TestViewCertByThing(t *testing.T) {
 			token:   "",
 			page:    certs.Page{Certs: []certs.Cert{}},
 			err:     errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrBearerToken), http.StatusUnauthorized),
-			svcerr:  errors.Wrap(svcerr.ErrAuthentication, apiutil.ErrBearerToken),
+			svcerr:  svcerr.NewUserAuthNError(apiutil.ErrBearerToken),
 		},
 	}
 	for _, tc := range cases {
@@ -294,7 +294,7 @@ func TestRevokeCert(t *testing.T) {
 			token:       authmocks.InvalidValue,
 			svcResponse: certs.Revoke{RevocationTime: time.Now()},
 			err:         errors.NewSDKErrorWithStatus(svcerr.ErrAuthentication, http.StatusUnauthorized),
-			svcerr:      errors.Wrap(svcerr.ErrAuthentication, svcerr.ErrAuthentication),
+			svcerr:      svcerr.NewUserAuthNError(svcerr.ErrAuthentication),
 		},
 		{
 			desc:        "revoke non-existing cert",
@@ -310,7 +310,7 @@ func TestRevokeCert(t *testing.T) {
 			token:       "",
 			svcResponse: certs.Revoke{RevocationTime: time.Now()},
 			err:         errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrBearerToken), http.StatusUnauthorized),
-			svcerr:      errors.Wrap(svcerr.ErrAuthentication, apiutil.ErrBearerToken),
+			svcerr:      svcerr.NewUserAuthNError(apiutil.ErrBearerToken),
 		},
 		{
 			desc:        "revoke existing cert",

@@ -8,15 +8,21 @@ import "github.com/absmach/magistrala/pkg/errors"
 // Wrapper for Service errors.
 // ErrAuthentication indicates failure occurred while authenticating the entity.
 type AuthenticationError struct {
-	Err errors.Error
+	*errors.CustomError
 }
 
 func (ae *AuthenticationError) Error() string {
 	return ae.Err.Error()
 }
 
-var ErrAuthentication = &AuthenticationError{
-	Err: errors.New("failed to perform authentication over the entity"),
+// var ErrAuthentication = "failed to perform authentication for user"
+
+func NewUserAuthNError(err error) *AuthenticationError {
+	return &AuthenticationError{errors.NewCustomError("failed to perform authentication over the user", err)}
+}
+
+func NewThingAuthNError(err error) *AuthenticationError {
+	return &AuthenticationError{errors.NewCustomError("failed to perform authentication over thing", err)}
 }
 
 // ErrAuthorization indicates failure occurred while authorizing the entity.

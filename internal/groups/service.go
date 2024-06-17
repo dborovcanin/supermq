@@ -684,7 +684,7 @@ func (svc service) changeGroupStatus(ctx context.Context, token string, group gr
 func (svc service) identify(ctx context.Context, token string) (*magistrala.IdentityRes, error) {
 	res, err := svc.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return nil, errors.Wrap(svcerr.ErrAuthentication, err)
+		return nil, svcerr.NewUserAuthNError(err)
 	}
 	if res.GetId() == "" || res.GetDomainId() == "" {
 		return nil, svcerr.ErrDomainAuthorization

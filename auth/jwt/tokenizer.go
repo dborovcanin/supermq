@@ -70,7 +70,7 @@ func (tok *tokenizer) Issue(key auth.Key) (string, error) {
 	}
 	tkn, err := builder.Build()
 	if err != nil {
-		return "", errors.Wrap(svcerr.ErrAuthentication, err)
+		return "", svcerr.NewUserAuthNError(err)
 	}
 	signedTkn, err := jwt.Sign(tkn, jwt.WithKey(jwa.HS512, tok.secret))
 	if err != nil {
@@ -82,12 +82,12 @@ func (tok *tokenizer) Issue(key auth.Key) (string, error) {
 func (tok *tokenizer) Parse(token string) (auth.Key, error) {
 	tkn, err := tok.validateToken(token)
 	if err != nil {
-		return auth.Key{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return auth.Key{}, svcerr.NewUserAuthNError(err)
 	}
 
 	key, err := toKey(tkn)
 	if err != nil {
-		return auth.Key{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return auth.Key{}, svcerr.NewUserAuthNError(err)
 	}
 
 	return key, nil

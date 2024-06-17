@@ -492,7 +492,7 @@ func encodeError(err error) error {
 		err == apiutil.ErrMissingPolicyObj,
 		err == apiutil.ErrMalformedPolicyAct:
 		return status.Error(codes.InvalidArgument, err.Error())
-	case errors.Contains(err, svcerr.ErrAuthentication),
+	case errors.Contains(err, &svcerr.AuthenticationError{}),
 		errors.Contains(err, auth.ErrKeyExpired),
 		err == apiutil.ErrMissingEmail,
 		err == apiutil.ErrBearerToken:

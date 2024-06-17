@@ -87,7 +87,7 @@ type Cert struct {
 func (cs *certsService) IssueCert(ctx context.Context, token, thingID, ttl string) (Cert, error) {
 	owner, err := cs.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return Cert{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return Cert{}, svcerr.NewUserAuthNError(err)
 	}
 
 	thing, err := cs.sdk.Thing(thingID, token)
@@ -120,7 +120,7 @@ func (cs *certsService) RevokeCert(ctx context.Context, token, thingID string) (
 	var revoke Revoke
 	u, err := cs.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return revoke, errors.Wrap(svcerr.ErrAuthentication, err)
+		return revoke, svcerr.NewUserAuthNError(err)
 	}
 	thing, err := cs.sdk.Thing(thingID, token)
 	if err != nil {
@@ -150,7 +150,7 @@ func (cs *certsService) RevokeCert(ctx context.Context, token, thingID string) (
 func (cs *certsService) ListCerts(ctx context.Context, token, thingID string, offset, limit uint64) (Page, error) {
 	u, err := cs.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return Page{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return Page{}, svcerr.NewUserAuthNError(err)
 	}
 
 	cp, err := cs.certsRepo.RetrieveByThing(ctx, u.GetId(), thingID, offset, limit)
@@ -173,7 +173,7 @@ func (cs *certsService) ListCerts(ctx context.Context, token, thingID string, of
 func (cs *certsService) ListSerials(ctx context.Context, token, thingID string, offset, limit uint64) (Page, error) {
 	u, err := cs.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return Page{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return Page{}, svcerr.NewUserAuthNError(err)
 	}
 
 	return cs.certsRepo.RetrieveByThing(ctx, u.GetId(), thingID, offset, limit)
@@ -182,7 +182,7 @@ func (cs *certsService) ListSerials(ctx context.Context, token, thingID string, 
 func (cs *certsService) ViewCert(ctx context.Context, token, serialID string) (Cert, error) {
 	u, err := cs.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return Cert{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return Cert{}, svcerr.NewUserAuthNError(err)
 	}
 
 	cert, err := cs.certsRepo.RetrieveBySerial(ctx, u.GetId(), serialID)

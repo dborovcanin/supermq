@@ -92,7 +92,7 @@ func (cfg *config) UserInfo(accessToken string) (mfclients.Client, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return mfclients.Client{}, svcerr.ErrAuthentication
+		return mfclients.Client{}, svcerr.NewUserAuthNError(nil)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -111,7 +111,7 @@ func (cfg *config) UserInfo(accessToken string) (mfclients.Client, error) {
 	}
 
 	if user.ID == "" || user.Name == "" || user.Email == "" {
-		return mfclients.Client{}, svcerr.ErrAuthentication
+		return mfclients.Client{}, svcerr.NewUserAuthNError(nil)
 	}
 
 	client := mfclients.Client{

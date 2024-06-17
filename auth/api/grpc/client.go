@@ -740,7 +740,7 @@ func decodeError(err error) error {
 		case codes.AlreadyExists:
 			return errors.Wrap(svcerr.ErrConflict, errors.New(st.Message()))
 		case codes.Unauthenticated:
-			return errors.Wrap(svcerr.ErrAuthentication, errors.New(st.Message()))
+			return svcerr.NewUserAuthNError(errors.New(st.Message()))
 		case codes.OK:
 			if msg := st.Message(); msg != "" {
 				return errors.Wrap(errors.ErrUnidentified, errors.New(msg))

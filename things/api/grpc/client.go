@@ -79,7 +79,7 @@ func decodeError(err error) error {
 	if st, ok := status.FromError(err); ok {
 		switch st.Code() {
 		case codes.Unauthenticated:
-			return errors.Wrap(svcerr.ErrAuthentication, errors.New(st.Message()))
+			return svcerr.NewUserAuthNError(errors.New(st.Message()))
 		case codes.PermissionDenied:
 			return errors.Wrap(svcerr.ErrAuthorization, errors.New(st.Message()))
 		case codes.InvalidArgument:

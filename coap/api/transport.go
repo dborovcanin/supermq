@@ -114,7 +114,7 @@ func handler(w mux.ResponseWriter, m *mux.Message) {
 			resp.SetCode(codes.MethodNotAllowed)
 		case errors.Contains(err, svcerr.ErrAuthorization):
 			resp.SetCode(codes.Forbidden)
-		case errors.Contains(err, svcerr.ErrAuthentication):
+		case errors.Contains(err, &svcerr.AuthenticationError{}):
 			resp.SetCode(codes.Unauthorized)
 		default:
 			resp.SetCode(codes.InternalServerError)

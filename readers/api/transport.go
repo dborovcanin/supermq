@@ -220,7 +220,7 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 		errors.Contains(err, apiutil.ErrMissingFrom),
 		errors.Contains(err, apiutil.ErrMissingTo):
 		w.WriteHeader(http.StatusBadRequest)
-	case errors.Contains(err, svcerr.ErrAuthentication),
+	case errors.Contains(err, &svcerr.AuthenticationError{}),
 		errors.Contains(err, svcerr.ErrAuthorization),
 		errors.Contains(err, apiutil.ErrBearerToken):
 		w.WriteHeader(http.StatusUnauthorized)

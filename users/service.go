@@ -98,7 +98,7 @@ func (svc service) RegisterClient(ctx context.Context, token string, cli mgclien
 func (svc service) IssueToken(ctx context.Context, identity, secret, domainID string) (*magistrala.Token, errors.Error) {
 	dbUser, err := svc.clients.RetrieveByIdentity(ctx, identity)
 	if err != nil {
-		return &magistrala.Token{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return &magistrala.Token{}, svcerr.NewUserAuthNError(err)
 	}
 	if err := svc.hasher.Compare(secret, dbUser.Credentials.Secret); err != nil {
 		return &magistrala.Token{}, errors.Wrap(svcerr.ErrLogin, err)
@@ -130,10 +130,10 @@ func (svc service) RefreshToken(ctx context.Context, refreshToken, domainID stri
 
 	dbUser, err := svc.clients.RetrieveByID(ctx, tokenUserID)
 	if err != nil {
-		return &magistrala.Token{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return &magistrala.Token{}, svcerr.NewUserAuthNError(err)
 	}
 	if dbUser.Status == mgclients.DisabledStatus {
-		return &magistrala.Token{}, errors.Wrap(svcerr.ErrAuthentication, errLoginDisableUser)
+		return &magistrala.Token{}, svcerr.NewUserAuthNError(errLoginDisableUser)
 	}
 
 	tk, Err := svc.auth.Refresh(ctx, &magistrala.RefreshReq{RefreshToken: refreshToken, DomainId: &d})
@@ -570,7 +570,7 @@ func (svc *service) checkSuperAdmin(ctx context.Context, adminID string) errors.
 func (svc service) identify(ctx context.Context, token string) (*magistrala.IdentityRes, errors.Error) {
 	res, err := svc.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return &magistrala.IdentityRes{}, errors.Wrap(svcerr.ErrAuthentication, err)
+		return &magistrala.IdentityRes{}, svcerr.NewUserAuthNError(err)
 	}
 	return res, nil
 }
@@ -627,7 +627,7 @@ func (svc service) OAuthCallback(ctx context.Context, client mgclients.Client) (
 func (svc service) Identify(ctx context.Context, token string) (string, errors.Error) {
 	user, err := svc.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return "", errors.Wrap(svcerr.ErrAuthentication, err)
+		return "", svcerr.NewUserAuthNError(err)
 	}
 	return user.GetUserId(), nil
 }

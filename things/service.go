@@ -568,7 +568,7 @@ func (svc service) Identify(ctx context.Context, key string) (string, errors.Err
 func (svc service) identify(ctx context.Context, token string) (*magistrala.IdentityRes, errors.Error) {
 	res, err := svc.auth.Identify(ctx, &magistrala.IdentityReq{Token: token})
 	if err != nil {
-		return nil, errors.Wrap(svcerr.ErrAuthentication, err)
+		return nil, svcerr.NewUserAuthNError(err)
 	}
 	if res.GetId() == "" || res.GetDomainId() == "" {
 		return nil, svcerr.ErrDomainAuthorization.Err

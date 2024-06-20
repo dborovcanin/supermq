@@ -5,59 +5,44 @@ package service
 
 import "github.com/absmach/magistrala/pkg/errors"
 
-// Wrapper for Service errors.
-var (
-	// ErrAuthentication indicates failure occurred while authenticating the entity.
-	ErrAuthentication = errors.New("failed to perform authentication over the entity")
+// Wrapper service type errors
+type (
 
-	// ErrAuthorization indicates failure occurred while authorizing the entity.
-	ErrAuthorization = errors.New("failed to perform authorization over the entity")
+	// AuthenticationError indicates failure occurred while authenticating the entity.
+	AuthenticationError struct {
+		*errors.CustomError
+	}
 
-	// ErrDomainAuthorization indicates failure occurred while authorizing the domain.
-	ErrDomainAuthorization = errors.New("failed to perform authorization over the domain")
+	// AuthorizationError indicates failure occurred while authorizing the entity.
+	AuthorizationError struct {
+		*errors.CustomError
+	}
 
-	// ErrLogin indicates wrong login credentials.
-	ErrLogin = errors.New("invalid user id or secret")
+	// MalformedEntityError indicates a malformed entity specification.
+	MalformedError struct {
+		*errors.CustomError
+	}
 
-	// ErrMalformedEntity indicates a malformed entity specification.
-	ErrMalformedEntity = errors.New("malformed entity specification")
+	// ConflictError indicates unique constraint violation.
+	ConflictError struct {
+		*errors.CustomError
+	}
 
-	// ErrNotFound indicates a non-existent entity request.
-	ErrNotFound = errors.New("entity not found")
+	// NotFoundError indicates that resource is not found at the given location.
+	NotFoundError struct {
+		*errors.CustomError
+	}
 
-	// ErrConflict indicates that entity already exists.
-	ErrConflict = errors.New("entity already exists")
-
-	// ErrCreateEntity indicates error in creating entity or entities.
-	ErrCreateEntity = errors.New("failed to create entity")
-
-	// ErrRemoveEntity indicates error in removing entity.
-	ErrRemoveEntity = errors.New("failed to remove entity")
-
-	// ErrViewEntity indicates error in viewing entity or entities.
-	ErrViewEntity = errors.New("view entity failed")
-
-	// ErrUpdateEntity indicates error in updating entity or entities.
-	ErrUpdateEntity = errors.New("update entity failed")
-
-	// ErrInvalidStatus indicates an invalid status.
-	ErrInvalidStatus = errors.New("invalid status")
-
-	// ErrInvalidRole indicates that an invalid role.
-	ErrInvalidRole = errors.New("invalid client role")
-
-	// ErrInvalidPolicy indicates that an invalid policy.
-	ErrInvalidPolicy = errors.New("invalid policy")
-
-	// ErrEnableClient indicates error in enabling client.
-	ErrEnableClient = errors.New("failed to enable client")
-
-	// ErrDisableClient indicates error in disabling client.
-	ErrDisableClient = errors.New("failed to disable client")
-
-	// ErrAddPolicies indicates error in adding policies.
-	ErrAddPolicies = errors.New("failed to add policies")
-
-	// ErrDeletePolicies indicates error in removing policies.
-	ErrDeletePolicies = errors.New("failed to remove policies")
+	// OtherError indicates unknown error usually caused by internal.
+	OtherError struct {
+		*errors.CustomError
+	}
 )
+
+func NewAuthNError(err error) error {
+	return &AuthenticationError{errors.NewErr("failed to perform authentication over the user", err)}
+}
+
+func NewAuthZError(err error) error {
+	return &AuthenticationError{errors.NewErr("failed to perform authorization over the user", err)}
+}

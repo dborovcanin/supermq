@@ -15,30 +15,37 @@ type Error interface {
 	// Msg returns error message.
 	Msg() string
 
-	// Err returns wrapped error.
-	Err() Error
+	// Unwrap returns wrapped error.
+	Unwrap() error
 
 	// MarshalJSON returns a marshaled error.
 	MarshalJSON() ([]byte, error)
 }
 
-var _ Error = (*customError)(nil)
+var _ Error = (*CustomError)(nil)
 
-// customError represents a Magistrala error.
-type customError struct {
+// CustomError represents a Magistrala error.
+type CustomError struct {
 	msg string
 	err Error
 }
 
 // New returns an Error that formats as the given text.
 func New(text string) Error {
-	return &customError{
+	return &CustomError{
 		msg: text,
 		err: nil,
 	}
 }
 
-func (ce *customError) Error() string {
+func NewErr(text string, err error) *CustomError {
+	return &CustomError{
+		msg: text,
+		err: cast(err),
+	}
+}
+
+func (ce *CustomError) Error() string {
 	if ce == nil {
 		return ""
 	}
@@ -48,18 +55,20 @@ func (ce *customError) Error() string {
 	return ce.msg + " : " + ce.err.Error()
 }
 
-func (ce *customError) Msg() string {
+func (ce *CustomError) Msg() string {
 	return ce.msg
 }
 
-func (ce *customError) Err() Error {
+func (ce *CustomError) Unwrap() error {
 	return ce.err
 }
 
-func (ce *customError) MarshalJSON() ([]byte, error) {
+func (ce *CustomError) MarshalJSON() ([]byte, error) {
 	var val string
-	if e := ce.Err(); e != nil {
-		val = e.Msg()
+	if e := ce.Unwrap(); e != nil {
+		if e1, ok := e.(Error); ok {
+			val = e1.Msg()
+		}
 	}
 	return json.Marshal(&struct {
 		Err string `json:"error"`
@@ -80,7 +89,7 @@ func Contains(e1, e2 error) bool {
 		if ce.Msg() == e2.Error() {
 			return true
 		}
-		return Contains(ce.Err(), e2)
+		return Contains(ce.Unwrap(), e2)
 	}
 	return e1.Error() == e2.Error()
 }
@@ -91,12 +100,12 @@ func Wrap(wrapper, err error) error {
 		return wrapper
 	}
 	if w, ok := wrapper.(Error); ok {
-		return &customError{
+		return &CustomError{
 			msg: w.Msg(),
 			err: cast(err),
 		}
 	}
-	return &customError{
+	return &CustomError{
 		msg: wrapper.Error(),
 		err: cast(err),
 	}
@@ -105,10 +114,10 @@ func Wrap(wrapper, err error) error {
 // Unwrap returns the wrapper and the error by separating the Wrapper from the error.
 func Unwrap(err error) (error, error) {
 	if ce, ok := err.(Error); ok {
-		if ce.Err() == nil {
+		if ce.Unwrap() == nil {
 			return nil, New(ce.Msg())
 		}
-		return New(ce.Msg()), ce.Err()
+		return New(ce.Msg()), ce.Unwrap()
 	}
 
 	return nil, err
@@ -121,7 +130,7 @@ func cast(err error) Error {
 	if e, ok := err.(Error); ok {
 		return e
 	}
-	return &customError{
+	return &CustomError{
 		msg: err.Error(),
 		err: nil,
 	}

@@ -32,6 +32,10 @@ type (
 	OtherError struct {
 		*errors.CustomError
 	}
+
+	NotFoundError struct {
+		*errors.CustomError
+	}
 )
 
 func NewConstraintError(text string, err error) *ConstraintError {
@@ -56,4 +60,8 @@ func NewTypeError(text string, err error) *TypeError {
 
 func NewOtherError(text string, err error) *OtherError {
 	return &OtherError{errors.NewErr(text, err)}
+}
+
+func NewNotFoundError(text string, err error) *NotFoundError {
+	return &NotFoundError{errors.NewErr(text, err)}
 }

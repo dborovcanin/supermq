@@ -20,6 +20,11 @@ import (
 	"github.com/jackc/pgtype"
 )
 
+var (
+	errMarshalMeta   = repoerr.NewTypeError("failed to marshal JSON metadata", nil)
+	errUnmarshalMeta = repoerr.NewTypeError("failed to unmarshal JSON metadata", nil)
+)
+
 type Repository struct {
 	DB postgres.Database
 }
@@ -355,7 +360,7 @@ func ToDBClient(c clients.Client) (DBClient, error) {
 	if len(c.Metadata) > 0 {
 		b, err := json.Marshal(c.Metadata)
 		if err != nil {
-			return DBClient{}, repoerr.NewTypeError("failed to convert metadata", err)
+			return DBClient{}, errMarshalMeta
 		}
 		data = b
 	}
@@ -392,7 +397,7 @@ func ToClient(c DBClient) (clients.Client, error) {
 	var metadata clients.Metadata
 	if c.Metadata != nil {
 		if err := json.Unmarshal([]byte(c.Metadata), &metadata); err != nil {
-			return clients.Client{}, errors.Wrap(errors.ErrMalformedEntity, err)
+			return clients.Client{}, errUnmarshalMeta
 		}
 	}
 	var tags []string

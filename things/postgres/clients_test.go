@@ -296,7 +296,7 @@ func TestClientsSave(t *testing.T) {
 					},
 				},
 			},
-			err: errors.ErrMalformedEntity,
+			err: repoerr.NewTypeError("failed to marshal JSON metadata", nil),
 		},
 	}
 	for _, tc := range cases {

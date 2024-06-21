@@ -78,18 +78,18 @@ func (repo clientRepo) CheckSuperAdmin(ctx context.Context, adminID string) erro
 	q := "SELECT 1 FROM clients WHERE id = $1 AND role = $2"
 	rows, err := repo.DB.QueryContext(ctx, q, adminID, mgclients.AdminRole)
 	if err != nil {
-		return postgres.HandleError(repoerr.ErrViewEntity, err)
+		return postgres.HandleRepoError("failed to fetch admin user", err)
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		if err := rows.Err(); err != nil {
-			return postgres.HandleError(repoerr.ErrViewEntity, err)
+			return postgres.HandleRepoError("failed process db response", err)
 		}
 		return nil
 	}
 
-	return repoerr.ErrNotFound
+	return repoerr.NewNotFoundError("super admin not found", nil)
 }
 
 func (repo clientRepo) RetrieveByID(ctx context.Context, id string) (mgclients.Client, error) {
@@ -102,14 +102,14 @@ func (repo clientRepo) RetrieveByID(ctx context.Context, id string) (mgclients.C
 
 	rows, err := repo.DB.NamedQueryContext(ctx, q, dbc)
 	if err != nil {
-		return mgclients.Client{}, postgres.HandleError(repoerr.ErrViewEntity, err)
+		return mgclients.Client{}, postgres.HandleRepoError("failed to retrieve user", err)
 	}
 	defer rows.Close()
 
 	dbc = pgclients.DBClient{}
 	if rows.Next() {
 		if err = rows.StructScan(&dbc); err != nil {
-			return mgclients.Client{}, postgres.HandleError(repoerr.ErrViewEntity, err)
+			return mgclients.Client{}, postgres.HandleRepoError("failed to retrieve user", err)
 		}
 
 		client, err := pgclients.ToClient(dbc)
@@ -120,7 +120,7 @@ func (repo clientRepo) RetrieveByID(ctx context.Context, id string) (mgclients.C
 		return client, nil
 	}
 
-	return mgclients.Client{}, repoerr.ErrNotFound
+	return mgclients.Client{}, repoerr.NewNotFoundError("user not found", nil)
 }
 
 func (repo clientRepo) RetrieveAll(ctx context.Context, pm mgclients.Page) (mgclients.ClientsPage, error) {
@@ -134,11 +134,11 @@ func (repo clientRepo) RetrieveAll(ctx context.Context, pm mgclients.Page) (mgcl
 
 	dbPage, err := pgclients.ToDBClientsPage(pm)
 	if err != nil {
-		return mgclients.ClientsPage{}, errors.Wrap(repoerr.ErrFailedToRetrieveAllGroups, err)
+		return mgclients.ClientsPage{}, repoerr.NewTypeError("failed to convert users page", err)
 	}
 	rows, err := repo.DB.NamedQueryContext(ctx, q, dbPage)
 	if err != nil {
-		return mgclients.ClientsPage{}, errors.Wrap(repoerr.ErrFailedToRetrieveAllGroups, err)
+		return mgclients.ClientsPage{}, repoerr.NewReadError("failed to fetch users", err)
 	}
 	defer rows.Close()
 
@@ -146,7 +146,7 @@ func (repo clientRepo) RetrieveAll(ctx context.Context, pm mgclients.Page) (mgcl
 	for rows.Next() {
 		dbc := pgclients.DBClient{}
 		if err := rows.StructScan(&dbc); err != nil {
-			return mgclients.ClientsPage{}, errors.Wrap(repoerr.ErrViewEntity, err)
+			return mgclients.ClientsPage{}, repoerr.NewTypeError("failed to convert db data", err)
 		}
 
 		c, err := pgclients.ToClient(dbc)
@@ -160,7 +160,7 @@ func (repo clientRepo) RetrieveAll(ctx context.Context, pm mgclients.Page) (mgcl
 
 	total, err := postgres.Total(ctx, repo.DB, cq, dbPage)
 	if err != nil {
-		return mgclients.ClientsPage{}, errors.Wrap(repoerr.ErrViewEntity, err)
+		return mgclients.ClientsPage{}, repoerr.NewReadError("failed to calculate total", err)
 	}
 
 	page := mgclients.ClientsPage{
@@ -182,21 +182,21 @@ func (repo clientRepo) UpdateRole(ctx context.Context, client mgclients.Client) 
 
 	dbc, err := pgclients.ToDBClient(client)
 	if err != nil {
-		return mgclients.Client{}, errors.Wrap(repoerr.ErrUpdateEntity, err)
+		return mgclients.Client{}, repoerr.NewTypeError("failed to convert to db format", err)
 	}
 
 	row, err := repo.DB.NamedQueryContext(ctx, query, dbc)
 	if err != nil {
-		return mgclients.Client{}, postgres.HandleError(err, repoerr.ErrUpdateEntity)
+		return mgclients.Client{}, postgres.HandleRepoError("failed write update", err)
 	}
 
 	defer row.Close()
 	if ok := row.Next(); !ok {
-		return mgclients.Client{}, errors.Wrap(repoerr.ErrNotFound, row.Err())
+		return mgclients.Client{}, repoerr.NewNotFoundError("user to update not found", row.Err())
 	}
 	dbc = pgclients.DBClient{}
 	if err := row.StructScan(&dbc); err != nil {
-		return mgclients.Client{}, err
+		return mgclients.Client{}, repoerr.NewTypeError("failed to convert from db response", err)
 	}
 
 	return pgclients.ToClient(dbc)

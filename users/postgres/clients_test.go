@@ -181,7 +181,7 @@ func TestClientsSave(t *testing.T) {
 					"key": make(chan int),
 				},
 			},
-			err: repoerr.NewTypeError("failed to convert metadata", nil),
+			err: repoerr.NewTypeError("failed to marshal JSON metadata", nil),
 		},
 	}
 
@@ -235,7 +235,7 @@ func TestIsPlatformAdmin(t *testing.T) {
 				Status:   mgclients.EnabledStatus,
 				Role:     mgclients.UserRole,
 			},
-			err: repoerr.ErrNotFound,
+			err: repoerr.NewNotFoundError("super admin not found", nil),
 		},
 	}
 
@@ -281,12 +281,12 @@ func TestRetrieveByID(t *testing.T) {
 		{
 			desc:     "retrieve non-existing client",
 			clientID: invalidName,
-			err:      repoerr.ErrNotFound,
+			err:      repoerr.NewNotFoundError("user not found", nil),
 		},
 		{
 			desc:     "retrieve with empty client id",
 			clientID: "",
-			err:      repoerr.ErrNotFound,
+			err:      repoerr.NewNotFoundError("user not found", nil),
 		},
 	}
 
@@ -742,7 +742,7 @@ func TestUpdateRole(t *testing.T) {
 			desc:    "update role with invalid client id",
 			client:  mgclients.Client{ID: invalidName},
 			newRole: mgclients.AdminRole,
-			err:     repoerr.ErrNotFound,
+			err:     repoerr.NewNotFoundError("user to update not found", nil),
 		},
 	}
 

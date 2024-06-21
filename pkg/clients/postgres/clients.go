@@ -355,7 +355,7 @@ func ToDBClient(c clients.Client) (DBClient, error) {
 	if len(c.Metadata) > 0 {
 		b, err := json.Marshal(c.Metadata)
 		if err != nil {
-			return DBClient{}, errors.Wrap(repoerr.ErrMalformedEntity, err)
+			return DBClient{}, repoerr.NewTypeError("failed to convert metadata", err)
 		}
 		data = b
 	}

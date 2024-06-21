@@ -22,6 +22,22 @@ const (
 
 // HandleError handles the error and returns a wrapped error.
 // It checks the error code and returns a specific error.
+func HandleRepoError(text string, err error) error {
+	pqErr, ok := err.(*pgconn.PgError)
+	if ok {
+		switch pqErr.Code {
+		case errDuplicate:
+			return repoerr.NewWriteError(text, err)
+		case errInvalid, errInvalidChar, errTruncation, errUntranslatable:
+			return repoerr.NewTypeError(text, err)
+		case errFK:
+			return repoerr.NewConstraintError(text, err)
+		}
+	}
+
+	return repoerr.NewOtherError(text, err)
+}
+
 func HandleError(wrapper, err error) error {
 	pqErr, ok := err.(*pgconn.PgError)
 	if ok {

@@ -8,29 +8,29 @@ import "github.com/absmach/magistrala/pkg/errors"
 // Wrapper for Repository errors.
 var (
 	// ErrMalformedEntity indicates a malformed entity specification.
-	ErrMalformedEntity = errors.New("malformed entity specification")
+	ErrMalformedEntity = &ConstraintError{errors.NewErr("malformed entity specification", nil)}
 
 	// ErrNotFound indicates a non-existent entity request.
-	ErrNotFound = errors.New("entity not found")
+	ErrNotFound = &ReadError{errors.NewErr("entity not found", nil)}
 
 	// ErrConflict indicates that entity already exists.
-	ErrConflict = errors.New("entity already exists")
+	ErrConflict = &WriteError{errors.NewErr("entity already exists", nil)}
 
 	// ErrCreateEntity indicates error in creating entity or entities.
-	ErrCreateEntity = errors.New("failed to create entity in the db")
+	ErrCreateEntity = &WriteError{errors.NewErr("failed to create entity in the db", nil)}
 
 	// ErrViewEntity indicates error in viewing entity or entities.
-	ErrViewEntity = errors.New("view entity failed")
+	ErrViewEntity = &ReadError{errors.NewErr("view entity failed", nil)}
 
 	// ErrUpdateEntity indicates error in updating entity or entities.
-	ErrUpdateEntity = errors.New("update entity failed")
+	ErrUpdateEntity = &WriteError{errors.NewErr("update entity failed", nil)}
 
 	// ErrRemoveEntity indicates error in removing entity.
-	ErrRemoveEntity = errors.New("failed to remove entity")
+	ErrRemoveEntity = &WriteError{errors.NewErr("failed to remove entity", nil)}
 
 	// ErrFailedOpDB indicates a failure in a database operation.
-	ErrFailedOpDB = errors.New("operation on db element failed")
+	ErrFailedOpDB = &ConstraintError{errors.NewErr("operation on db element failed", nil)}
 
 	// ErrFailedToRetrieveAllGroups failed to retrieve groups.
-	ErrFailedToRetrieveAllGroups = errors.New("failed to retrieve all groups")
+	ErrFailedToRetrieveAllGroups = &ReadError{errors.NewErr("failed to retrieve all groups", nil)}
 )

@@ -51,12 +51,12 @@ func (repo clientRepo) Save(ctx context.Context, c mgclients.Client) (mgclients.
         RETURNING id, name, tags, identity, metadata, status, created_at`
 	dbc, err := pgclients.ToDBClient(c)
 	if err != nil {
-		return mgclients.Client{}, errors.Wrap(repoerr.ErrCreateEntity, err)
+		return mgclients.Client{}, repoerr.NewTypeError("failed to convert to DB structure", err)
 	}
 
 	row, err := repo.DB.NamedQueryContext(ctx, q, dbc)
 	if err != nil {
-		return mgclients.Client{}, postgres.HandleError(repoerr.ErrCreateEntity, err)
+		return mgclients.Client{}, postgres.HandleRepoError("failed to create user", err)
 	}
 
 	defer row.Close()

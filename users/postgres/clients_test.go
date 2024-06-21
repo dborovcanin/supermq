@@ -27,6 +27,10 @@ var (
 	namesgen    = namegenerator.NewGenerator()
 )
 
+const (
+	createRepoErrMsg = "failed to create user"
+)
+
 func TestClientsSave(t *testing.T) {
 	t.Cleanup(func() {
 		_, err := db.Exec("DELETE FROM clients")
@@ -70,7 +74,7 @@ func TestClientsSave(t *testing.T) {
 				Metadata: mgclients.Metadata{},
 				Status:   mgclients.EnabledStatus,
 			},
-			err: repoerr.ErrConflict,
+			err: repoerr.NewWriteError(createRepoErrMsg, nil),
 		},
 		{
 			desc: "add client with duplicate client name",
@@ -84,7 +88,7 @@ func TestClientsSave(t *testing.T) {
 				Metadata: mgclients.Metadata{},
 				Status:   mgclients.EnabledStatus,
 			},
-			err: repoerr.ErrConflict,
+			err: repoerr.NewWriteError(createRepoErrMsg, nil),
 		},
 		{
 			desc: "add client with invalid client id",
@@ -98,7 +102,7 @@ func TestClientsSave(t *testing.T) {
 				Metadata: mgclients.Metadata{},
 				Status:   mgclients.EnabledStatus,
 			},
-			err: errors.ErrMalformedEntity,
+			err: repoerr.NewTypeError(createRepoErrMsg, nil),
 		},
 		{
 			desc: "add client with invalid client name",
@@ -112,7 +116,7 @@ func TestClientsSave(t *testing.T) {
 				Metadata: mgclients.Metadata{},
 				Status:   mgclients.EnabledStatus,
 			},
-			err: errors.ErrMalformedEntity,
+			err: repoerr.NewTypeError(createRepoErrMsg, nil),
 		},
 		{
 			desc: "add client with invalid client identity",
@@ -126,7 +130,7 @@ func TestClientsSave(t *testing.T) {
 				Metadata: mgclients.Metadata{},
 				Status:   mgclients.EnabledStatus,
 			},
-			err: errors.ErrMalformedEntity,
+			err: repoerr.NewTypeError(createRepoErrMsg, nil),
 		},
 		{
 			desc: "add client with a missing client name",
@@ -177,13 +181,13 @@ func TestClientsSave(t *testing.T) {
 					"key": make(chan int),
 				},
 			},
-			err: errors.ErrMalformedEntity,
+			err: repoerr.NewTypeError("failed to convert metadata", nil),
 		},
 	}
 
 	for _, tc := range cases {
 		rClient, err := repo.Save(context.Background(), tc.client)
-		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		assert.True(t, errors.ContainsType(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 		if err == nil {
 			rClient.Credentials.Secret = tc.client.Credentials.Secret
 			assert.Equal(t, tc.client, rClient, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.client, rClient))

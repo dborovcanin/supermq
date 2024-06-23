@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	repoerr "github.com/absmach/magistrala/pkg/errors/repository"
 )
 
 // CreateMetadataQuery creates a query to filter by metadata.
@@ -23,7 +25,7 @@ func CreateMetadataQuery(entity string, um map[string]interface{}) (string, []by
 
 	param, err := json.Marshal(um)
 	if err != nil {
-		return "", nil, err
+		return "", nil, repoerr.NewTypeError("failed to marshal JSON metadata", err)
 	}
 	query := fmt.Sprintf("%smetadata @> :metadata", entity)
 

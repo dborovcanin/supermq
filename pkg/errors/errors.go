@@ -100,18 +100,15 @@ func ContainsType(e1, e2 error) bool {
 	if e1 == nil || e2 == nil {
 		return e2 == e1
 	}
-	v1 := reflect.ValueOf(e1)
-	v2 := reflect.ValueOf(e2)
-	if v1.Type() != v2.Type() {
-		return false
-	}
 
 	ce, ok := e1.(Error)
 	if ok {
-		if ce.Msg() == e2.Error() {
+		v1 := reflect.ValueOf(e1)
+		v2 := reflect.ValueOf(e2)
+		if v1.Type() == v2.Type() && ce.Msg() == e2.Error() {
 			return true
 		}
-		return Contains(ce.Unwrap(), e2)
+		return ContainsType(ce.Unwrap(), e2)
 	}
 	return e1.Error() == e2.Error()
 }

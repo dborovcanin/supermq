@@ -909,7 +909,7 @@ func TestRetrieveByIDs(t *testing.T) {
 				},
 				Clients: []mgclients.Client(nil),
 			},
-			err: errors.ErrMalformedEntity,
+			err: repoerr.NewTypeError("failed to marshal JSON metadata", nil),
 		},
 	}
 
@@ -922,7 +922,7 @@ func TestRetrieveByIDs(t *testing.T) {
 			assert.Equal(t, c.response.Offset, response.Offset)
 			assert.ElementsMatch(t, response.Clients, c.response.Clients)
 		default:
-			assert.True(t, errors.Contains(err, c.err), fmt.Sprintf("expected %s to contain %s\n", err, c.err))
+			assert.True(t, errors.ContainsType(err, c.err), fmt.Sprintf("%s: expected %s to contain %s\n", c.desc, err, c.err))
 		}
 	}
 }

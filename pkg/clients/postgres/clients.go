@@ -470,7 +470,7 @@ type dbClientsPage struct {
 func PageQuery(pm clients.Page) (string, error) {
 	mq, _, err := postgres.CreateMetadataQuery("", pm.Metadata)
 	if err != nil {
-		return "", errors.Wrap(errors.ErrMalformedEntity, err)
+		return "", err
 	}
 	var query []string
 	var emq string

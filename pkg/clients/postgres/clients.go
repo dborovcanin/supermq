@@ -20,11 +20,11 @@ import (
 )
 
 var (
-	errMarshalMeta   = "failed to marshal JSON metadata"
-	errUnmarshalMeta = "failed to unmarshal JSON metadata"
-	errFailedScan    = "failed to scan DB value to struct"
-	errFailedQuery   = "failed to execute DB query"
-	errFailedTotal   = "failed to calculate total"
+	MsgErrMarshalMeta   = "failed to marshal JSON metadata"
+	MsgErrUnmarshalMeta = "failed to unmarshal JSON metadata"
+	MsgErrFailedScan    = "failed to scan DB value to struct"
+	MsgErrFailedQuery   = "failed to execute DB query"
+	MsgErrFailedTotal   = "failed to calculate total"
 )
 
 type Repository struct {
@@ -37,6 +37,7 @@ func (repo *Repository) Update(ctx context.Context, client clients.Client) (clie
 	if client.Name != "" {
 		query = append(query, "name = :name,")
 	}
+
 	if client.Metadata != nil {
 		query = append(query, "metadata = :metadata,")
 	}
@@ -102,14 +103,14 @@ func (repo *Repository) RetrieveByID(ctx context.Context, id string) (clients.Cl
 
 	row, err := repo.DB.NamedQueryContext(ctx, q, dbc)
 	if err != nil {
-		return clients.Client{}, repoerr.NewReadError(errFailedQuery, err)
+		return clients.Client{}, repoerr.NewReadError(MsgErrFailedQuery, err)
 	}
 	defer row.Close()
 
 	dbc = DBClient{}
 	if row.Next() {
 		if err := row.StructScan(&dbc); err != nil {
-			return clients.Client{}, repoerr.NewTypeError(errFailedScan, err)
+			return clients.Client{}, repoerr.NewTypeError(MsgErrFailedScan, err)
 		}
 
 		return ToClient(dbc)
@@ -136,7 +137,7 @@ func (repo *Repository) RetrieveByIdentity(ctx context.Context, identity string)
 	dbc = DBClient{}
 	if row.Next() {
 		if err := row.StructScan(&dbc); err != nil {
-			return clients.Client{}, repoerr.NewTypeError(errFailedScan, err)
+			return clients.Client{}, repoerr.NewTypeError(MsgErrFailedScan, err)
 		}
 
 		return ToClient(dbc)
@@ -167,7 +168,7 @@ func (repo *Repository) RetrieveAll(ctx context.Context, pm clients.Page) (clien
 	for rows.Next() {
 		dbc := DBClient{}
 		if err := rows.StructScan(&dbc); err != nil {
-			return clients.ClientsPage{}, repoerr.NewTypeError(errFailedScan, err)
+			return clients.ClientsPage{}, repoerr.NewTypeError(MsgErrFailedScan, err)
 		}
 
 		c, err := ToClient(dbc)
@@ -181,7 +182,7 @@ func (repo *Repository) RetrieveAll(ctx context.Context, pm clients.Page) (clien
 
 	total, err := postgres.Total(ctx, repo.DB, cq, dbPage)
 	if err != nil {
-		return clients.ClientsPage{}, repoerr.NewReadError(errFailedTotal, err)
+		return clients.ClientsPage{}, repoerr.NewReadError(MsgErrFailedTotal, err)
 	}
 
 	page := clients.ClientsPage{
@@ -207,7 +208,7 @@ func (repo *Repository) RetrieveAllBasicInfo(ctx context.Context, pm clients.Pag
 	q := fmt.Sprintf(`SELECT c.id, c.name, c.created_at, c.updated_at FROM clients c %s LIMIT :limit OFFSET :offset;`, sq)
 	rows, err := repo.DB.NamedQueryContext(ctx, q, dbPage)
 	if err != nil {
-		return clients.ClientsPage{}, repoerr.NewReadError(errFailedQuery, err)
+		return clients.ClientsPage{}, repoerr.NewReadError(MsgErrFailedQuery, err)
 	}
 	defer rows.Close()
 
@@ -215,7 +216,7 @@ func (repo *Repository) RetrieveAllBasicInfo(ctx context.Context, pm clients.Pag
 	for rows.Next() {
 		dbc := DBClient{}
 		if err := rows.StructScan(&dbc); err != nil {
-			return clients.ClientsPage{}, repoerr.NewTypeError(errFailedScan, err)
+			return clients.ClientsPage{}, repoerr.NewTypeError(MsgErrFailedScan, err)
 		}
 
 		c, err := ToClient(dbc)
@@ -229,7 +230,7 @@ func (repo *Repository) RetrieveAllBasicInfo(ctx context.Context, pm clients.Pag
 	cq := fmt.Sprintf(`SELECT COUNT(*) FROM clients c %s;`, tq)
 	total, err := postgres.Total(ctx, repo.DB, cq, dbPage)
 	if err != nil {
-		return clients.ClientsPage{}, repoerr.NewReadError(errFailedTotal, err)
+		return clients.ClientsPage{}, repoerr.NewReadError(MsgErrFailedTotal, err)
 	}
 
 	page := clients.ClientsPage{
@@ -272,7 +273,7 @@ func (repo *Repository) RetrieveAllByIDs(ctx context.Context, pm clients.Page) (
 	for rows.Next() {
 		dbc := DBClient{}
 		if err := rows.StructScan(&dbc); err != nil {
-			return clients.ClientsPage{}, repoerr.NewTypeError(errFailedScan, err)
+			return clients.ClientsPage{}, repoerr.NewTypeError(MsgErrFailedScan, err)
 		}
 
 		c, err := ToClient(dbc)
@@ -286,7 +287,7 @@ func (repo *Repository) RetrieveAllByIDs(ctx context.Context, pm clients.Page) (
 
 	total, err := postgres.Total(ctx, repo.DB, cq, dbPage)
 	if err != nil {
-		return clients.ClientsPage{}, repoerr.NewReadError(errFailedTotal, err)
+		return clients.ClientsPage{}, repoerr.NewReadError(MsgErrFailedTotal, err)
 	}
 
 	page := clients.ClientsPage{
@@ -316,7 +317,7 @@ func (repo *Repository) update(ctx context.Context, client clients.Client, query
 	dbc = DBClient{}
 	if row.Next() {
 		if err := row.StructScan(&dbc); err != nil {
-			return clients.Client{}, repoerr.NewTypeError(errFailedScan, err)
+			return clients.Client{}, repoerr.NewTypeError(MsgErrFailedScan, err)
 		}
 
 		return ToClient(dbc)
@@ -360,7 +361,7 @@ func ToDBClient(c clients.Client) (DBClient, error) {
 	if len(c.Metadata) > 0 {
 		b, err := json.Marshal(c.Metadata)
 		if err != nil {
-			return DBClient{}, repoerr.NewTypeError(errMarshalMeta, err)
+			return DBClient{}, repoerr.NewTypeError(MsgErrMarshalMeta, err)
 		}
 		data = b
 	}
@@ -397,7 +398,7 @@ func ToClient(c DBClient) (clients.Client, error) {
 	var metadata clients.Metadata
 	if c.Metadata != nil {
 		if err := json.Unmarshal([]byte(c.Metadata), &metadata); err != nil {
-			return clients.Client{}, repoerr.NewTypeError(errUnmarshalMeta, err)
+			return clients.Client{}, repoerr.NewTypeError(MsgErrUnmarshalMeta, err)
 		}
 	}
 	var tags []string

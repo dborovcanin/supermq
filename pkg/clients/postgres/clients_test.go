@@ -345,7 +345,7 @@ func TestRetrieveAll(t *testing.T) {
 				},
 				Clients: []mgclients.Client(nil),
 			},
-			err: repoerr.ErrViewEntity,
+			err: repoerr.NewTypeError(pgclients.MsgErrMarshalMeta, nil),
 		},
 		{
 			desc: "with name",
@@ -909,7 +909,7 @@ func TestRetrieveByIDs(t *testing.T) {
 				},
 				Clients: []mgclients.Client(nil),
 			},
-			err: repoerr.NewTypeError("failed to marshal JSON metadata", nil),
+			err: repoerr.NewTypeError(pgclients.MsgErrMarshalMeta, nil),
 		},
 	}
 
@@ -1342,7 +1342,7 @@ func TestUpdate(t *testing.T) {
 					"update": make(chan int),
 				},
 			},
-			err: repoerr.ErrUpdateEntity,
+			err: repoerr.NewTypeError(pgclients.MsgErrMarshalMeta, nil),
 		},
 		{
 			desc:   "update metadata for disabled client",

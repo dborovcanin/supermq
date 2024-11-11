@@ -14,7 +14,7 @@ var cmdBootstrap = []cobra.Command{
 	{
 		Use:   "create <JSON_config> <domain_id> <user_auth_token>",
 		Short: "Create config",
-		Long:  `Create new Thing Bootstrap Config to the user identified by the provided key`,
+		Long:  `Create new Client Bootstrap Config to the user identified by the provided key`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
@@ -39,7 +39,7 @@ var cmdBootstrap = []cobra.Command{
 	{
 		Use:   "get [all | <client_id>] <domain_id> <user_auth_token>",
 		Short: "Get config",
-		Long: `Get Thing Config with given ID belonging to the user identified by the given key.
+		Long: `Get Client Config with given ID belonging to the user identified by the given key.
 				all - lists all config
 				<client_id> - view config of <client_id>`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -77,7 +77,7 @@ var cmdBootstrap = []cobra.Command{
 		Short: "Update config",
 		Long: `Updates editable fields of the provided Config.
 				config <JSON_config> - Updates editable fields of the provided Config.
-				connection <id> <channel_ids> - Updates connections performs update of the channel list corresponding Thing is connected to.
+				connection <id> <channel_ids> - Updates connections performs update of the channel list corresponding Client is connected to.
 				channel_ids - '["channel_id1", ...]'
 				certs  <id> <client_cert> <client_key> <ca> - Update bootstrap config certificates.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -148,7 +148,7 @@ var cmdBootstrap = []cobra.Command{
 	{
 		Use:   "bootstrap [<external_id> <external_key> | secure <external_id> <external_key> <crypto_key> ]",
 		Short: "Bootstrap config",
-		Long: `Returns Config to the Thing with provided external ID using external key.
+		Long: `Returns Config to the Client with provided external ID using external key.
 				secure - Retrieves a configuration with given external ID and encrypted external key.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) < 2 {

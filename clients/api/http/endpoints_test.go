@@ -87,7 +87,7 @@ func toJSON(data interface{}) string {
 	return string(jsonData)
 }
 
-func newThingsServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentication) {
+func newClientsServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentication) {
 	svc := new(mocks.Service)
 	authn := new(authnmocks.Authentication)
 
@@ -98,8 +98,8 @@ func newThingsServer() (*httptest.Server, *mocks.Service, *authnmocks.Authentica
 	return httptest.NewServer(mux), svc, authn
 }
 
-func TestCreateThing(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestCreateClient(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
@@ -124,7 +124,7 @@ func TestCreateThing(t *testing.T) {
 			err:         nil,
 		},
 		{
-			desc:        "register an existing thing",
+			desc:        "register an existing client",
 			client:      client,
 			domainID:    domainID,
 			token:       validToken,
@@ -218,7 +218,7 @@ func TestCreateThing(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/%s/things/", ts.URL, tc.domainID),
+				url:         fmt.Sprintf("%s/%s/clients/", ts.URL, tc.domainID),
 				contentType: tc.contentType,
 				token:       tc.token,
 				body:        strings.NewReader(data),
@@ -242,8 +242,8 @@ func TestCreateThing(t *testing.T) {
 	}
 }
 
-func TestCreateThings(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestCreateClients(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	num := 3
@@ -388,7 +388,7 @@ func TestCreateThings(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/%s/things/bulk", ts.URL, domainID),
+				url:         fmt.Sprintf("%s/%s/clients/bulk", ts.URL, domainID),
 				contentType: tc.contentType,
 				token:       tc.token,
 				body:        strings.NewReader(data),
@@ -414,20 +414,20 @@ func TestCreateThings(t *testing.T) {
 	}
 }
 
-func TestListThings(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestListClients(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
-		desc               string
-		query              string
-		domainID           string
-		token              string
-		listThingsResponse clients.ClientsPage
-		status             int
-		authnRes           mgauthn.Session
-		authnErr           error
-		err                error
+		desc                string
+		query               string
+		domainID            string
+		token               string
+		listClientsResponse clients.ClientsPage
+		status              int
+		authnRes            mgauthn.Session
+		authnErr            error
+		err                 error
 	}{
 		{
 			desc:     "list clients as admin with valid token",
@@ -435,7 +435,7 @@ func TestListThings(t *testing.T) {
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
 			status:   http.StatusOK,
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Total: 1,
 				},
@@ -449,7 +449,7 @@ func TestListThings(t *testing.T) {
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
 			status:   http.StatusOK,
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Total: 1,
 				},
@@ -477,7 +477,7 @@ func TestListThings(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Offset: 1,
 					Total:  1,
@@ -502,7 +502,7 @@ func TestListThings(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Limit: 1,
 					Total: 1,
@@ -536,7 +536,7 @@ func TestListThings(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Total: 1,
 				},
@@ -569,7 +569,7 @@ func TestListThings(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Total: 1,
 				},
@@ -602,7 +602,7 @@ func TestListThings(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Total: 1,
 				},
@@ -635,7 +635,7 @@ func TestListThings(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Total: 1,
 				},
@@ -668,7 +668,7 @@ func TestListThings(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Total: 1,
 				},
@@ -701,7 +701,7 @@ func TestListThings(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID, DomainUserID: domainID + "_" + validID, SuperAdmin: false},
-			listThingsResponse: clients.ClientsPage{
+			listClientsResponse: clients.ClientsPage{
 				Page: clients.Page{
 					Total: 1,
 				},
@@ -736,13 +736,13 @@ func TestListThings(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodGet,
-				url:         ts.URL + "/" + tc.domainID + "/things?" + tc.query,
+				url:         ts.URL + "/" + tc.domainID + "/clients?" + tc.query,
 				contentType: contentType,
 				token:       tc.token,
 			}
 
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("ListClients", mock.Anything, tc.authnRes, "", mock.Anything).Return(tc.listThingsResponse, tc.err)
+			svcCall := svc.On("ListClients", mock.Anything, tc.authnRes, "", mock.Anything).Return(tc.listClientsResponse, tc.err)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 
@@ -760,8 +760,8 @@ func TestListThings(t *testing.T) {
 	}
 }
 
-func TestViewThing(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestViewClient(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
@@ -818,7 +818,7 @@ func TestViewThing(t *testing.T) {
 			req := testRequest{
 				client: ts.Client(),
 				method: http.MethodGet,
-				url:    fmt.Sprintf("%s/%s/things/%s", ts.URL, tc.domainID, tc.id),
+				url:    fmt.Sprintf("%s/%s/clients/%s", ts.URL, tc.domainID, tc.id),
 				token:  tc.token,
 			}
 
@@ -840,15 +840,15 @@ func TestViewThing(t *testing.T) {
 	}
 }
 
-func TestViewThingPerms(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestViewClientPerms(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
 		desc     string
 		domainID string
 		token    string
-		thingID  string
+		clientID string
 		response []string
 		status   int
 		authnRes mgauthn.Session
@@ -860,7 +860,7 @@ func TestViewThingPerms(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			thingID:  client.ID,
+			clientID: client.ID,
 			response: []string{"view", "delete", "membership"},
 			status:   http.StatusOK,
 
@@ -870,7 +870,7 @@ func TestViewThingPerms(t *testing.T) {
 			desc:     "view client permissions with invalid token",
 			domainID: domainID,
 			token:    inValidToken,
-			thingID:  client.ID,
+			clientID: client.ID,
 			response: []string{},
 			status:   http.StatusUnauthorized,
 			authnErr: svcerr.ErrAuthentication,
@@ -880,7 +880,7 @@ func TestViewThingPerms(t *testing.T) {
 			desc:     "view client permissions with empty token",
 			domainID: domainID,
 			token:    "",
-			thingID:  client.ID,
+			clientID: client.ID,
 			response: []string{},
 			status:   http.StatusUnauthorized,
 			err:      apiutil.ErrBearerToken,
@@ -890,7 +890,7 @@ func TestViewThingPerms(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			thingID:  inValid,
+			clientID: inValid,
 			response: []string{},
 			status:   http.StatusForbidden,
 
@@ -901,7 +901,7 @@ func TestViewThingPerms(t *testing.T) {
 			domainID: domainID,
 			token:    validToken,
 			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			thingID:  "",
+			clientID: "",
 			response: []string{},
 			status:   http.StatusBadRequest,
 
@@ -914,12 +914,12 @@ func TestViewThingPerms(t *testing.T) {
 			req := testRequest{
 				client: ts.Client(),
 				method: http.MethodGet,
-				url:    fmt.Sprintf("%s/%s/things/%s/permissions", ts.URL, tc.domainID, tc.thingID),
+				url:    fmt.Sprintf("%s/%s/clients/%s/permissions", ts.URL, tc.domainID, tc.clientID),
 				token:  tc.token,
 			}
 
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("ViewPerms", mock.Anything, tc.authnRes, tc.thingID).Return(tc.response, tc.err)
+			svcCall := svc.On("ViewPerms", mock.Anything, tc.authnRes, tc.clientID).Return(tc.response, tc.err)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var resBody respBody
@@ -937,8 +937,8 @@ func TestViewThingPerms(t *testing.T) {
 	}
 }
 
-func TestUpdateThing(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestUpdateClient(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	newName := "newname"
@@ -1052,7 +1052,7 @@ func TestUpdateThing(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPatch,
-				url:         fmt.Sprintf("%s/%s/things/%s", ts.URL, tc.domainID, tc.id),
+				url:         fmt.Sprintf("%s/%s/clients/%s", ts.URL, tc.domainID, tc.id),
 				contentType: tc.contentType,
 				token:       tc.token,
 				body:        strings.NewReader(tc.data),
@@ -1081,8 +1081,8 @@ func TestUpdateThing(t *testing.T) {
 	}
 }
 
-func TestUpdateThingsTags(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestUpdateClientsTags(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	newTag := "newtag"
@@ -1191,7 +1191,7 @@ func TestUpdateThingsTags(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPatch,
-				url:         fmt.Sprintf("%s/%s/things/%s/tags", ts.URL, tc.domainID, tc.id),
+				url:         fmt.Sprintf("%s/%s/clients/%s/tags", ts.URL, tc.domainID, tc.id),
 				contentType: tc.contentType,
 				token:       tc.token,
 				body:        strings.NewReader(tc.data),
@@ -1216,7 +1216,7 @@ func TestUpdateThingsTags(t *testing.T) {
 }
 
 func TestUpdateClientSecret(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
@@ -1359,7 +1359,7 @@ func TestUpdateClientSecret(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPatch,
-				url:         fmt.Sprintf("%s/%s/things/%s/secret", ts.URL, tc.domainID, tc.client.ID),
+				url:         fmt.Sprintf("%s/%s/clients/%s/secret", ts.URL, tc.domainID, tc.client.ID),
 				contentType: tc.contentType,
 				token:       tc.token,
 				body:        strings.NewReader(tc.data),
@@ -1383,8 +1383,8 @@ func TestUpdateClientSecret(t *testing.T) {
 	}
 }
 
-func TestEnableThing(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestEnableClient(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
@@ -1441,7 +1441,7 @@ func TestEnableThing(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/%s/things/%s/enable", ts.URL, tc.domainID, tc.client.ID),
+				url:         fmt.Sprintf("%s/%s/clients/%s/enable", ts.URL, tc.domainID, tc.client.ID),
 				contentType: contentType,
 				token:       tc.token,
 				body:        strings.NewReader(data),
@@ -1468,8 +1468,8 @@ func TestEnableThing(t *testing.T) {
 	}
 }
 
-func TestDisableThing(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestDisableClient(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
@@ -1526,7 +1526,7 @@ func TestDisableThing(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/%s/things/%s/disable", ts.URL, tc.domainID, tc.client.ID),
+				url:         fmt.Sprintf("%s/%s/clients/%s/disable", ts.URL, tc.domainID, tc.client.ID),
 				contentType: contentType,
 				token:       tc.token,
 				body:        strings.NewReader(data),
@@ -1553,14 +1553,14 @@ func TestDisableThing(t *testing.T) {
 	}
 }
 
-func TestShareThing(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestShareClient(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
 		desc        string
 		data        string
-		thingID     string
+		clientID    string
 		domainID    string
 		token       string
 		contentType string
@@ -1572,7 +1572,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with valid token",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1584,7 +1584,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with invalid token",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       inValidToken,
 			contentType: contentType,
@@ -1595,7 +1595,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with empty token",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       "",
 			contentType: contentType,
@@ -1605,7 +1605,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with empty id",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     " ",
+			clientID:    " ",
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1617,7 +1617,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with missing relation",
 			data:        fmt.Sprintf(`{"relation": "%s", user_ids" : ["%s", "%s"]}`, " ", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1629,7 +1629,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with malformed data",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : [%s, "%s"]}`, "editor", "invalid", validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1641,7 +1641,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with empty client id",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     "",
+			clientID:    "",
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1653,7 +1653,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with empty relation",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, " ", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1665,7 +1665,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with empty user ids",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : [" ", " "]}`, "editor"),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1677,7 +1677,7 @@ func TestShareThing(t *testing.T) {
 		{
 			desc:        "share client with invalid content type",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1693,14 +1693,14 @@ func TestShareThing(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/%s/things/%s/share", ts.URL, tc.domainID, tc.thingID),
+				url:         fmt.Sprintf("%s/%s/clients/%s/share", ts.URL, tc.domainID, tc.clientID),
 				contentType: tc.contentType,
 				token:       tc.token,
 				body:        strings.NewReader(tc.data),
 			}
 
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("Share", mock.Anything, tc.authnRes, tc.thingID, mock.Anything, mock.Anything, mock.Anything).Return(tc.err)
+			svcCall := svc.On("Share", mock.Anything, tc.authnRes, tc.clientID, mock.Anything, mock.Anything, mock.Anything).Return(tc.err)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
@@ -1710,14 +1710,14 @@ func TestShareThing(t *testing.T) {
 	}
 }
 
-func TestUnShareThing(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestUnShareClient(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
 		desc        string
 		data        string
-		thingID     string
+		clientID    string
 		domainID    string
 		token       string
 		contentType string
@@ -1729,7 +1729,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with valid token",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1741,7 +1741,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with invalid token",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       inValidToken,
 			contentType: contentType,
@@ -1752,7 +1752,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with empty token",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       "",
 			contentType: contentType,
@@ -1762,7 +1762,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with empty id",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     " ",
+			clientID:    " ",
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1774,7 +1774,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with missing relation",
 			data:        fmt.Sprintf(`{"relation": "%s", user_ids" : ["%s", "%s"]}`, " ", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1786,7 +1786,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with malformed data",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : [%s, "%s"]}`, "editor", "invalid", validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1798,7 +1798,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with empty client id",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     "",
+			clientID:    "",
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1810,7 +1810,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with empty relation",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, " ", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1822,7 +1822,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with empty user ids",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : [" ", " "]}`, "editor"),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1834,7 +1834,7 @@ func TestUnShareThing(t *testing.T) {
 		{
 			desc:        "unshare client with invalid content type",
 			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			thingID:     client.ID,
+			clientID:    client.ID,
 			domainID:    domainID,
 			token:       validToken,
 			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
@@ -1850,14 +1850,14 @@ func TestUnShareThing(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/%s/things/%s/unshare", ts.URL, tc.domainID, tc.thingID),
+				url:         fmt.Sprintf("%s/%s/clients/%s/unshare", ts.URL, tc.domainID, tc.clientID),
 				contentType: tc.contentType,
 				token:       tc.token,
 				body:        strings.NewReader(tc.data),
 			}
 
 			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("Unshare", mock.Anything, tc.authnRes, tc.thingID, mock.Anything, mock.Anything, mock.Anything).Return(tc.err)
+			svcCall := svc.On("Unshare", mock.Anything, tc.authnRes, tc.clientID, mock.Anything, mock.Anything, mock.Anything).Return(tc.err)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
@@ -1867,8 +1867,8 @@ func TestUnShareThing(t *testing.T) {
 	}
 }
 
-func TestDeleteThing(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+func TestDeleteClient(t *testing.T) {
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
@@ -1926,7 +1926,7 @@ func TestDeleteThing(t *testing.T) {
 			req := testRequest{
 				client: ts.Client(),
 				method: http.MethodDelete,
-				url:    fmt.Sprintf("%s/%s/things/%s", ts.URL, tc.domainID, tc.id),
+				url:    fmt.Sprintf("%s/%s/clients/%s", ts.URL, tc.domainID, tc.id),
 				token:  tc.token,
 			}
 
@@ -1942,7 +1942,7 @@ func TestDeleteThing(t *testing.T) {
 }
 
 func TestListMembers(t *testing.T) {
-	ts, svc, authn := newThingsServer()
+	ts, svc, authn := newClientsServer()
 	defer ts.Close()
 
 	cases := []struct {
@@ -2318,7 +2318,7 @@ func TestListMembers(t *testing.T) {
 			req := testRequest{
 				client:      ts.Client(),
 				method:      http.MethodGet,
-				url:         ts.URL + fmt.Sprintf("/%s/channels/%s/things?", tc.domainID, tc.groupID) + tc.query,
+				url:         ts.URL + fmt.Sprintf("/%s/channels/%s/clients?", tc.domainID, tc.groupID) + tc.query,
 				contentType: contentType,
 				token:       tc.token,
 			}

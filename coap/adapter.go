@@ -44,15 +44,15 @@ var _ Service = (*adapterService)(nil)
 
 // Observers is a map of maps,.
 type adapterService struct {
-	things   grpcClientsV1.ClientsServiceClient
+	clients   grpcClientsV1.ClientsServiceClient
 	channels grpcChannelsV1.ChannelsServiceClient
 	pubsub   messaging.PubSub
 }
 
 // New instantiates the CoAP adapter implementation.
-func New(things grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient, pubsub messaging.PubSub) Service {
+func New(clients grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient, pubsub messaging.PubSub) Service {
 	as := &adapterService{
-		things:   things,
+		clients:   clients,
 		channels: channels,
 		pubsub:   pubsub,
 	}
@@ -61,7 +61,7 @@ func New(things grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.Chan
 }
 
 func (svc *adapterService) Publish(ctx context.Context, key string, msg *messaging.Message) error {
-	authnRes, err := svc.things.Authenticate(ctx, &grpcClientsV1.AuthnReq{
+	authnRes, err := svc.clients.Authenticate(ctx, &grpcClientsV1.AuthnReq{
 		ClientSecret: key,
 	})
 	if err != nil {
@@ -90,7 +90,7 @@ func (svc *adapterService) Publish(ctx context.Context, key string, msg *messagi
 }
 
 func (svc *adapterService) Subscribe(ctx context.Context, key, chanID, subtopic string, c Client) error {
-	authnRes, err := svc.things.Authenticate(ctx, &grpcClientsV1.AuthnReq{
+	authnRes, err := svc.clients.Authenticate(ctx, &grpcClientsV1.AuthnReq{
 		ClientSecret: key,
 	})
 	if err != nil {
@@ -100,9 +100,9 @@ func (svc *adapterService) Subscribe(ctx context.Context, key, chanID, subtopic 
 		return svcerr.ErrAuthentication
 	}
 
-	thingID := authnRes.GetId()
+	clientID := authnRes.GetId()
 	authzRes, err := svc.channels.Authorize(ctx, &grpcChannelsV1.AuthzReq{
-		ClientId:   thingID,
+		ClientId:   clientID,
 		ClientType: policies.ClientType,
 		Type:       uint32(connections.Subscribe),
 		ChannelId:  chanID,
@@ -119,7 +119,7 @@ func (svc *adapterService) Subscribe(ctx context.Context, key, chanID, subtopic 
 		subject = fmt.Sprintf("%s.%s", subject, subtopic)
 	}
 
-	authzc := newAuthzClient(thingID, chanID, subtopic, svc.channels, c)
+	authzc := newAuthzClient(clientID, chanID, subtopic, svc.channels, c)
 	subCfg := messaging.SubscriberConfig{
 		ID:      c.Token(),
 		Topic:   subject,
@@ -129,7 +129,7 @@ func (svc *adapterService) Subscribe(ctx context.Context, key, chanID, subtopic 
 }
 
 func (svc *adapterService) Unsubscribe(ctx context.Context, key, chanID, subtopic, token string) error {
-	authnRes, err := svc.things.Authenticate(ctx, &grpcClientsV1.AuthnReq{
+	authnRes, err := svc.clients.Authenticate(ctx, &grpcClientsV1.AuthnReq{
 		ClientSecret: key,
 	})
 	if err != nil {
@@ -179,19 +179,19 @@ type authzClient interface {
 }
 
 type ac struct {
-	thingID   string
+	clientID   string
 	channelID string
 	subTopic  string
 	channels  grpcChannelsV1.ChannelsServiceClient
 	client    Client
 }
 
-func newAuthzClient(thingID, channelID, subTopic string, channels grpcChannelsV1.ChannelsServiceClient, client Client) authzClient {
-	return ac{thingID, channelID, subTopic, channels, client}
+func newAuthzClient(clientID, channelID, subTopic string, channels grpcChannelsV1.ChannelsServiceClient, client Client) authzClient {
+	return ac{clientID, channelID, subTopic, channels, client}
 }
 
 func (a ac) Handle(m *messaging.Message) error {
-	res, err := a.channels.Authorize(context.Background(), &grpcChannelsV1.AuthzReq{ClientId: a.thingID, ClientType: policies.ClientType, ChannelId: a.channelID, Type: uint32(connections.Subscribe)})
+	res, err := a.channels.Authorize(context.Background(), &grpcChannelsV1.AuthzReq{ClientId: a.clientID, ClientType: policies.ClientType, ChannelId: a.channelID, Type: uint32(connections.Subscribe)})
 	if err != nil {
 		if disErr := a.Cancel(); disErr != nil {
 			return errors.Wrap(err, errors.Wrap(errFailedToDisconnectClient, disErr))

@@ -42,7 +42,7 @@ func (res createClientRes) Code() int {
 func (res createClientRes) Headers() map[string]string {
 	if res.created {
 		return map[string]string{
-			"Location": fmt.Sprintf("/things/%s", res.ID),
+			"Location": fmt.Sprintf("/clients/%s", res.ID),
 		}
 	}
 

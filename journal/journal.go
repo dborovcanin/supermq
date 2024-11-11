@@ -17,7 +17,7 @@ type EntityType uint8
 const (
 	UserEntity EntityType = iota
 	GroupEntity
-	ThingEntity
+	ClientEntity
 	ChannelEntity
 )
 
@@ -36,7 +36,7 @@ func (e EntityType) String() string {
 		return userEntityType
 	case GroupEntity:
 		return groupEntityType
-	case ThingEntity:
+	case ClientEntity:
 		return clientEntityType
 	case ChannelEntity:
 		return channelEntityType
@@ -52,7 +52,7 @@ func (e EntityType) AuthString() string {
 		return policies.UserType
 	case GroupEntity, ChannelEntity:
 		return policies.GroupType
-	case ThingEntity:
+	case ClientEntity:
 		return policies.ClientType
 	default:
 		return ""
@@ -67,7 +67,7 @@ func ToEntityType(entityType string) (EntityType, error) {
 	case groupEntityType:
 		return GroupEntity, nil
 	case clientEntityType:
-		return ThingEntity, nil
+		return ClientEntity, nil
 	case channelEntityType:
 		return ChannelEntity, nil
 	default:
@@ -82,8 +82,8 @@ func (e EntityType) Query() string {
 		return "((operation LIKE 'user.%' AND attributes->>'id' = :entity_id) OR (attributes->>'user_id' = :entity_id))"
 	case GroupEntity, ChannelEntity:
 		return "((operation LIKE 'group.%' AND attributes->>'id' = :entity_id) OR (attributes->>'group_id' = :entity_id))"
-	case ThingEntity:
-		return "((operation LIKE 'thing.%' AND attributes->>'id' = :entity_id) OR (attributes->>'client_id' = :entity_id))"
+	case ClientEntity:
+		return "((operation LIKE 'client.%' AND attributes->>'id' = :entity_id) OR (attributes->>'client_id' = :entity_id))"
 	default:
 		return ""
 	}

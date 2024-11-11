@@ -48,12 +48,12 @@ const (
 	configList          = configPrefix + "list"
 	configHandlerRemove = configPrefix + "remove_handler"
 
-	thingPrefix            = "thing."
-	thingBootstrap         = thingPrefix + "bootstrap"
-	thingStateChange       = thingPrefix + "change_state"
-	thingUpdateConnections = thingPrefix + "update_connections"
-	thingConnect           = thingPrefix + "connect"
-	thingDisconnect        = thingPrefix + "disconnect"
+	clientPrefix            = "client."
+	clientBootstrap         = clientPrefix + "bootstrap"
+	clientStateChange       = clientPrefix + "change_state"
+	clientUpdateConnections = clientPrefix + "update_connections"
+	clientConnect           = clientPrefix + "connect"
+	clientDisconnect        = clientPrefix + "disconnect"
 
 	channelPrefix        = "group."
 	channelHandlerRemove = channelPrefix + "remove_handler"
@@ -125,18 +125,18 @@ func TestAdd(t *testing.T) {
 	invalidConfig.Channels = []bootstrap.Channel{{ID: "empty"}}
 
 	cases := []struct {
-		desc     string
-		config   bootstrap.Config
-		token    string
-		session  mgauthn.Session
-		id       string
-		domainID string
-		thingErr error
-		channel  []bootstrap.Channel
-		listErr  error
-		saveErr  error
-		err      error
-		event    map[string]interface{}
+		desc      string
+		config    bootstrap.Config
+		token     string
+		session   mgauthn.Session
+		id        string
+		domainID  string
+		clientErr error
+		channel   []bootstrap.Channel
+		listErr   error
+		saveErr   error
+		err       error
+		event     map[string]interface{}
 	}{
 		{
 			desc:     "create config successfully",
@@ -158,14 +158,14 @@ func TestAdd(t *testing.T) {
 			err: nil,
 		},
 		{
-			desc:     "create config with failed to fetch thing",
-			config:   config,
-			token:    validToken,
-			id:       validID,
-			domainID: domainID,
-			event:    nil,
-			thingErr: svcerr.ErrNotFound,
-			err:      svcerr.ErrNotFound,
+			desc:      "create config with failed to fetch client",
+			config:    config,
+			token:     validToken,
+			id:        validID,
+			domainID:  domainID,
+			event:     nil,
+			clientErr: svcerr.ErrNotFound,
+			err:       svcerr.ErrNotFound,
 		},
 		{
 			desc:     "create config with failed to list existing",
@@ -192,7 +192,7 @@ func TestAdd(t *testing.T) {
 	lastID := "0"
 	for _, tc := range cases {
 		tc.session = mgauthn.Session{UserID: validID, DomainID: tc.domainID, DomainUserID: validID}
-		sdkCall := tv.sdk.On("Thing", tc.config.ClientID, tc.domainID, tc.token).Return(mgsdk.Client{ID: tc.config.ClientID, Credentials: mgsdk.ClientCredentials{Secret: tc.config.ClientSecret}}, errors.NewSDKError(tc.thingErr))
+		sdkCall := tv.sdk.On("Client", tc.config.ClientID, tc.domainID, tc.token).Return(mgsdk.Client{ID: tc.config.ClientID, Credentials: mgsdk.ClientCredentials{Secret: tc.config.ClientSecret}}, errors.NewSDKError(tc.clientErr))
 		repoCall := tv.boot.On("ListExisting", context.Background(), domainID, mock.Anything).Return(tc.config.Channels, tc.listErr)
 		repoCall1 := tv.boot.On("Save", context.Background(), mock.Anything, mock.Anything).Return(mock.Anything, tc.saveErr)
 
@@ -403,7 +403,7 @@ func TestUpdateConnections(t *testing.T) {
 		token       string
 		session     mgauthn.Session
 		connections []string
-		thingErr    error
+		clientErr   error
 		channelErr  error
 		retrieveErr error
 		listErr     error
@@ -423,7 +423,7 @@ func TestUpdateConnections(t *testing.T) {
 				"client_id": config.ClientID,
 				"channels":  "2",
 				"timestamp": time.Now().Unix(),
-				"operation": thingUpdateConnections,
+				"operation": clientUpdateConnections,
 			},
 		},
 		{
@@ -533,11 +533,11 @@ func TestUpdateCert(t *testing.T) {
 			caCert:     "caCert",
 			err:        nil,
 			event: map[string]interface{}{
-				"thing_key":   config.ClientSecret,
-				"client_cert": "clientCert",
-				"client_key":  "clientKey",
-				"ca_cert":     "caCert",
-				"operation":   certUpdate,
+				"client_secret": config.ClientSecret,
+				"client_cert":   "clientCert",
+				"client_key":    "clientKey",
+				"ca_cert":       "caCert",
+				"operation":     certUpdate,
 			},
 		},
 		{
@@ -600,12 +600,12 @@ func TestUpdateCert(t *testing.T) {
 			caCert:     "",
 			err:        nil,
 			event: map[string]interface{}{
-				"thing_key":   config.ClientSecret,
-				"client_cert": "clientCert",
-				"client_key":  "clientKey",
-				"ca_cert":     "caCert",
-				"operation":   certUpdate,
-				"timestamp":   time.Now().Unix(),
+				"client_secret": config.ClientSecret,
+				"client_cert":   "clientCert",
+				"client_key":    "clientKey",
+				"ca_cert":       "caCert",
+				"operation":     certUpdate,
+				"timestamp":     time.Now().Unix(),
 			},
 		},
 	}
@@ -639,10 +639,10 @@ func TestUpdateCert(t *testing.T) {
 func TestList(t *testing.T) {
 	tv := newTestVariable(t, redisURL)
 
-	numThings := 101
+	numClients := 101
 	var c bootstrap.Config
 	saved := make([]bootstrap.Config, 0)
-	for i := 0; i < numThings; i++ {
+	for i := 0; i < numClients; i++ {
 		c := config
 		c.ExternalID = testsutil.GenerateUUID(t)
 		c.ExternalKey = testsutil.GenerateUUID(t)
@@ -936,7 +936,7 @@ func TestBootstrap(t *testing.T) {
 				"external_id": config.ExternalID,
 				"success":     "1",
 				"timestamp":   time.Now().Unix(),
-				"operation":   thingBootstrap,
+				"operation":   clientBootstrap,
 			},
 		},
 		{
@@ -949,7 +949,7 @@ func TestBootstrap(t *testing.T) {
 				"external_id": "external_id",
 				"success":     "0",
 				"timestamp":   time.Now().Unix(),
-				"operation":   thingBootstrap,
+				"operation":   clientBootstrap,
 			},
 		},
 	}
@@ -1012,7 +1012,7 @@ func TestChangeState(t *testing.T) {
 				"client_id": config.ClientID,
 				"state":     bootstrap.Active.String(),
 				"timestamp": time.Now().Unix(),
-				"operation": thingStateChange,
+				"operation": clientStateChange,
 			},
 		},
 		{
@@ -1261,7 +1261,7 @@ func TestRemoveConfigHandler(t *testing.T) {
 
 	lastID := "0"
 	for _, tc := range cases {
-		repoCall := tv.boot.On("RemoveThing", context.Background(), mock.Anything).Return(tc.err)
+		repoCall := tv.boot.On("RemoveClient", context.Background(), mock.Anything).Return(tc.err)
 		err := tv.svc.RemoveConfigHandler(context.Background(), tc.configID)
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
@@ -1284,7 +1284,7 @@ func TestRemoveConfigHandler(t *testing.T) {
 	}
 }
 
-func TestConnectThingHandler(t *testing.T) {
+func TestConnectClientHandler(t *testing.T) {
 	err := redisClient.FlushAll(context.Background()).Err()
 	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 
@@ -1293,19 +1293,19 @@ func TestConnectThingHandler(t *testing.T) {
 	cases := []struct {
 		desc      string
 		channelID string
-		thingID   string
+		clientID  string
 		err       error
 		event     map[string]interface{}
 	}{
 		{
 			desc:      "connect client handler successfully",
 			channelID: channel.ID,
-			thingID:   "1",
+			clientID:  "1",
 			err:       nil,
 			event: map[string]interface{}{
 				"channel_id":  channel.ID,
 				"client_id":   "1",
-				"operation":   thingConnect,
+				"operation":   clientConnect,
 				"timestamp":   time.Now().UnixNano(),
 				"occurred_at": time.Now().UnixNano(),
 			},
@@ -1313,21 +1313,21 @@ func TestConnectThingHandler(t *testing.T) {
 		{
 			desc:      "connect non-existing client handler",
 			channelID: channel.ID,
-			thingID:   "unknown",
+			clientID:  "unknown",
 			err:       nil,
 			event:     nil,
 		},
 		{
 			desc:      "connect client handler with empty client ID",
 			channelID: channel.ID,
-			thingID:   "",
+			clientID:  "",
 			err:       nil,
 			event:     nil,
 		},
 		{
 			desc:      "connect client handler with empty channel ID",
 			channelID: "",
-			thingID:   "1",
+			clientID:  "1",
 			err:       nil,
 			event:     nil,
 		},
@@ -1335,8 +1335,8 @@ func TestConnectThingHandler(t *testing.T) {
 
 	lastID := "0"
 	for _, tc := range cases {
-		repoCall := tv.boot.On("ConnectThing", context.Background(), mock.Anything, mock.Anything).Return(tc.err)
-		err := tv.svc.ConnectThingHandler(context.Background(), tc.channelID, tc.thingID)
+		repoCall := tv.boot.On("ConnectClient", context.Background(), mock.Anything, mock.Anything).Return(tc.err)
+		err := tv.svc.ConnectClientHandler(context.Background(), tc.channelID, tc.clientID)
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
 		streams := redisClient.XRead(context.Background(), &redis.XReadArgs{
@@ -1358,7 +1358,7 @@ func TestConnectThingHandler(t *testing.T) {
 	}
 }
 
-func TestDisconnectThingHandler(t *testing.T) {
+func TestDisconnectClientHandler(t *testing.T) {
 	err := redisClient.FlushAll(context.Background()).Err()
 	assert.Nil(t, err, fmt.Sprintf("got unexpected error: %s", err))
 
@@ -1367,19 +1367,19 @@ func TestDisconnectThingHandler(t *testing.T) {
 	cases := []struct {
 		desc      string
 		channelID string
-		thingID   string
+		clientID  string
 		err       error
 		event     map[string]interface{}
 	}{
 		{
 			desc:      "disconnect client handler successfully",
 			channelID: channel.ID,
-			thingID:   "1",
+			clientID:  "1",
 			err:       nil,
 			event: map[string]interface{}{
 				"channel_id":  channel.ID,
 				"client_id":   "1",
-				"operation":   thingDisconnect,
+				"operation":   clientDisconnect,
 				"timestamp":   time.Now().UnixNano(),
 				"occurred_at": time.Now().UnixNano(),
 			},
@@ -1392,7 +1392,7 @@ func TestDisconnectThingHandler(t *testing.T) {
 		{
 			desc:      "remove client handler with empty client ID",
 			channelID: channel.ID,
-			thingID:   "",
+			clientID:  "",
 			err:       nil,
 			event:     nil,
 		},
@@ -1405,12 +1405,12 @@ func TestDisconnectThingHandler(t *testing.T) {
 		{
 			desc:      "remove client handler successfully",
 			channelID: channel.ID,
-			thingID:   "1",
+			clientID:  "1",
 			err:       nil,
 			event: map[string]interface{}{
 				"channel_id":  channel.ID,
 				"client_id":   "1",
-				"operation":   thingDisconnect,
+				"operation":   clientDisconnect,
 				"timestamp":   time.Now().UnixNano(),
 				"occurred_at": time.Now().UnixNano(),
 			},
@@ -1419,8 +1419,8 @@ func TestDisconnectThingHandler(t *testing.T) {
 
 	lastID := "0"
 	for _, tc := range cases {
-		repoCall := tv.boot.On("DisconnectThing", context.Background(), tc.channelID, tc.thingID).Return(tc.err)
-		err := tv.svc.DisconnectThingHandler(context.Background(), tc.channelID, tc.thingID)
+		repoCall := tv.boot.On("DisconnectClient", context.Background(), tc.channelID, tc.clientID).Return(tc.err)
+		err := tv.svc.DisconnectClientHandler(context.Background(), tc.channelID, tc.clientID)
 		assert.Equal(t, tc.err, err, fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 
 		streams := redisClient.XRead(context.Background(), &redis.XReadArgs{

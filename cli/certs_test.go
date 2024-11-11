@@ -104,7 +104,7 @@ func TestGetCertCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ViewCertByThing", mock.Anything, mock.Anything, mock.Anything).Return(tc.serials, tc.sdkErr)
+			sdkCall := sdkMock.On("ViewCertByClient", mock.Anything, mock.Anything, mock.Anything).Return(tc.serials, tc.sdkErr)
 			sdkCall1 := sdkMock.On("ViewCert", mock.Anything, mock.Anything, mock.Anything).Return(tc.cert, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{getCmd}, tc.args...)...)
 			switch tc.logType {

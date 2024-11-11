@@ -22,7 +22,7 @@ import (
 	"github.com/absmach/magistrala/clients/events"
 	"github.com/absmach/magistrala/clients/middleware"
 	"github.com/absmach/magistrala/clients/postgres"
-	pThings "github.com/absmach/magistrala/clients/private"
+	pClients "github.com/absmach/magistrala/clients/private"
 	"github.com/absmach/magistrala/clients/tracing"
 	redisclient "github.com/absmach/magistrala/internal/clients/redis"
 	grpcChannelsV1 "github.com/absmach/magistrala/internal/grpc/channels/v1"
@@ -113,7 +113,7 @@ func main() {
 		}
 	}
 
-	// Create new database for things
+	// Create new database for clients
 	dbConfig := pgclient.Config{Name: defDB}
 	if err := env.ParseWithOptions(&dbConfig, env.Options{Prefix: envPrefixDB}); err != nil {
 		logger.Error(err.Error())
@@ -241,11 +241,11 @@ func main() {
 		return
 	}
 
-	registerThingsServer := func(srv *grpc.Server) {
+	registerClientsServer := func(srv *grpc.Server) {
 		reflection.Register(srv)
 		grpcClientsV1.RegisterClientsServiceServer(srv, grpcapi.NewServer(psvc))
 	}
-	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerThingsServer, logger)
+	gs := grpcserver.NewServer(ctx, cancel, svcName, grpcServerConfig, registerClientsServer, logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, magistrala.Version, logger, cancel)
@@ -270,7 +270,7 @@ func main() {
 	}
 }
 
-func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, authz mgauthz.Authorization, pe policies.Evaluator, ps policies.Service, cacheClient *redis.Client, keyDuration time.Duration, esURL string, channels grpcChannelsV1.ChannelsServiceClient, groups grpcGroupsV1.GroupsServiceClient, tracer trace.Tracer, logger *slog.Logger) (clients.Service, pThings.Service, error) {
+func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, authz mgauthz.Authorization, pe policies.Evaluator, ps policies.Service, cacheClient *redis.Client, keyDuration time.Duration, esURL string, channels grpcChannelsV1.ChannelsServiceClient, groups grpcGroupsV1.GroupsServiceClient, tracer trace.Tracer, logger *slog.Logger) (clients.Service, pClients.Service, error) {
 	database := pg.NewDatabase(db, dbConfig, tracer)
 	repo := postgres.NewRepository(database)
 
@@ -305,7 +305,7 @@ func newService(ctx context.Context, db *sqlx.DB, dbConfig pgclient.Config, auth
 	}
 	csvc = middleware.LoggingMiddleware(csvc, logger)
 
-	isvc := pThings.New(repo, cache, pe, ps)
+	isvc := pClients.New(repo, cache, pe, ps)
 
 	return csvc, isvc, err
 }

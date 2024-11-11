@@ -105,7 +105,7 @@ func main() {
 		}
 	}
 
-	// Create new database for things
+	// Create new database for clients
 	dbConfig := pgclient.Config{Name: defDB}
 	if err := env.ParseWithOptions(&dbConfig, env.Options{Prefix: envPrefixDB}); err != nil {
 		logger.Error(err.Error())
@@ -184,7 +184,7 @@ func main() {
 		return
 	}
 	defer clientsHandler.Close()
-	logger.Info("Things gRPC client successfully connected to clients gRPC server " + clientsHandler.Secure())
+	logger.Info("Clients gRPC client successfully connected to clients gRPC server " + clientsHandler.Secure())
 
 	groupsgRPCCfg := grpcclient.Config{}
 	if err := env.ParseWithOptions(&groupsgRPCCfg, env.Options{Prefix: envPrefixGroups}); err != nil {

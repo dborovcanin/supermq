@@ -103,8 +103,8 @@ func (_c *ChannelsServiceClient_Authorize_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
-// RemoveThingConnections provides a mock function with given fields: ctx, in, opts
-func (_m *ChannelsServiceClient) RemoveThingConnections(ctx context.Context, in *v1.RemoveThingConnectionsReq, opts ...grpc.CallOption) (*v1.RemoveThingConnectionsRes, error) {
+// RemoveClientConnections provides a mock function with given fields: ctx, in, opts
+func (_m *ChannelsServiceClient) RemoveClientConnections(ctx context.Context, in *v1.RemoveClientConnectionsReq, opts ...grpc.CallOption) (*v1.RemoveClientConnectionsRes, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -115,23 +115,23 @@ func (_m *ChannelsServiceClient) RemoveThingConnections(ctx context.Context, in 
 	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RemoveThingConnections")
+		panic("no return value specified for RemoveClientConnections")
 	}
 
-	var r0 *v1.RemoveThingConnectionsRes
+	var r0 *v1.RemoveClientConnectionsRes
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.RemoveThingConnectionsReq, ...grpc.CallOption) (*v1.RemoveThingConnectionsRes, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.RemoveClientConnectionsReq, ...grpc.CallOption) (*v1.RemoveClientConnectionsRes, error)); ok {
 		return rf(ctx, in, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *v1.RemoveThingConnectionsReq, ...grpc.CallOption) *v1.RemoveThingConnectionsRes); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *v1.RemoveClientConnectionsReq, ...grpc.CallOption) *v1.RemoveClientConnectionsRes); ok {
 		r0 = rf(ctx, in, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1.RemoveThingConnectionsRes)
+			r0 = ret.Get(0).(*v1.RemoveClientConnectionsRes)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *v1.RemoveThingConnectionsReq, ...grpc.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *v1.RemoveClientConnectionsReq, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -140,21 +140,21 @@ func (_m *ChannelsServiceClient) RemoveThingConnections(ctx context.Context, in 
 	return r0, r1
 }
 
-// ChannelsServiceClient_RemoveThingConnections_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveThingConnections'
-type ChannelsServiceClient_RemoveThingConnections_Call struct {
+// ChannelsServiceClient_RemoveClientConnections_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveClientConnections'
+type ChannelsServiceClient_RemoveClientConnections_Call struct {
 	*mock.Call
 }
 
-// RemoveThingConnections is a helper method to define mock.On call
+// RemoveClientConnections is a helper method to define mock.On call
 //   - ctx context.Context
-//   - in *v1.RemoveThingConnectionsReq
+//   - in *v1.RemoveClientConnectionsReq
 //   - opts ...grpc.CallOption
-func (_e *ChannelsServiceClient_Expecter) RemoveThingConnections(ctx interface{}, in interface{}, opts ...interface{}) *ChannelsServiceClient_RemoveThingConnections_Call {
-	return &ChannelsServiceClient_RemoveThingConnections_Call{Call: _e.mock.On("RemoveThingConnections",
+func (_e *ChannelsServiceClient_Expecter) RemoveClientConnections(ctx interface{}, in interface{}, opts ...interface{}) *ChannelsServiceClient_RemoveClientConnections_Call {
+	return &ChannelsServiceClient_RemoveClientConnections_Call{Call: _e.mock.On("RemoveClientConnections",
 		append([]interface{}{ctx, in}, opts...)...)}
 }
 
-func (_c *ChannelsServiceClient_RemoveThingConnections_Call) Run(run func(ctx context.Context, in *v1.RemoveThingConnectionsReq, opts ...grpc.CallOption)) *ChannelsServiceClient_RemoveThingConnections_Call {
+func (_c *ChannelsServiceClient_RemoveClientConnections_Call) Run(run func(ctx context.Context, in *v1.RemoveClientConnectionsReq, opts ...grpc.CallOption)) *ChannelsServiceClient_RemoveClientConnections_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]grpc.CallOption, len(args)-2)
 		for i, a := range args[2:] {
@@ -162,17 +162,17 @@ func (_c *ChannelsServiceClient_RemoveThingConnections_Call) Run(run func(ctx co
 				variadicArgs[i] = a.(grpc.CallOption)
 			}
 		}
-		run(args[0].(context.Context), args[1].(*v1.RemoveThingConnectionsReq), variadicArgs...)
+		run(args[0].(context.Context), args[1].(*v1.RemoveClientConnectionsReq), variadicArgs...)
 	})
 	return _c
 }
 
-func (_c *ChannelsServiceClient_RemoveThingConnections_Call) Return(_a0 *v1.RemoveThingConnectionsRes, _a1 error) *ChannelsServiceClient_RemoveThingConnections_Call {
+func (_c *ChannelsServiceClient_RemoveClientConnections_Call) Return(_a0 *v1.RemoveClientConnectionsRes, _a1 error) *ChannelsServiceClient_RemoveClientConnections_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *ChannelsServiceClient_RemoveThingConnections_Call) RunAndReturn(run func(context.Context, *v1.RemoveThingConnectionsReq, ...grpc.CallOption) (*v1.RemoveThingConnectionsRes, error)) *ChannelsServiceClient_RemoveThingConnections_Call {
+func (_c *ChannelsServiceClient_RemoveClientConnections_Call) RunAndReturn(run func(context.Context, *v1.RemoveClientConnectionsReq, ...grpc.CallOption) (*v1.RemoveClientConnectionsRes, error)) *ChannelsServiceClient_RemoveClientConnections_Call {
 	_c.Call.Return(run)
 	return _c
 }

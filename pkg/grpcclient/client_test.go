@@ -11,7 +11,7 @@ import (
 
 	tokengrpcapi "github.com/absmach/magistrala/auth/api/grpc/token"
 	"github.com/absmach/magistrala/auth/mocks"
-	thingsgrpcapi "github.com/absmach/magistrala/clients/api/grpc"
+	clientsgrpcapi "github.com/absmach/magistrala/clients/api/grpc"
 	climocks "github.com/absmach/magistrala/clients/private/mocks"
 	domainsgrpcapi "github.com/absmach/magistrala/domains/api/grpc"
 	domainsMocks "github.com/absmach/magistrala/domains/mocks"
@@ -78,14 +78,14 @@ func TestSetupToken(t *testing.T) {
 	}
 }
 
-func TestSetupThingsClient(t *testing.T) {
+func TestSetupClientsClient(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	registerThingsServiceServer := func(srv *grpc.Server) {
-		grpcClientsV1.RegisterClientsServiceServer(srv, thingsgrpcapi.NewServer(new(climocks.Service)))
+	registerClientsServiceServer := func(srv *grpc.Server) {
+		grpcClientsV1.RegisterClientsServiceServer(srv, clientsgrpcapi.NewServer(new(climocks.Service)))
 	}
-	gs := grpcserver.NewServer(ctx, cancel, "clients", server.Config{Port: "12345"}, registerThingsServiceServer, mglog.NewMock())
+	gs := grpcserver.NewServer(ctx, cancel, "clients", server.Config{Port: "12345"}, registerClientsServiceServer, mglog.NewMock())
 	go func() {
 		err := gs.Start()
 		assert.Nil(t, err, fmt.Sprintf(`"Unexpected error creating server %s"`, err))

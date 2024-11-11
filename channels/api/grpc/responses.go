@@ -7,6 +7,6 @@ type authorizeRes struct {
 	authorized bool
 }
 
-type removeThingConnectionsRes struct{}
+type removeClientConnectionsRes struct{}
 
 type unsetParentGroupFromChannelsRes struct{}

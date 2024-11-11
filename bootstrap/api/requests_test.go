@@ -152,19 +152,19 @@ func TestUpdateReqValidation(t *testing.T) {
 func TestUpdateCertReqValidation(t *testing.T) {
 	cases := []struct {
 		desc    string
-		thingID string
+		clientID string
 		err     error
 	}{
 		{
 			desc:    "empty client id",
-			thingID: "",
+			clientID: "",
 			err:     apiutil.ErrMissingID,
 		},
 	}
 
 	for _, tc := range cases {
 		req := updateCertReq{
-			thingID: tc.thingID,
+			clientID: tc.clientID,
 		}
 
 		err := req.validate()

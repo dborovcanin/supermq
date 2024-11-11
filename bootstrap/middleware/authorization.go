@@ -52,12 +52,12 @@ func (am *authorizationMiddleware) Update(ctx context.Context, session mgauthn.S
 	return am.svc.Update(ctx, session, cfg)
 }
 
-func (am *authorizationMiddleware) UpdateCert(ctx context.Context, session mgauthn.Session, thingID, clientCert, clientKey, caCert string) (bootstrap.Config, error) {
-	if err := am.authorize(ctx, session.DomainID, policies.UserType, policies.UsersKind, session.DomainUserID, policies.EditPermission, policies.ClientType, thingID); err != nil {
+func (am *authorizationMiddleware) UpdateCert(ctx context.Context, session mgauthn.Session, clientID, clientCert, clientKey, caCert string) (bootstrap.Config, error) {
+	if err := am.authorize(ctx, session.DomainID, policies.UserType, policies.UsersKind, session.DomainUserID, policies.EditPermission, policies.ClientType, clientID); err != nil {
 		return bootstrap.Config{}, err
 	}
 
-	return am.svc.UpdateCert(ctx, session, thingID, clientCert, clientKey, caCert)
+	return am.svc.UpdateCert(ctx, session, clientID, clientCert, clientKey, caCert)
 }
 
 func (am *authorizationMiddleware) UpdateConnections(ctx context.Context, session mgauthn.Session, token, id string, connections []string) error {

@@ -55,7 +55,7 @@ var channelRegExp = regexp.MustCompile(`^\/?channels\/([\w\-]+)\/messages(\/[^?]
 // Event implements events.Event interface.
 type handler struct {
 	pubsub   messaging.PubSub
-	things   grpcClientsV1.ClientsServiceClient
+	clients   grpcClientsV1.ClientsServiceClient
 	channels grpcChannelsV1.ChannelsServiceClient
 	authn    mgauthn.Authentication
 	logger   *slog.Logger
@@ -67,7 +67,7 @@ func NewHandler(pubsub messaging.PubSub, logger *slog.Logger, authn mgauthn.Auth
 		logger:   logger,
 		pubsub:   pubsub,
 		authn:    authn,
-		things:   clients,
+		clients:   clients,
 		channels: channels,
 	}
 }
@@ -91,8 +91,8 @@ func (h *handler) AuthPublish(ctx context.Context, topic *string, payload *[]byt
 
 	var token string
 	switch {
-	case strings.HasPrefix(string(s.Password), "Thing"):
-		token = strings.ReplaceAll(string(s.Password), "Thing ", "")
+	case strings.HasPrefix(string(s.Password), "Client"):
+		token = strings.ReplaceAll(string(s.Password), "Client ", "")
 	default:
 		token = string(s.Password)
 	}
@@ -113,8 +113,8 @@ func (h *handler) AuthSubscribe(ctx context.Context, topics *[]string) error {
 
 	var token string
 	switch {
-	case strings.HasPrefix(string(s.Password), "Thing"):
-		token = strings.ReplaceAll(string(s.Password), "Thing ", "")
+	case strings.HasPrefix(string(s.Password), "Client"):
+		token = strings.ReplaceAll(string(s.Password), "Client ", "")
 	default:
 		token = string(s.Password)
 	}
@@ -162,9 +162,9 @@ func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) e
 
 	var clientID, clientType string
 	switch {
-	case strings.HasPrefix(string(s.Password), "Thing"):
-		thingKey := extractClientSecret(string(s.Password))
-		authnRes, err := h.things.Authenticate(ctx, &grpcClientsV1.AuthnReq{ClientSecret: thingKey})
+	case strings.HasPrefix(string(s.Password), "Client"):
+		clientKey := extractClientSecret(string(s.Password))
+		authnRes, err := h.clients.Authenticate(ctx, &grpcClientsV1.AuthnReq{ClientSecret: clientKey})
 		if err != nil {
 			return errors.Wrap(svcerr.ErrAuthentication, err)
 		}
@@ -245,9 +245,9 @@ func (h *handler) Disconnect(ctx context.Context) error {
 func (h *handler) authAccess(ctx context.Context, token, topic string, msgType connections.ConnType) error {
 	var clientID, clientType string
 	switch {
-	case strings.HasPrefix(token, "Thing"):
-		thingKey := extractClientSecret(token)
-		authnRes, err := h.things.Authenticate(ctx, &grpcClientsV1.AuthnReq{ClientSecret: thingKey})
+	case strings.HasPrefix(token, "Client"):
+		clientKey := extractClientSecret(token)
+		authnRes, err := h.clients.Authenticate(ctx, &grpcClientsV1.AuthnReq{ClientSecret: clientKey})
 		if err != nil {
 			return errors.Wrap(svcerr.ErrAuthentication, err)
 		}

@@ -2359,8 +2359,8 @@ func TestEnable(t *testing.T) {
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
 			status:   http.StatusUnprocessableEntity,
-			svcErr:   svcerr.ErrUpdateEntity,
-			err:      svcerr.ErrUpdateEntity,
+			svcErr:   svcerr.ErrEnableUser,
+			err:      svcerr.ErrEnableUser,
 		},
 	}
 
@@ -2459,8 +2459,8 @@ func TestDisable(t *testing.T) {
 			token:    validToken,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
 			status:   http.StatusUnprocessableEntity,
-			svcErr:   svcerr.ErrUpdateEntity,
-			err:      svcerr.ErrUpdateEntity,
+			svcErr:   svcerr.ErrDisableUser,
+			err:      svcerr.ErrDisableUser,
 		},
 	}
 
@@ -3580,7 +3580,7 @@ func TestListUsersByClientID(t *testing.T) {
 	cases := []struct {
 		desc              string
 		token             string
-		thingID           string
+		clientID          string
 		page              users.Page
 		status            int
 		query             string
@@ -3590,10 +3590,10 @@ func TestListUsersByClientID(t *testing.T) {
 		err               error
 	}{
 		{
-			desc:    "list users with valid token",
-			token:   validToken,
-			thingID: validID,
-			status:  http.StatusOK,
+			desc:     "list users with valid token",
+			token:    validToken,
+			clientID: validID,
+			status:   http.StatusOK,
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Total: 1,
@@ -3606,7 +3606,7 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with empty token",
 			token:    "",
-			thingID:  validID,
+			clientID: validID,
 			status:   http.StatusUnauthorized,
 			authnErr: svcerr.ErrAuthentication,
 			err:      apiutil.ErrBearerToken,
@@ -3614,15 +3614,15 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with invalid token",
 			token:    inValidToken,
-			thingID:  validID,
+			clientID: validID,
 			status:   http.StatusUnauthorized,
 			authnErr: svcerr.ErrAuthentication,
 			err:      svcerr.ErrAuthentication,
 		},
 		{
-			desc:    "list users with offset",
-			token:   validToken,
-			thingID: validID,
+			desc:     "list users with offset",
+			token:    validToken,
+			clientID: validID,
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Offset: 1,
@@ -3638,16 +3638,16 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with invalid offset",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    "offset=invalid",
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
 			err:      apiutil.ErrValidation,
 		},
 		{
-			desc:    "list users with limit",
-			token:   validToken,
-			thingID: validID,
+			desc:     "list users with limit",
+			token:    validToken,
+			clientID: validID,
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Limit: 1,
@@ -3663,7 +3663,7 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with invalid limit",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    "limit=invalid",
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
@@ -3672,16 +3672,16 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with limit greater than max",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    fmt.Sprintf("limit=%d", api.MaxLimitSize+1),
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
 			err:      apiutil.ErrValidation,
 		},
 		{
-			desc:    "list users with name",
-			token:   validToken,
-			thingID: validID,
+			desc:     "list users with name",
+			token:    validToken,
+			clientID: validID,
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Total: 1,
@@ -3696,24 +3696,24 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with invalid user name",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    "username=invalid",
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
 			err:      apiutil.ErrValidation,
 		},
 		{
-			desc:    "list users with duplicate user name",
-			token:   validToken,
-			thingID: validID,
-			query:   "username=1&username=2",
-			status:  http.StatusBadRequest,
-			err:     apiutil.ErrInvalidQueryParams,
+			desc:     "list users with duplicate user name",
+			token:    validToken,
+			clientID: validID,
+			query:    "username=1&username=2",
+			status:   http.StatusBadRequest,
+			err:      apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:    "list users with status",
-			token:   validToken,
-			thingID: validID,
+			desc:     "list users with status",
+			token:    validToken,
+			clientID: validID,
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Total: 1,
@@ -3728,7 +3728,7 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with invalid status",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    "status=invalid",
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
@@ -3742,9 +3742,9 @@ func TestListUsersByClientID(t *testing.T) {
 			err:    apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:    "list users with tags",
-			token:   validToken,
-			thingID: validID,
+			desc:     "list users with tags",
+			token:    validToken,
+			clientID: validID,
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Total: 1,
@@ -3759,7 +3759,7 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with invalid tags",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    "tag=invalid",
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
@@ -3773,9 +3773,9 @@ func TestListUsersByClientID(t *testing.T) {
 			err:    apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:    "list users with metadata",
-			token:   validToken,
-			thingID: validID,
+			desc:     "list users with metadata",
+			token:    validToken,
+			clientID: validID,
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Total: 1,
@@ -3790,7 +3790,7 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with invalid metadata",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    "metadata=invalid",
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
@@ -3799,16 +3799,16 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with duplicate metadata",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&metadata=%7B%22domain%22%3A%20%22example.com%22%7D",
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
 			err:      apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:    "list users with permissions",
-			token:   validToken,
-			thingID: validID,
+			desc:     "list users with permissions",
+			token:    validToken,
+			clientID: validID,
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Total: 1,
@@ -3828,10 +3828,10 @@ func TestListUsersByClientID(t *testing.T) {
 			err:    apiutil.ErrInvalidQueryParams,
 		},
 		{
-			desc:    "list users with email",
-			token:   validToken,
-			thingID: validID,
-			query:   fmt.Sprintf("email=%s", user.Email),
+			desc:     "list users with email",
+			token:    validToken,
+			clientID: validID,
+			query:    fmt.Sprintf("email=%s", user.Email),
 			listUsersResponse: users.UsersPage{
 				Page: users.Page{
 					Total: 1,
@@ -3847,7 +3847,7 @@ func TestListUsersByClientID(t *testing.T) {
 		{
 			desc:     "list users with invalid email",
 			token:    validToken,
-			thingID:  validID,
+			clientID: validID,
 			query:    "email=invalid",
 			status:   http.StatusBadRequest,
 			authnRes: mgauthn.Session{UserID: validID, DomainID: domainID},
@@ -3867,7 +3867,7 @@ func TestListUsersByClientID(t *testing.T) {
 			req := testRequest{
 				user:   us.Client(),
 				method: http.MethodGet,
-				url:    fmt.Sprintf("%s/%s/things/%s/users?", us.URL, validID, validID) + tc.query,
+				url:    fmt.Sprintf("%s/%s/clients/%s/users?", us.URL, validID, validID) + tc.query,
 				token:  tc.token,
 			}
 

@@ -67,7 +67,7 @@ services:
         target: /auth-grpc-server-ca${MG_AUTH_GRPC_SERVER_CA_CERTS:+.crt}
         bind:
           create_host_path: true
-      # Things gRPC mTLS client certificates
+      # Clients gRPC mTLS client certificates
       - type: bind
         source: ${MG_ADDONS_CERTS_PATH_PREFIX}${MG_CLIENTS_AUTH_GRPC_CLIENT_CERT:-ssl/certs/dummy/client_cert}
         target: /clients-grpc-client${MG_CLIENTS_AUTH_GRPC_CLIENT_CERT:+.crt}

@@ -30,8 +30,8 @@ paths:
   /{domainID}/certs:
     post:
       operationId: createCert
-      summary: Creates a certificate for thing
-      description: Creates a certificate for thing
+      summary: Creates a certificate for client
+      description: Creates a certificate for client
       tags:
         - certs
       parameters:
@@ -171,7 +171,7 @@ components:
         client_id:
           type: string
           format: uuid
-          description: Corresponding Magistrala Thing ID.
+          description: Corresponding Magistrala Client ID.
         client_cert:
           type: string
           description: Client Certificate.
@@ -240,7 +240,7 @@ components:
   requestBodies:
     CertReq:
       description: |
-        Issues a certificate that is required for mTLS. To create a certificate for a thing
+        Issues a certificate that is required for mTLS. To create a certificate for a client
         provide a client id, data identifying particular client will be embedded into the Certificate.
         x509 and ECC certificates are supported when using when Vault is used as PKI.
       content:
@@ -271,7 +271,7 @@ components:
         serial:
           operationId: getSerials
           parameters:
-            thingID: $response.body#/client_id
+            clientID: $response.body#/client_id
         delete:
           operationId: revokeCert
           parameters:

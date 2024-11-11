@@ -22,7 +22,7 @@ const (
 
 var validID = testsutil.GenerateUUID(&testing.T{})
 
-func TestCreateThingReqValidate(t *testing.T) {
+func TestCreateClientReqValidate(t *testing.T) {
 	cases := []struct {
 		desc string
 		req  createClientReq
@@ -67,7 +67,7 @@ func TestCreateThingReqValidate(t *testing.T) {
 	}
 }
 
-func TestCreateThingsReqValidate(t *testing.T) {
+func TestCreateClientsReqValidate(t *testing.T) {
 	cases := []struct {
 		desc string
 		req  createClientsReq
@@ -76,7 +76,7 @@ func TestCreateThingsReqValidate(t *testing.T) {
 		{
 			desc: "valid request",
 			req: createClientsReq{
-				Things: []clients.Client{
+				Clients: []clients.Client{
 					{
 						ID:   validID,
 						Name: valid,
@@ -88,14 +88,14 @@ func TestCreateThingsReqValidate(t *testing.T) {
 		{
 			desc: "empty list",
 			req: createClientsReq{
-				Things: []clients.Client{},
+				Clients: []clients.Client{},
 			},
 			err: apiutil.ErrEmptyList,
 		},
 		{
 			desc: "name too long",
 			req: createClientsReq{
-				Things: []clients.Client{
+				Clients: []clients.Client{
 					{
 						ID:   validID,
 						Name: strings.Repeat("a", api.MaxNameSize+1),
@@ -107,7 +107,7 @@ func TestCreateThingsReqValidate(t *testing.T) {
 		{
 			desc: "invalid id",
 			req: createClientsReq{
-				Things: []clients.Client{
+				Clients: []clients.Client{
 					{
 						ID:   invalid,
 						Name: valid,

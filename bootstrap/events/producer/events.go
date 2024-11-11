@@ -17,12 +17,12 @@ const (
 	configList          = configPrefix + "list"
 	configHandlerRemove = configPrefix + "remove_handler"
 
-	thingPrefix            = "bootstrap.thing."
-	thingBootstrap         = thingPrefix + "bootstrap"
-	thingStateChange       = thingPrefix + "change_state"
-	thingUpdateConnections = thingPrefix + "update_connections"
-	thingConnect           = thingPrefix + "connect"
-	thingDisconnect        = thingPrefix + "disconnect"
+	clientPrefix            = "bootstrap.client."
+	clientBootstrap         = clientPrefix + "bootstrap"
+	clientStateChange       = clientPrefix + "change_state"
+	clientUpdateConnections = clientPrefix + "update_connections"
+	clientConnect           = clientPrefix + "connect"
+	clientDisconnect        = clientPrefix + "disconnect"
 
 	channelPrefix        = "bootstrap.channel."
 	channelHandlerRemove = channelPrefix + "remove_handler"
@@ -134,7 +134,7 @@ func (be bootstrapEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
 		"external_id": be.externalID,
 		"success":     be.success,
-		"operation":   thingBootstrap,
+		"operation":   clientBootstrap,
 	}
 
 	if be.ClientID != "" {
@@ -175,28 +175,28 @@ func (be bootstrapEvent) Encode() (map[string]interface{}, error) {
 }
 
 type changeStateEvent struct {
-	mgThing string
-	state   bootstrap.State
+	mgClient string
+	state    bootstrap.State
 }
 
 func (cse changeStateEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"client_id": cse.mgThing,
+		"client_id": cse.mgClient,
 		"state":     cse.state.String(),
-		"operation": thingStateChange,
+		"operation": clientStateChange,
 	}, nil
 }
 
 type updateConnectionsEvent struct {
-	mgThing    string
+	mgClient   string
 	mgChannels []string
 }
 
 func (uce updateConnectionsEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"client_id": uce.mgThing,
+		"client_id": uce.mgClient,
 		"channels":  uce.mgChannels,
-		"operation": thingUpdateConnections,
+		"operation": clientUpdateConnections,
 	}, nil
 }
 
@@ -250,28 +250,28 @@ func (uche updateChannelHandlerEvent) Encode() (map[string]interface{}, error) {
 	return val, nil
 }
 
-type connectThingEvent struct {
-	thingID   string
+type connectClientEvent struct {
+	clientID  string
 	channelID string
 }
 
-func (cte connectThingEvent) Encode() (map[string]interface{}, error) {
+func (cte connectClientEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"client_id":  cte.thingID,
+		"client_id":  cte.clientID,
 		"channel_id": cte.channelID,
-		"operation":  thingConnect,
+		"operation":  clientConnect,
 	}, nil
 }
 
-type disconnectThingEvent struct {
-	thingID   string
+type disconnectClientEvent struct {
+	clientID  string
 	channelID string
 }
 
-func (dte disconnectThingEvent) Encode() (map[string]interface{}, error) {
+func (dte disconnectClientEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"client_id":  dte.thingID,
+		"client_id":  dte.clientID,
 		"channel_id": dte.channelID,
-		"operation":  thingDisconnect,
+		"operation":  clientDisconnect,
 	}, nil
 }

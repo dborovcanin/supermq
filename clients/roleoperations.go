@@ -11,13 +11,13 @@ import (
 // Internal Operations
 
 const (
-	OpViewThing svcutil.Operation = iota
-	OpUpdateThing
-	OpUpdateThingTags
-	OpUpdateThingSecret
-	OpEnableThing
-	OpDisableThing
-	OpDeleteThing
+	OpViewClient svcutil.Operation = iota
+	OpUpdateClient
+	OpUpdateClientTags
+	OpUpdateClientSecret
+	OpEnableClient
+	OpDisableClient
+	OpDeleteClient
 	OpSetParentGroup
 	OpRemoveParentGroup
 	OpConnectToChannel
@@ -25,13 +25,13 @@ const (
 )
 
 var expectedOperations = []svcutil.Operation{
-	OpViewThing,
-	OpUpdateThing,
-	OpUpdateThingTags,
-	OpUpdateThingSecret,
-	OpEnableThing,
-	OpDisableThing,
-	OpDeleteThing,
+	OpViewClient,
+	OpUpdateClient,
+	OpUpdateClientTags,
+	OpUpdateClientSecret,
+	OpEnableClient,
+	OpDisableClient,
+	OpDeleteClient,
 	OpSetParentGroup,
 	OpRemoveParentGroup,
 	OpConnectToChannel,
@@ -105,13 +105,13 @@ const (
 
 func NewOperationPermissionMap() map[svcutil.Operation]svcutil.Permission {
 	opPerm := map[svcutil.Operation]svcutil.Permission{
-		OpViewThing:             readPermission,
-		OpUpdateThing:           updatePermission,
-		OpUpdateThingTags:       updatePermission,
-		OpUpdateThingSecret:     updatePermission,
-		OpEnableThing:           updatePermission,
-		OpDisableThing:          updatePermission,
-		OpDeleteThing:           deletePermission,
+		OpViewClient:            readPermission,
+		OpUpdateClient:          updatePermission,
+		OpUpdateClientTags:      updatePermission,
+		OpUpdateClientSecret:    updatePermission,
+		OpEnableClient:          updatePermission,
+		OpDisableClient:         updatePermission,
+		OpDeleteClient:          deletePermission,
 		OpSetParentGroup:        setParentGroupPermission,
 		OpRemoveParentGroup:     setParentGroupPermission,
 		OpConnectToChannel:      connectToChannelPermission,

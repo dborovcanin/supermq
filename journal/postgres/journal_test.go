@@ -43,8 +43,8 @@ var (
 	}
 
 	entityID          = testsutil.GenerateUUID(&testing.T{})
-	thingOperation    = "thing.create"
-	thingAttributesV1 = map[string]interface{}{
+	clientOperation    = "client.create"
+	clientAttributesV1 = map[string]interface{}{
 		"id":         entityID,
 		"status":     "enabled",
 		"created_at": time.Now().Add(-time.Hour),
@@ -54,7 +54,7 @@ var (
 		"metadata":   payload,
 		"identity":   testsutil.GenerateUUID(&testing.T{}),
 	}
-	thingAttributesV2 = map[string]interface{}{
+	clientAttributesV2 = map[string]interface{}{
 		"client_id": entityID,
 		"metadata":  payload,
 	}
@@ -299,14 +299,14 @@ func TestJournalRetrieveAll(t *testing.T) {
 			Metadata:   payload,
 		}
 		if i%2 == 0 {
-			j.Operation = fmt.Sprintf("%s-%d", thingOperation, i)
-			j.Attributes = thingAttributesV1
+			j.Operation = fmt.Sprintf("%s-%d", clientOperation, i)
+			j.Attributes = clientAttributesV1
 		}
 		if i%3 == 0 {
 			j.Attributes = userAttributesV2
 		}
 		if i%5 == 0 {
-			j.Attributes = thingAttributesV2
+			j.Attributes = clientAttributesV2
 		}
 		err := repo.Save(context.Background(), j)
 		require.Nil(t, err, fmt.Sprintf("create journal unexpected error: %s", err))
@@ -634,13 +634,13 @@ func TestJournalRetrieveAll(t *testing.T) {
 				Offset:     0,
 				Limit:      10,
 				EntityID:   entityID,
-				EntityType: journal.ThingEntity,
+				EntityType: journal.ClientEntity,
 			},
 			response: journal.JournalsPage{
-				Total:    uint64(len(extractEntities(items, journal.ThingEntity, entityID))),
+				Total:    uint64(len(extractEntities(items, journal.ClientEntity, entityID))),
 				Offset:   0,
 				Limit:    10,
-				Journals: extractEntities(items, journal.ThingEntity, entityID)[:10],
+				Journals: extractEntities(items, journal.ClientEntity, entityID)[:10],
 			},
 		},
 		{
@@ -709,8 +709,8 @@ func extractEntities(journals []journal.Journal, entityType journal.EntityType, 
 			if strings.HasPrefix(j.Operation, "group.") && j.Attributes["id"] == entityID || j.Attributes["group_id"] == entityID {
 				entities = append(entities, j)
 			}
-		case journal.ThingEntity:
-			if strings.HasPrefix(j.Operation, "thing.") && j.Attributes["id"] == entityID || j.Attributes["client_id"] == entityID {
+		case journal.ClientEntity:
+			if strings.HasPrefix(j.Operation, "client.") && j.Attributes["id"] == entityID || j.Attributes["client_id"] == entityID {
 				entities = append(entities, j)
 			}
 		case journal.ChannelEntity:

@@ -28,7 +28,7 @@ type service struct {
 	policy     policies.Service
 	idProvider magistrala.IDProvider
 	channels   grpcChannelsV1.ChannelsServiceClient
-	things     grpcClientsV1.ClientsServiceClient
+	clients     grpcClientsV1.ClientsServiceClient
 
 	roles.ProvisionManageService
 }
@@ -44,7 +44,7 @@ func NewService(repo Repository, policy policies.Service, idp magistrala.IDProvi
 		policy:                 policy,
 		idProvider:             idp,
 		channels:               channels,
-		things:                 clients,
+		clients:                 clients,
 		ProvisionManageService: rpms,
 	}, nil
 }
@@ -156,7 +156,7 @@ func (svc service) ListGroups(ctx context.Context, session mgauthn.Session, gm P
 	return gp, nil
 }
 
-// Experimental functions used for async calling of svc.listUserThingPermission. This might be helpful during listing of large number of entities.
+// Experimental functions used for async calling of svc.listUserClientPermission. This might be helpful during listing of large number of entities.
 func (svc service) retrievePermissions(ctx context.Context, userID string, group *Group) error {
 	permissions, err := svc.listUserGroupPermission(ctx, userID, group.ID)
 	if err != nil {
@@ -457,7 +457,7 @@ func (svc service) DeleteGroup(ctx context.Context, session mgauthn.Session, id 
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
 
-	if _, err := svc.things.UnsetParentGroupFromClient(ctx, &grpcClientsV1.UnsetParentGroupFromClientReq{ParentGroupId: id}); err != nil {
+	if _, err := svc.clients.UnsetParentGroupFromClient(ctx, &grpcClientsV1.UnsetParentGroupFromClientReq{ParentGroupId: id}); err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
 

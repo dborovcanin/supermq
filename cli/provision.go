@@ -122,7 +122,7 @@ var cmdProvision = []cobra.Command{
 						Connect both clients to one of the channels, \
 						and only on client to other channel.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			numThings := 2
+			numClients := 2
 			numChan := 2
 			clients := []mgxsdk.Client{}
 			channels := []mgxsdk.Channel{}
@@ -172,10 +172,10 @@ var cmdProvision = []cobra.Command{
 				return
 			}
 
-			// Create things
-			for i := 0; i < numThings; i++ {
+			// Create clients
+			for i := 0; i < numClients; i++ {
 				t := mgxsdk.Client{
-					Name:   fmt.Sprintf("%s-thing-%d", name, i),
+					Name:   fmt.Sprintf("%s-client-%d", name, i),
 					Status: mgxsdk.EnabledStatus,
 				}
 
@@ -275,7 +275,7 @@ func clientsFromFile(path string) ([]mgxsdk.Client, error) {
 	}
 	defer file.Close()
 
-	things := []mgxsdk.Client{}
+	clients := []mgxsdk.Client{}
 	switch filepath.Ext(path) {
 	case csvExt:
 		reader := csv.NewReader(file)
@@ -293,14 +293,14 @@ func clientsFromFile(path string) ([]mgxsdk.Client, error) {
 				return []mgxsdk.Client{}, errors.New("empty line found in file")
 			}
 
-			thing := mgxsdk.Client{
+			client := mgxsdk.Client{
 				Name: l[0],
 			}
 
-			things = append(things, thing)
+			clients = append(clients, client)
 		}
 	case jsonExt:
-		err := json.NewDecoder(file).Decode(&things)
+		err := json.NewDecoder(file).Decode(&clients)
 		if err != nil {
 			return []mgxsdk.Client{}, err
 		}
@@ -308,7 +308,7 @@ func clientsFromFile(path string) ([]mgxsdk.Client, error) {
 		return []mgxsdk.Client{}, err
 	}
 
-	return things, nil
+	return clients, nil
 }
 
 func channelsFromFile(path string) ([]mgxsdk.Channel, error) {

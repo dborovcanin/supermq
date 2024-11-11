@@ -43,9 +43,9 @@ type authorizationMiddleware struct {
 }
 
 // AuthorizationMiddleware adds authorization to the clients service.
-func AuthorizationMiddleware(entityType string, svc clients.Service, authz authz.Authorization, repo clients.Repository, thingsOpPerm, rolesOpPerm map[svcutil.Operation]svcutil.Permission, extOpPerm map[svcutil.ExternalOperation]svcutil.Permission) (clients.Service, error) {
+func AuthorizationMiddleware(entityType string, svc clients.Service, authz authz.Authorization, repo clients.Repository, clientsOpPerm, rolesOpPerm map[svcutil.Operation]svcutil.Permission, extOpPerm map[svcutil.ExternalOperation]svcutil.Permission) (clients.Service, error) {
 	opp := clients.NewOperationPerm()
-	if err := opp.AddOperationPermissionMap(thingsOpPerm); err != nil {
+	if err := opp.AddOperationPermissionMap(clientsOpPerm); err != nil {
 		return nil, err
 	}
 	if err := opp.Validate(); err != nil {
@@ -87,7 +87,7 @@ func (am *authorizationMiddleware) CreateClients(ctx context.Context, session au
 }
 
 func (am *authorizationMiddleware) View(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
-	if err := am.authorize(ctx, clients.OpViewThing, authz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpViewClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -108,7 +108,7 @@ func (am *authorizationMiddleware) ListClients(ctx context.Context, session auth
 }
 
 func (am *authorizationMiddleware) Update(ctx context.Context, session authn.Session, client clients.Client) (clients.Client, error) {
-	if err := am.authorize(ctx, clients.OpUpdateThing, authz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpUpdateClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -122,7 +122,7 @@ func (am *authorizationMiddleware) Update(ctx context.Context, session authn.Ses
 }
 
 func (am *authorizationMiddleware) UpdateTags(ctx context.Context, session authn.Session, client clients.Client) (clients.Client, error) {
-	if err := am.authorize(ctx, clients.OpUpdateThingTags, authz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpUpdateClientTags, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -136,7 +136,7 @@ func (am *authorizationMiddleware) UpdateTags(ctx context.Context, session authn
 }
 
 func (am *authorizationMiddleware) UpdateSecret(ctx context.Context, session authn.Session, id, key string) (clients.Client, error) {
-	if err := am.authorize(ctx, clients.OpUpdateThingSecret, authz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpUpdateClientSecret, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -149,7 +149,7 @@ func (am *authorizationMiddleware) UpdateSecret(ctx context.Context, session aut
 }
 
 func (am *authorizationMiddleware) Enable(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
-	if err := am.authorize(ctx, clients.OpEnableThing, authz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpEnableClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -163,7 +163,7 @@ func (am *authorizationMiddleware) Enable(ctx context.Context, session authn.Ses
 }
 
 func (am *authorizationMiddleware) Disable(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
-	if err := am.authorize(ctx, clients.OpDisableThing, authz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpDisableClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -176,7 +176,7 @@ func (am *authorizationMiddleware) Disable(ctx context.Context, session authn.Se
 }
 
 func (am *authorizationMiddleware) Delete(ctx context.Context, session authn.Session, id string) error {
-	if err := am.authorize(ctx, clients.OpDeleteThing, authz.PolicyReq{
+	if err := am.authorize(ctx, clients.OpDeleteClient, authz.PolicyReq{
 		Domain:      session.DomainID,
 		SubjectType: policies.UserType,
 		Subject:     session.DomainUserID,
@@ -223,18 +223,18 @@ func (am *authorizationMiddleware) RemoveParentGroup(ctx context.Context, sessio
 		return errors.Wrap(err, errRemoveParentGroup)
 	}
 
-	th, err := am.repo.RetrieveByID(ctx, id)
+	cli, err := am.repo.RetrieveByID(ctx, id)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
 
-	if th.ParentGroup != "" {
+	if cli.ParentGroup != "" {
 		if err := am.extAuthorize(ctx, clients.GroupOpSetChildClient, authz.PolicyReq{
 			Domain:      session.DomainID,
 			SubjectType: policies.UserType,
 			Subject:     session.DomainUserID,
 			ObjectType:  policies.GroupType,
-			Object:      th.ParentGroup,
+			Object:      cli.ParentGroup,
 		}); err != nil {
 			return errors.Wrap(err, errGroupRemoveChildClients)
 		}

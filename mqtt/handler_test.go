@@ -23,8 +23,6 @@ import (
 )
 
 const (
-	thingID               = "513d02d2-16c1-4f23-98be-9e12f8fee898"
-	thingID1              = "513d02d2-16c1-4f23-98be-9e12f8fee899"
 	password              = "password"
 	password1             = "password1"
 	chanID                = "123e4567-e89b-12d3-a456-000000000001"
@@ -48,15 +46,15 @@ var (
 	logBuffer     = bytes.Buffer{}
 	sessionClient = session.Session{
 		ID:       clientID,
-		Username: thingID,
+		Username: clientID,
 		Password: []byte(password),
 	}
 	sessionClientSub = session.Session{
 		ID:       clientID1,
-		Username: thingID1,
+		Username: clientID1,
 		Password: []byte(password1),
 	}
-	invalidThingSessionClient = session.Session{
+	invalidClientSessionClient = session.Session{
 		ID:       clientID,
 		Username: invalidID,
 		Password: []byte(password),
@@ -81,7 +79,7 @@ func TestAuthConnect(t *testing.T) {
 			err:  mqtt.ErrMissingClientID,
 			session: &session.Session{
 				ID:       "",
-				Username: thingID,
+				Username: clientID,
 				Password: []byte(password),
 			},
 		},
@@ -90,14 +88,14 @@ func TestAuthConnect(t *testing.T) {
 			err:  nil,
 			session: &session.Session{
 				ID:       clientID,
-				Username: thingID,
+				Username: clientID,
 				Password: []byte(""),
 			},
 		},
 		{
 			desc:    "connect with valid password and invalid username",
 			err:     nil,
-			session: &invalidThingSessionClient,
+			session: &invalidClientSessionClient,
 		},
 		{
 			desc:    "connect with valid username and password",
@@ -450,8 +448,8 @@ func newHandler() (session.Handler, *climocks.ClientsServiceClient, *chmocks.Cha
 	if err != nil {
 		log.Fatalf("failed to create logger: %s", err)
 	}
-	things := new(climocks.ClientsServiceClient)
+	clients := new(climocks.ClientsServiceClient)
 	channels := new(chmocks.ChannelsServiceClient)
 	eventStore := new(mocks.EventStore)
-	return mqtt.NewHandler(mocks.NewPublisher(), eventStore, logger, things, channels), things, channels, eventStore
+	return mqtt.NewHandler(mocks.NewPublisher(), eventStore, logger, clients, channels), clients, channels, eventStore
 }

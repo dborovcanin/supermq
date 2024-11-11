@@ -16,8 +16,8 @@ import (
 const port = 7000
 
 var (
-	thingID   = "testID"
-	thingKey  = "testKey"
+	clientID  = "testID"
+	clientKey = "testKey"
 	channelID = "testID"
 	invalid   = "invalid"
 )

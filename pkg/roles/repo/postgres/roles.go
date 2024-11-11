@@ -721,13 +721,13 @@ func (repo *Repository) RetrieveEntitiesRolesActionsMembers(ctx context.Context,
 		"entity_ids": entityIDs,
 	}
 
-	thingsActionsRolesQuery := fmt.Sprintf(`SELECT e.%s AS entity_id , era."action" AS "action", er.id AS role_id
+	clientsActionsRolesQuery := fmt.Sprintf(`SELECT e.%s AS entity_id , era."action" AS "action", er.id AS role_id
 								FROM %s e
 								JOIN %s_roles er ON er.entity_id  = e.%s
 								JOIN %s_role_actions era  ON era.role_id  = er.id
 								WHERE e.%s = ANY(:entity_ids);
 							`, repo.entityIDColumnName, repo.entityTableName, repo.tableNamePrefix, repo.entityIDColumnName, repo.tableNamePrefix, repo.entityIDColumnName)
-	rows, err := repo.db.NamedQueryContext(ctx, thingsActionsRolesQuery, params)
+	rows, err := repo.db.NamedQueryContext(ctx, clientsActionsRolesQuery, params)
 	if err != nil {
 		return []roles.EntityActionRole{}, []roles.EntityMemberRole{}, postgres.HandleError(repoerr.ErrViewEntity, err)
 	}
@@ -742,14 +742,14 @@ func (repo *Repository) RetrieveEntitiesRolesActionsMembers(ctx context.Context,
 
 		dbears = append(dbears, dbear)
 	}
-	thingsMembersRolesQuery := fmt.Sprintf(`SELECT e.%s AS entity_id , erm.member_id AS member_id, er.id AS role_id
+	clientsMembersRolesQuery := fmt.Sprintf(`SELECT e.%s AS entity_id , erm.member_id AS member_id, er.id AS role_id
 								FROM %s e
 								JOIN %s_roles er ON er.entity_id  = e.%s
 								JOIN %s_role_members erm ON erm.role_id = er.id
 								WHERE e.%s = ANY(:entity_ids);
 								`, repo.entityIDColumnName, repo.entityTableName, repo.tableNamePrefix, repo.entityIDColumnName, repo.tableNamePrefix, repo.entityIDColumnName)
 
-	rows, err = repo.db.NamedQueryContext(ctx, thingsMembersRolesQuery, params)
+	rows, err = repo.db.NamedQueryContext(ctx, clientsMembersRolesQuery, params)
 	if err != nil {
 		return []roles.EntityActionRole{}, []roles.EntityMemberRole{}, postgres.HandleError(repoerr.ErrViewEntity, err)
 	}

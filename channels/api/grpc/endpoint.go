@@ -29,15 +29,15 @@ func authorizeEndpoint(svc channels.Service) endpoint.Endpoint {
 	}
 }
 
-func removeThingConnectionsEndpoint(svc channels.Service) endpoint.Endpoint {
+func removeClientConnectionsEndpoint(svc channels.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(removeThingConnectionsReq)
+		req := request.(removeClientConnectionsReq)
 
 		if err := svc.RemoveClientConnections(ctx, req.clientID); err != nil {
-			return removeThingConnectionsRes{}, err
+			return removeClientConnectionsRes{}, err
 		}
 
-		return removeThingConnectionsRes{}, nil
+		return removeClientConnectionsRes{}, nil
 	}
 }
 

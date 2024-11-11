@@ -63,13 +63,13 @@ func (tm *tracingMiddleware) Update(ctx context.Context, session mgauthn.Session
 }
 
 // UpdateCert traces the "UpdateCert" operation of the wrapped bootstrap.Service.
-func (tm *tracingMiddleware) UpdateCert(ctx context.Context, session mgauthn.Session, thingID, clientCert, clientKey, caCert string) (bootstrap.Config, error) {
+func (tm *tracingMiddleware) UpdateCert(ctx context.Context, session mgauthn.Session, clientID, clientCert, clientKey, caCert string) (bootstrap.Config, error) {
 	ctx, span := tm.tracer.Start(ctx, "svc_update_cert", trace.WithAttributes(
-		attribute.String("client_id", thingID),
+		attribute.String("client_id", clientID),
 	))
 	defer span.End()
 
-	return tm.svc.UpdateCert(ctx, session, thingID, clientCert, clientKey, caCert)
+	return tm.svc.UpdateCert(ctx, session, clientID, clientCert, clientKey, caCert)
 }
 
 // UpdateConnections traces the "UpdateConnections" operation of the wrapped bootstrap.Service.

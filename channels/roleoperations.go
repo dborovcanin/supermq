@@ -16,8 +16,8 @@ const (
 	OpDeleteChannel
 	OpSetParentGroup
 	OpRemoveParentGroup
-	OpConnectThing
-	OpDisconnectThing
+	OpConnectClient
+	OpDisconnectClient
 )
 
 var expectedOperations = []svcutil.Operation{
@@ -29,8 +29,8 @@ var expectedOperations = []svcutil.Operation{
 	OpDeleteChannel,
 	OpSetParentGroup,
 	OpRemoveParentGroup,
-	OpConnectThing,
-	OpDisconnectThing,
+	OpConnectClient,
+	OpDisconnectClient,
 }
 
 var operationNames = []string{
@@ -42,8 +42,8 @@ var operationNames = []string{
 	"OpDeleteChannel",
 	"OpSetParentGroup",
 	"OpRemoveParentGroup",
-	"OpConnectThing",
-	"OpDisconnectThing",
+	"OpConnectClient",
+	"OpDisconnectClient",
 }
 
 func NewOperationPerm() svcutil.OperationPerm {
@@ -85,11 +85,11 @@ func NewExternalOperationPerm() svcutil.ExternalOperationPerm {
 // Below codes should moved out of service, may be can be kept in `cmd/<svc>/main.go`
 
 const (
-	updatePermission         = "update_permission"
-	readPermission           = "read_permission"
-	deletePermission         = "delete_permission"
-	setParentGroupPermission = "set_parent_group_permission"
-	connectToThingPermission = "connect_to_client_permission"
+	updatePermission          = "update_permission"
+	readPermission            = "read_permission"
+	deletePermission          = "delete_permission"
+	setParentGroupPermission  = "set_parent_group_permission"
+	connectToClientPermission = "connect_to_client_permission"
 
 	manageRolePermission      = "manage_role_permission"
 	addRoleUsersPermission    = "add_role_users_permission"
@@ -107,8 +107,8 @@ func NewOperationPermissionMap() map[svcutil.Operation]svcutil.Permission {
 		OpDeleteChannel:     deletePermission,
 		OpSetParentGroup:    setParentGroupPermission,
 		OpRemoveParentGroup: setParentGroupPermission,
-		OpConnectThing:      connectToThingPermission,
-		OpDisconnectThing:   connectToThingPermission,
+		OpConnectClient:     connectToClientPermission,
+		OpDisconnectClient:  connectToClientPermission,
 	}
 	return opPerm
 }

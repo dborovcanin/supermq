@@ -85,19 +85,19 @@ func (tr testRequest) make() (*http.Response, error) {
 }
 
 func TestPublish(t *testing.T) {
-	things := new(climocks.ClientsServiceClient)
+	clients := new(climocks.ClientsServiceClient)
 	authn := new(authnMocks.Authentication)
 	channels := new(chmocks.ChannelsServiceClient)
 	chanID := "1"
 	ctSenmlJSON := "application/senml+json"
 	ctSenmlCBOR := "application/senml+cbor"
 	ctJSON := "application/json"
-	thingKey := "thing_key"
+	clientKey := "client_key"
 	invalidKey := invalidValue
 	msg := `[{"n":"current","t":-1,"v":1.6}]`
 	msgJSON := `{"field1":"val1","field2":"val2"}`
 	msgCBOR := `81A3616E6763757272656E746174206176FB3FF999999999999A`
-	svc, pub := newService(authn, things, channels)
+	svc, pub := newService(authn, clients, channels)
 	target := newTargetHTTPServer()
 	defer target.Close()
 	ts, err := newProxyHTPPServer(svc, target)
@@ -117,21 +117,21 @@ func TestPublish(t *testing.T) {
 			chanID:      chanID,
 			msg:         msg,
 			contentType: ctSenmlJSON,
-			key:         thingKey,
+			key:         clientKey,
 			status:      http.StatusAccepted,
 		},
 		"publish message with application/senml+cbor content-type": {
 			chanID:      chanID,
 			msg:         msgCBOR,
 			contentType: ctSenmlCBOR,
-			key:         thingKey,
+			key:         clientKey,
 			status:      http.StatusAccepted,
 		},
 		"publish message with application/json content-type": {
 			chanID:      chanID,
 			msg:         msgJSON,
 			contentType: ctJSON,
-			key:         thingKey,
+			key:         clientKey,
 			status:      http.StatusAccepted,
 		},
 		"publish message with empty key": {
@@ -145,7 +145,7 @@ func TestPublish(t *testing.T) {
 			chanID:      chanID,
 			msg:         msg,
 			contentType: ctSenmlJSON,
-			key:         thingKey,
+			key:         clientKey,
 			basicAuth:   true,
 			status:      http.StatusAccepted,
 		},
@@ -168,14 +168,14 @@ func TestPublish(t *testing.T) {
 			chanID:      chanID,
 			msg:         msg,
 			contentType: "",
-			key:         thingKey,
+			key:         clientKey,
 			status:      http.StatusUnsupportedMediaType,
 		},
 		"publish message to invalid channel": {
 			chanID:      "",
 			msg:         msg,
 			contentType: ctSenmlJSON,
-			key:         thingKey,
+			key:         clientKey,
 			status:      http.StatusBadRequest,
 		},
 	}

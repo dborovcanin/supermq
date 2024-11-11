@@ -155,7 +155,7 @@ func decodeCreateClientsReq(_ context.Context, r *http.Request) (interface{}, er
 	}
 
 	c := createClientsReq{}
-	if err := json.NewDecoder(r.Body).Decode(&c.Things); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&c.Clients); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(errors.ErrMalformedEntity, err))
 	}
 
@@ -170,12 +170,12 @@ func decodeChangeClientStatus(_ context.Context, r *http.Request) (interface{}, 
 	return req, nil
 }
 
-func decodeSetThingParentGroupStatus(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeSetClientParentGroupStatus(_ context.Context, r *http.Request) (interface{}, error) {
 	if !strings.Contains(r.Header.Get("Content-Type"), api.ContentType) {
 		return nil, errors.Wrap(apiutil.ErrValidation, apiutil.ErrUnsupportedContentType)
 	}
 
-	req := setThingParentGroupReq{
+	req := setClientParentGroupReq{
 		id: chi.URLParam(r, clientID),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -184,8 +184,8 @@ func decodeSetThingParentGroupStatus(_ context.Context, r *http.Request) (interf
 	return req, nil
 }
 
-func decodeRemoveThingParentGroupStatus(_ context.Context, r *http.Request) (interface{}, error) {
-	req := removeThingParentGroupReq{
+func decodeRemoveClientParentGroupStatus(_ context.Context, r *http.Request) (interface{}, error) {
+	req := removeClientParentGroupReq{
 		id: chi.URLParam(r, clientID),
 	}
 

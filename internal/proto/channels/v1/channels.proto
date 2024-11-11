@@ -9,15 +9,15 @@ option go_package = "github.com/absmach/magistrala/internal/grpc/channels/v1";
 
 service ChannelsService {
   rpc Authorize(AuthzReq)returns(AuthzRes) {}
-  rpc RemoveThingConnections(RemoveThingConnectionsReq)returns(RemoveThingConnectionsRes) {}
+  rpc RemoveClientConnections(RemoveClientConnectionsReq)returns(RemoveClientConnectionsRes) {}
   rpc UnsetParentGroupFromChannels(UnsetParentGroupFromChannelsReq)returns(UnsetParentGroupFromChannelsRes){}
 }
 
-message RemoveThingConnectionsReq {
+message RemoveClientConnectionsReq {
   string client_id = 1;
 }
 
-message RemoveThingConnectionsRes {}
+message RemoveClientConnectionsRes {}
 
 message UnsetParentGroupFromChannelsReq {
   string parent_group_id = 1;

@@ -70,7 +70,7 @@ func updateCertEndpoint(svc bootstrap.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthorization
 		}
 
-		cfg, err := svc.UpdateCert(ctx, session, req.thingID, req.ClientCert, req.ClientKey, req.CACert)
+		cfg, err := svc.UpdateCert(ctx, session, req.clientID, req.ClientCert, req.ClientKey, req.CACert)
 		if err != nil {
 			return nil, err
 		}

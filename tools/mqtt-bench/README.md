@@ -46,7 +46,7 @@ Flags:
 
 Two output formats supported: human-readable plain text and JSON.
 
-Before use you need a `mgconn.toml` - a TOML file that describes Magistrala connection data (channels, thingIDs, thingKeys, certs).
+Before use you need a `mgconn.toml` - a TOML file that describes Magistrala connection data (channels, clientIDs, clientKeys, certs).
 You can use `provision` tool (in tools/provision) to create this TOML config file.
 
 ```bash

@@ -152,26 +152,26 @@ func (bs bootstrapService) Add(ctx context.Context, session mgauthn.Session, tok
 	}
 
 	id := cfg.ClientID
-	mgThing, err := bs.client(session.DomainID, id, token)
+	mgClient, err := bs.client(session.DomainID, id, token)
 	if err != nil {
 		return Config{}, errors.Wrap(errClientNotFound, err)
 	}
 
 	for _, channel := range cfg.Channels {
-		if channel.DomainID != mgThing.DomainID {
+		if channel.DomainID != mgClient.DomainID {
 			return Config{}, errors.Wrap(svcerr.ErrMalformedEntity, errNotInSameDomain)
 		}
 	}
 
-	cfg.ClientID = mgThing.ID
+	cfg.ClientID = mgClient.ID
 	cfg.DomainID = session.DomainID
 	cfg.State = Inactive
-	cfg.ClientSecret = mgThing.Credentials.Secret
+	cfg.ClientSecret = mgClient.Credentials.Secret
 
 	saved, err := bs.configs.Save(ctx, cfg, toConnect)
 	if err != nil {
-		// If id is empty, then a new client has been created function - bs.thing(id, token)
-		// So, on bootstrap config save error , delete the newly created thing.
+		// If id is empty, then a new client has been created function - bs.client(id, token)
+		// So, on bootstrap config save error , delete the newly created client.
 		if id == "" {
 			if errT := bs.sdk.DeleteClient(cfg.ClientID, cfg.DomainID, token); errT != nil {
 				err = errors.Wrap(err, errT)
@@ -280,12 +280,12 @@ func (bs bootstrapService) List(ctx context.Context, session mgauthn.Session, fi
 	}
 
 	// Handle non-admin users
-	thingIDs, err := bs.listClientIDs(ctx, session.DomainUserID)
+	clientIDs, err := bs.listClientIDs(ctx, session.DomainUserID)
 	if err != nil {
 		return ConfigsPage{}, errors.Wrap(svcerr.ErrNotFound, err)
 	}
 
-	if len(thingIDs) == 0 {
+	if len(clientIDs) == 0 {
 		return ConfigsPage{
 			Total:   0,
 			Offset:  offset,
@@ -294,7 +294,7 @@ func (bs bootstrapService) List(ctx context.Context, session mgauthn.Session, fi
 		}, nil
 	}
 
-	return bs.configs.RetrieveAll(ctx, session.DomainID, thingIDs, filter, offset, limit), nil
+	return bs.configs.RetrieveAll(ctx, session.DomainID, clientIDs, filter, offset, limit), nil
 }
 
 func (bs bootstrapService) Remove(ctx context.Context, session mgauthn.Session, id string) error {
@@ -407,19 +407,19 @@ func (bs bootstrapService) client(domainID, id, token string) (mgsdk.Client, err
 		if err != nil {
 			return mgsdk.Client{}, errors.Wrap(errCreateClient, err)
 		}
-		thing, sdkErr := bs.sdk.CreateClient(mgsdk.Client{ID: id, Name: "Bootstrapped Client " + id}, domainID, token)
+		client, sdkErr := bs.sdk.CreateClient(mgsdk.Client{ID: id, Name: "Bootstrapped Client " + id}, domainID, token)
 		if sdkErr != nil {
 			return mgsdk.Client{}, errors.Wrap(errCreateClient, sdkErr)
 		}
-		return thing, nil
+		return client, nil
 	}
 
-	// If Client ID is provided, then retrieve thing
-	thing, sdkErr := bs.sdk.Client(id, domainID, token)
+	// If Client ID is provided, then retrieve client
+	client, sdkErr := bs.sdk.Client(id, domainID, token)
 	if sdkErr != nil {
 		return mgsdk.Client{}, errors.Wrap(ErrClients, sdkErr)
 	}
-	return thing, nil
+	return client, nil
 }
 
 func (bs bootstrapService) connectionChannels(channels, existing []string, domainID, token string) ([]Channel, error) {

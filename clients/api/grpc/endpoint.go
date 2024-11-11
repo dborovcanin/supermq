@@ -7,11 +7,11 @@ import (
 	"context"
 
 	"github.com/absmach/magistrala/clients"
-	pThings "github.com/absmach/magistrala/clients/private"
+	pClients "github.com/absmach/magistrala/clients/private"
 	"github.com/go-kit/kit/endpoint"
 )
 
-func authenticateEndpoint(svc pThings.Service) endpoint.Endpoint {
+func authenticateEndpoint(svc pClients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(authenticateReq)
 		id, err := svc.Authenticate(ctx, req.ClientSecret)
@@ -25,39 +25,39 @@ func authenticateEndpoint(svc pThings.Service) endpoint.Endpoint {
 	}
 }
 
-func retrieveEntityEndpoint(svc pThings.Service) endpoint.Endpoint {
+func retrieveEntityEndpoint(svc pClients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(retrieveEntityReq)
-		thing, err := svc.RetrieveById(ctx, req.Id)
+		Client, err := svc.RetrieveById(ctx, req.Id)
 		if err != nil {
 			return retrieveEntityRes{}, err
 		}
 
-		return retrieveEntityRes{id: thing.ID, domain: thing.Domain, status: uint8(thing.Status)}, nil
+		return retrieveEntityRes{id: Client.ID, domain: Client.Domain, status: uint8(Client.Status)}, nil
 	}
 }
 
-func retrieveEntitiesEndpoint(svc pThings.Service) endpoint.Endpoint {
+func retrieveEntitiesEndpoint(svc pClients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(retrieveEntitiesReq)
 		tp, err := svc.RetrieveByIds(ctx, req.Ids)
 		if err != nil {
 			return retrieveEntitiesRes{}, err
 		}
-		thingsBasic := []enitity{}
+		clientsBasic := []enitity{}
 		for _, client := range tp.Clients {
-			thingsBasic = append(thingsBasic, enitity{id: client.ID, domain: client.Domain, status: uint8(client.Status)})
+			clientsBasic = append(clientsBasic, enitity{id: client.ID, domain: client.Domain, status: uint8(client.Status)})
 		}
 		return retrieveEntitiesRes{
 			total:   tp.Total,
 			limit:   tp.Limit,
 			offset:  tp.Offset,
-			clients: thingsBasic,
+			clients: clientsBasic,
 		}, nil
 	}
 }
 
-func addConnectionsEndpoint(svc pThings.Service) endpoint.Endpoint {
+func addConnectionsEndpoint(svc pClients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(connectionsReq)
 
@@ -80,7 +80,7 @@ func addConnectionsEndpoint(svc pThings.Service) endpoint.Endpoint {
 	}
 }
 
-func removeConnectionsEndpoint(svc pThings.Service) endpoint.Endpoint {
+func removeConnectionsEndpoint(svc pClients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(connectionsReq)
 
@@ -102,7 +102,7 @@ func removeConnectionsEndpoint(svc pThings.Service) endpoint.Endpoint {
 	}
 }
 
-func removeChannelConnectionsEndpoint(svc pThings.Service) endpoint.Endpoint {
+func removeChannelConnectionsEndpoint(svc pClients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(removeChannelConnectionsReq)
 
@@ -114,7 +114,7 @@ func removeChannelConnectionsEndpoint(svc pThings.Service) endpoint.Endpoint {
 	}
 }
 
-func UnsetParentGroupFromClientEndpoint(svc pThings.Service) endpoint.Endpoint {
+func UnsetParentGroupFromClientEndpoint(svc pClients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(UnsetParentGroupFromClientReq)
 

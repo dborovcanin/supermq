@@ -198,16 +198,16 @@ func encodeRetrieveEntitiesRequest(_ context.Context, grpcReq interface{}) (inte
 func decodeRetrieveEntitiesResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
 	res := grpcRes.(*grpcCommonV1.RetrieveEntitiesRes)
 
-	ths := []enitity{}
+	clis := []enitity{}
 
 	for _, e := range res.Entities {
-		ths = append(ths, enitity{
+		clis = append(clis, enitity{
 			id:     e.GetId(),
 			domain: e.GetDomainId(),
 			status: uint8(e.GetStatus()),
 		})
 	}
-	return retrieveEntitiesRes{total: res.GetTotal(), limit: res.GetLimit(), offset: res.GetOffset(), clients: ths}, nil
+	return retrieveEntitiesRes{total: res.GetTotal(), limit: res.GetLimit(), offset: res.GetOffset(), clients: clis}, nil
 }
 
 func (client grpcClient) AddConnections(ctx context.Context, req *grpcCommonV1.AddConnectionsReq, _ ...grpc.CallOption) (r *grpcCommonV1.AddConnectionsRes, err error) {

@@ -38,10 +38,10 @@ const (
 
 // Log message formats.
 const (
-	logInfoConnected        = "connected with thing_key %s"
+	logInfoConnected        = "connected with client_key %s"
 	logInfoPublished        = "published with client_type %s client_id %s to the topic %s"
 	logInfoFailedAuthNToken = "failed to authenticate token for topic %s with error %s"
-	logInfoFailedAuthNThing = "failed to authenticate client key %s for topic %s with error %s"
+	logInfoFailedAuthNClient = "failed to authenticate client key %s for topic %s with error %s"
 )
 
 // Error wrappers for MQTT errors.
@@ -131,11 +131,11 @@ func (h *handler) Publish(ctx context.Context, topic *string, payload *[]byte) e
 		secret := strings.TrimPrefix(string(s.Password), apiutil.ClientPrefix)
 		authnRes, err := h.clients.Authenticate(ctx, &grpcClientsV1.AuthnReq{ClientSecret: secret})
 		if err != nil {
-			h.logger.Info(fmt.Sprintf(logInfoFailedAuthNThing, secret, *topic, err))
+			h.logger.Info(fmt.Sprintf(logInfoFailedAuthNClient, secret, *topic, err))
 			return mgate.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
 		}
 		if !authnRes.Authenticated {
-			h.logger.Info(fmt.Sprintf(logInfoFailedAuthNThing, secret, *topic, svcerr.ErrAuthentication))
+			h.logger.Info(fmt.Sprintf(logInfoFailedAuthNClient, secret, *topic, svcerr.ErrAuthentication))
 			return mgate.NewHTTPProxyError(http.StatusUnauthorized, svcerr.ErrAuthentication)
 		}
 		clientType = policies.ClientType

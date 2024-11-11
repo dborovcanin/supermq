@@ -13,7 +13,7 @@ func Migration() *migrate.MemoryMigrationSource {
 				Id: "configs_1",
 				Up: []string{
 					`CREATE TABLE IF NOT EXISTS configs (
-						mainflux_thing TEXT UNIQUE NOT NULL,
+						mainflux_client TEXT UNIQUE NOT NULL,
 						owner          VARCHAR(254),
 						name           TEXT,
 						mainflux_key   CHAR(36) UNIQUE NOT NULL,
@@ -24,7 +24,7 @@ func Migration() *migrate.MemoryMigrationSource {
 						client_key 	   TEXT,
 						ca_cert 	   TEXT,
 						state          BIGINT NOT NULL,
-						PRIMARY KEY (mainflux_thing, owner)
+						PRIMARY KEY (mainflux_client, owner)
 					)`,
 					`CREATE TABLE IF NOT EXISTS unknown_configs (
 						external_id  TEXT UNIQUE NOT NULL,
@@ -44,7 +44,7 @@ func Migration() *migrate.MemoryMigrationSource {
 						config_id     TEXT,
 						config_owner  VARCHAR(256),
 						FOREIGN KEY (channel_id, channel_owner) REFERENCES channels (mainflux_channel, owner) ON DELETE CASCADE ON UPDATE CASCADE,
-						FOREIGN KEY (config_id, config_owner) REFERENCES configs (mainflux_thing, owner) ON DELETE CASCADE ON UPDATE CASCADE,
+						FOREIGN KEY (config_id, config_owner) REFERENCES configs (mainflux_client, owner) ON DELETE CASCADE ON UPDATE CASCADE,
 						PRIMARY KEY (channel_id, channel_owner, config_id, config_owner)
 					)`,
 				},
@@ -78,7 +78,7 @@ func Migration() *migrate.MemoryMigrationSource {
 			{
 				Id: "configs_4",
 				Up: []string{
-					`ALTER TABLE IF EXISTS configs RENAME COLUMN mainflux_thing TO magistrala_client`,
+					`ALTER TABLE IF EXISTS configs RENAME COLUMN mainflux_client TO magistrala_client`,
 					`ALTER TABLE IF EXISTS configs RENAME COLUMN mainflux_key TO magistrala_secret`,
 					`ALTER TABLE IF EXISTS channels RENAME COLUMN mainflux_channel TO magistrala_channel`,
 				},

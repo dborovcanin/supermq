@@ -149,7 +149,7 @@ func TestClientsSave(t *testing.T) {
 					ID:   testsutil.GenerateUUID(t),
 					Name: clientName,
 					Credentials: clients.Credentials{
-						Identity: "withoutdomain-thing@example.com",
+						Identity: "withoutdomain-client@example.com",
 						Secret:   testsutil.GenerateUUID(t),
 					},
 					Metadata: clients.Metadata{},
@@ -166,7 +166,7 @@ func TestClientsSave(t *testing.T) {
 					Domain: domainID,
 					Name:   clientName,
 					Credentials: clients.Credentials{
-						Identity: "invalidid-thing@example.com",
+						Identity: "invalidid-client@example.com",
 						Secret:   testsutil.GenerateUUID(t),
 					},
 					Metadata: clients.Metadata{},
@@ -209,7 +209,7 @@ func TestClientsSave(t *testing.T) {
 					Name:   invalidName,
 					Domain: domainID,
 					Credentials: clients.Credentials{
-						Identity: "invalidname-thing@example.com",
+						Identity: "invalidname-client@example.com",
 						Secret:   testsutil.GenerateUUID(t),
 					},
 					Metadata: clients.Metadata{},
@@ -225,7 +225,7 @@ func TestClientsSave(t *testing.T) {
 					ID:     testsutil.GenerateUUID(t),
 					Domain: invalidDomainID,
 					Credentials: clients.Credentials{
-						Identity: "invaliddomainid-thing@example.com",
+						Identity: "invaliddomainid-client@example.com",
 						Secret:   testsutil.GenerateUUID(t),
 					},
 					Metadata: clients.Metadata{},
@@ -256,7 +256,7 @@ func TestClientsSave(t *testing.T) {
 				{
 					ID:     testsutil.GenerateUUID(t),
 					Domain: testsutil.GenerateUUID(t),
-					Name:   "missing-thing-identity",
+					Name:   "missing-client-identity",
 					Credentials: clients.Credentials{
 						Identity: "",
 						Secret:   testsutil.GenerateUUID(t),
@@ -273,7 +273,7 @@ func TestClientsSave(t *testing.T) {
 					ID:     testsutil.GenerateUUID(t),
 					Domain: testsutil.GenerateUUID(t),
 					Credentials: clients.Credentials{
-						Identity: "missing-thing-secret@example.com",
+						Identity: "missing-client-secret@example.com",
 						Secret:   "",
 					},
 					Metadata: clients.Metadata{},
@@ -300,18 +300,18 @@ func TestClientsSave(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		rThings, err := repo.Save(context.Background(), tc.clients...)
+		rClients, err := repo.Save(context.Background(), tc.clients...)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 		if err == nil {
-			for i := range rThings {
-				tc.clients[i].Credentials.Secret = rThings[i].Credentials.Secret
+			for i := range rClients {
+				tc.clients[i].Credentials.Secret = rClients[i].Credentials.Secret
 			}
-			assert.Equal(t, tc.clients, rThings, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.clients, rThings))
+			assert.Equal(t, tc.clients, rClients, fmt.Sprintf("%s: expected %v got %v\n", tc.desc, tc.clients, rClients))
 		}
 	}
 }
 
-func TestThingsRetrieveBySecret(t *testing.T) {
+func TestClientsRetrieveBySecret(t *testing.T) {
 	t.Cleanup(func() {
 		_, err := db.Exec("DELETE FROM clients")
 		require.Nil(t, err, fmt.Sprintf("clean clients unexpected error: %s", err))

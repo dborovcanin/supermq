@@ -559,7 +559,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "label_replace(label_replace(label_replace(things_api_request_latency_microseconds, \"quantile\", \"50th percentile\", \"quantile\", \"0.5\"), \"quantile\", \"90th percentile\", \"quantile\", \"0.9\"), \"quantile\", \"99th percentile\", \"quantile\", \"0.99\")",
+          "expr": "label_replace(label_replace(label_replace(clients_api_request_latency_microseconds, \"quantile\", \"50th percentile\", \"quantile\", \"0.5\"), \"quantile\", \"90th percentile\", \"quantile\", \"0.9\"), \"quantile\", \"99th percentile\", \"quantile\", \"0.99\")",
           "format": "time_series",
           "instant": false,
           "interval": "",

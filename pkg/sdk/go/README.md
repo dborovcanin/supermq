@@ -8,8 +8,9 @@ Does both system administration (provisioning) and messaging.
 
 Import `"github.com/absmach/magistrala/sdk/go"` in your Go package.
 
-````
-import "github.com/absmach/magistrala/pkg/sdk/go"```
+```go
+import "github.com/absmach/magistrala/pkg/sdk/go"
+```
 
 Then call SDK Go functions to interact with the system.
 
@@ -20,10 +21,10 @@ FUNCTIONS
 
 func NewMgxSDK(host, port string, tls bool) *MgxSDK
 
-func (sdk *MgxSDK) Channel(id, token string) (things.Channel, error)
+func (sdk *MgxSDK) Channel(id, token string) (clients.Channel, error)
     Channel - gets channel by ID
 
-func (sdk *MgxSDK) Channels(token string) ([]things.Channel, error)
+func (sdk *MgxSDK) Channels(token string) ([]clients.Channel, error)
     Channels - gets all channels
 
 func (sdk *MgxSDK) Connect(struct{[]string, []string}, token string) error
@@ -32,8 +33,8 @@ func (sdk *MgxSDK) Connect(struct{[]string, []string}, token string) error
 func (sdk *MgxSDK) CreateChannel(data, token string) (string, error)
     CreateChannel - creates new channel and generates UUID
 
-func (sdk *MgxSDK) CreateThing(data, token string) (string, error)
-    CreateThing - creates new client and generates client UUID
+func (sdk *MgxSDK) CreateClient(data, token string) (string, error)
+    CreateClient - creates new client and generates client UUID
 
 func (sdk *MgxSDK) CreateToken(user, pwd string) (string, error)
     CreateToken - create user token
@@ -53,8 +54,8 @@ func (sdk *MgxSDK) UpdatePassword(user, pwd string) error
 func (sdk *MgxSDK) DeleteChannel(id, token string) error
     DeleteChannel - removes channel
 
-func (sdk *MgxSDK) DeleteThing(id, token string) error
-    DeleteThing - removes thing
+func (sdk *MgxSDK) DeleteClient(id, token string) error
+    DeleteClient - removes client
 
 func (sdk *MgxSDK) DisconnectClient(clientID, chanID, token string) error
     DisconnectClient - connect client to a channel
@@ -66,18 +67,18 @@ func (sdk *MgxSDK) SetContentType(ct ContentType) error
     SetContentType - set message content type. Available options are SenML
     JSON, custom JSON and custom binary (octet-stream).
 
-func (sdk *MgxSDK) Thing(id, token string) (Thing, error)
-    Thing - gets client by ID
+func (sdk *MgxSDK) Client(id, token string) (Client, error)
+    Client - gets client by ID
 
-func (sdk *MgxSDK) Things(token string) ([]Thing, error)
-    Things - gets all things
+func (sdk *MgxSDK) Clients(token string) ([]Client, error)
+    Clients - gets all clients
 
 func (sdk *MgxSDK) UpdateChannel(channel Channel, token string) error
     UpdateChannel - update a channel
 
-func (sdk *MgxSDK) UpdateThing(client Thing, token string) error
-    UpdateThing - updates client by ID
+func (sdk *MgxSDK) UpdateClient(client Client, token string) error
+    UpdateClient - updates client by ID
 
 func (sdk *MgxSDK) Health() (magistrala.Health, error)
     Health - clients service health check
-````
+```

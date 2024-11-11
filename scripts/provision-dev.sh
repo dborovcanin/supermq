@@ -31,13 +31,13 @@ curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X POST -H
 JWTTOKEN=$(curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X POST -H "Content-Type: application/json" https://localhost/users/tokens/issue -d '{"identity":"'"$EMAIL"'", "secret":"'"$PASSWORD"'"}' | grep -oP '"access_token":"\K[^"]+' )
 printf "JWT TOKEN for user is $JWTTOKEN \n"
 
-#provision thing
+#provision client
 printf "Provisioning client with name $DEVICE \n"
-DEVICEID=$(curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $JWTTOKEN" https://localhost/things -d '{"name":"'"$DEVICE"'", "status": "enabled"}' | grep -oP '"id":"\K[^"]+' )
-curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X GET -H "Content-Type: application/json" -H "Authorization: Bearer $JWTTOKEN" https://localhost/things/$DEVICEID
+DEVICEID=$(curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $JWTTOKEN" https://localhost/clients -d '{"name":"'"$DEVICE"'", "status": "enabled"}' | grep -oP '"id":"\K[^"]+' )
+curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X GET -H "Content-Type: application/json" -H "Authorization: Bearer $JWTTOKEN" https://localhost/clients/$DEVICEID
 
 #get client token
-DEVICETOKEN=$(curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -H "Authorization: Bearer $JWTTOKEN" https://localhost/things/$DEVICEID | grep -oP '"secret":"\K[^"]+' )
+DEVICETOKEN=$(curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -H "Authorization: Bearer $JWTTOKEN" https://localhost/clients/$DEVICEID | grep -oP '"secret":"\K[^"]+' )
 printf "Device token is $DEVICETOKEN \n"
 
 #provision channel
@@ -47,4 +47,4 @@ curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X GET -H 
 
 #connect client to channel
 printf "Connecting client of id $DEVICEID to channel of id $CHANNELID \n"
-curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X PUT -H "Authorization: Bearer $JWTTOKEN" https://localhost/channels/$CHANNELID/things/$DEVICEID
+curl -s -S --cacert docker/ssl/certs/magistrala-server.crt --insecure -X PUT -H "Authorization: Bearer $JWTTOKEN" https://localhost/channels/$CHANNELID/clients/$DEVICEID

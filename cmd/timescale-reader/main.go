@@ -34,7 +34,7 @@ const (
 	envPrefixDB       = "MG_TIMESCALE_"
 	envPrefixHTTP     = "MG_TIMESCALE_READER_HTTP_"
 	envPrefixAuth     = "MG_AUTH_GRPC_"
-	envPrefixThings   = "MG_CLIENTS_AUTH_GRPC_"
+	envPrefixClients   = "MG_CLIENTS_AUTH_GRPC_"
 	envPrefixChannels = "MG_CHANNELS_GRPC_"
 	defDB             = "messages"
 	defSvcHTTPPort    = "9011"
@@ -85,22 +85,22 @@ func main() {
 
 	repo := newService(db, logger)
 
-	thingsClientCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&thingsClientCfg, env.Options{Prefix: envPrefixThings}); err != nil {
+	clientsClientCfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&clientsClientCfg, env.Options{Prefix: envPrefixClients}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s auth configuration : %s", svcName, err))
 		exitCode = 1
 		return
 	}
 
-	thingsClient, thingsHandler, err := grpcclient.SetupClientsClient(ctx, thingsClientCfg)
+	clientsClient, clientsHandler, err := grpcclient.SetupClientsClient(ctx, clientsClientCfg)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
 		return
 	}
-	defer thingsHandler.Close()
+	defer clientsHandler.Close()
 
-	logger.Info("ThingsService gRPC client successfully connected to clients gRPC server " + thingsHandler.Secure())
+	logger.Info("ClientsService gRPC client successfully connected to clients gRPC server " + clientsHandler.Secure())
 
 	channelsClientCfg := grpcclient.Config{}
 	if err := env.ParseWithOptions(&channelsClientCfg, env.Options{Prefix: envPrefixChannels}); err != nil {
@@ -140,7 +140,7 @@ func main() {
 		exitCode = 1
 		return
 	}
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(repo, authn, thingsClient, channelsClient, svcName, cfg.InstanceID), logger)
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, api.MakeHandler(repo, authn, clientsClient, channelsClient, svcName, cfg.InstanceID), logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, magistrala.Version, logger, cancel)

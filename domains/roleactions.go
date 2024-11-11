@@ -20,7 +20,7 @@ const (
 	ChannelCreate roles.Action = "channel_create"
 	GroupCreate   roles.Action = "group_create"
 
-	// Domain Things Roles: Actions related to clients present within the Domain
+	// Domain Clients Roles: Actions related to clients present within the Domain
 	ClientUpdate           roles.Action = "client_update"
 	ClientRead             roles.Action = "client_read"
 	ClientDelete           roles.Action = "client_delete"
@@ -36,7 +36,7 @@ const (
 	ChannelRead            roles.Action = "channel_read"
 	ChannelDelete          roles.Action = "channel_delete"
 	ChannelSetParentGroup  roles.Action = "channel_set_parent_group"
-	ChannelConnectToThing  roles.Action = "channel_connect_to_client"
+	ChannelConnectToClient  roles.Action = "channel_connect_to_client"
 	ChannelPublish         roles.Action = "channel_publish"
 	ChannelSubscribe       roles.Action = "channel_subscribe"
 	ChannelManageRole      roles.Action = "channel_manage_role"
@@ -90,7 +90,7 @@ func AvailableActions() []roles.Action {
 		ChannelRead,
 		ChannelDelete,
 		ChannelSetParentGroup,
-		ChannelConnectToThing,
+		ChannelConnectToClient,
 		ChannelPublish,
 		ChannelSubscribe,
 		ChannelManageRole,

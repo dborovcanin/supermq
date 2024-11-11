@@ -13,11 +13,11 @@ import (
 
 var cmdClients = []cobra.Command{
 	{
-		Use:   "create <JSON_thing> <domain_id> <user_auth_token>",
-		Short: "Create thing",
+		Use:   "create <JSON_client> <domain_id> <user_auth_token>",
+		Short: "Create client",
 		Long: "Creates new client with provided name and metadata\n" +
 			"Usage:\n" +
-			"\tmagistrala-cli clients create '{\"name\":\"new thing\", \"metadata\":{\"key\": \"value\"}}' $DOMAINID $USERTOKEN\n",
+			"\tmagistrala-cli clients create '{\"name\":\"new client\", \"metadata\":{\"key\": \"value\"}}' $DOMAINID $USERTOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
@@ -41,10 +41,10 @@ var cmdClients = []cobra.Command{
 	},
 	{
 		Use:   "get [all | <client_id>] <domain_id> <user_auth_token>",
-		Short: "Get things",
+		Short: "Get clients",
 		Long: "Get all clients or get client by id. Clients can be filtered by name or metadata\n" +
 			"Usage:\n" +
-			"\tmagistrala-cli clients get all $DOMAINID $USERTOKEN - lists all things\n" +
+			"\tmagistrala-cli clients get all $DOMAINID $USERTOKEN - lists all clients\n" +
 			"\tmagistrala-cli clients get all $DOMAINID $USERTOKEN --offset=10 --limit=10 - lists all clients with offset and limit\n" +
 			"\tmagistrala-cli clients get <client_id> $DOMAINID $USERTOKEN - shows client with provided <client_id>\n",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -120,13 +120,13 @@ var cmdClients = []cobra.Command{
 					return
 				}
 				client.ID = args[1]
-				thing, err := sdk.UpdateClientTags(client, args[3], args[4])
+				client, err := sdk.UpdateClientTags(client, args[3], args[4])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
 				}
 
-				logJSONCmd(*cmd, thing)
+				logJSONCmd(*cmd, client)
 				return
 			}
 
@@ -167,13 +167,13 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			thing, err := sdk.EnableClient(args[0], args[1], args[2])
+			client, err := sdk.EnableClient(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSONCmd(*cmd, thing)
+			logJSONCmd(*cmd, client)
 		},
 	},
 	{
@@ -188,13 +188,13 @@ var cmdClients = []cobra.Command{
 				return
 			}
 
-			thing, err := sdk.DisableClient(args[0], args[1], args[2])
+			client, err := sdk.DisableClient(args[0], args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
 			}
 
-			logJSONCmd(*cmd, thing)
+			logJSONCmd(*cmd, client)
 		},
 	},
 	{
@@ -247,7 +247,7 @@ var cmdClients = []cobra.Command{
 	},
 	{
 		Use:   "connect <client_id> <channel_id> <domain_id> <user_auth_token>",
-		Short: "Connect thing",
+		Short: "Connect client",
 		Long: "Connect client to the channel\n" +
 			"Usage:\n" +
 			"\tmagistrala-cli clients connect <client_id> <channel_id> $DOMAINID $USERTOKEN\n",
@@ -271,7 +271,7 @@ var cmdClients = []cobra.Command{
 	},
 	{
 		Use:   "disconnect <client_id> <channel_id> <domain_id> <user_auth_token>",
-		Short: "Disconnect thing",
+		Short: "Disconnect client",
 		Long: "Disconnect client to the channel\n" +
 			"Usage:\n" +
 			"\tmagistrala-cli clients disconnect <client_id> <channel_id> $DOMAINID $USERTOKEN\n",
@@ -320,7 +320,7 @@ var cmdClients = []cobra.Command{
 	{
 		Use:   "users <client_id> <domain_id> <user_auth_token>",
 		Short: "List users",
-		Long: "List users of a thing\n" +
+		Long: "List users of a client\n" +
 			"Usage:\n" +
 			"\tmagistrala-cli clients users <client_id> $DOMAINID $USERTOKEN\n",
 		Run: func(cmd *cobra.Command, args []string) {

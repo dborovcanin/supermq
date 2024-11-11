@@ -124,7 +124,7 @@ func (es *eventStore) ListChannelsByClient(ctx context.Context, session authn.Se
 	if err != nil {
 		return cp, err
 	}
-	event := listChannelByThingEvent{
+	event := listChannelByClientEvent{
 		clientID,
 		pm,
 	}

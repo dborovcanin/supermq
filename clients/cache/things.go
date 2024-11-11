@@ -15,58 +15,58 @@ import (
 )
 
 const (
-	keyPrefix = "thing_key"
+	keyPrefix = "client_key"
 	idPrefix  = "client_id"
 )
 
-var _ clients.Cache = (*thingCache)(nil)
+var _ clients.Cache = (*clientCache)(nil)
 
-type thingCache struct {
+type clientCache struct {
 	client      *redis.Client
 	keyDuration time.Duration
 }
 
 // NewCache returns redis client cache implementation.
 func NewCache(client *redis.Client, duration time.Duration) clients.Cache {
-	return &thingCache{
+	return &clientCache{
 		client:      client,
 		keyDuration: duration,
 	}
 }
 
-func (tc *thingCache) Save(ctx context.Context, thingKey, thingID string) error {
-	if thingKey == "" || thingID == "" {
+func (tc *clientCache) Save(ctx context.Context, clientKey, clientID string) error {
+	if clientKey == "" || clientID == "" {
 		return errors.Wrap(repoerr.ErrCreateEntity, errors.New("client key or client id is empty"))
 	}
-	tkey := fmt.Sprintf("%s:%s", keyPrefix, thingKey)
-	if err := tc.client.Set(ctx, tkey, thingID, tc.keyDuration).Err(); err != nil {
+	tkey := fmt.Sprintf("%s:%s", keyPrefix, clientKey)
+	if err := tc.client.Set(ctx, tkey, clientID, tc.keyDuration).Err(); err != nil {
 		return errors.Wrap(repoerr.ErrCreateEntity, err)
 	}
 
-	tid := fmt.Sprintf("%s:%s", idPrefix, thingID)
-	if err := tc.client.Set(ctx, tid, thingKey, tc.keyDuration).Err(); err != nil {
+	tid := fmt.Sprintf("%s:%s", idPrefix, clientID)
+	if err := tc.client.Set(ctx, tid, clientKey, tc.keyDuration).Err(); err != nil {
 		return errors.Wrap(repoerr.ErrCreateEntity, err)
 	}
 
 	return nil
 }
 
-func (tc *thingCache) ID(ctx context.Context, thingKey string) (string, error) {
-	if thingKey == "" {
+func (tc *clientCache) ID(ctx context.Context, clientKey string) (string, error) {
+	if clientKey == "" {
 		return "", repoerr.ErrNotFound
 	}
 
-	tkey := fmt.Sprintf("%s:%s", keyPrefix, thingKey)
-	thingID, err := tc.client.Get(ctx, tkey).Result()
+	tkey := fmt.Sprintf("%s:%s", keyPrefix, clientKey)
+	clientID, err := tc.client.Get(ctx, tkey).Result()
 	if err != nil {
 		return "", errors.Wrap(repoerr.ErrNotFound, err)
 	}
 
-	return thingID, nil
+	return clientID, nil
 }
 
-func (tc *thingCache) Remove(ctx context.Context, thingID string) error {
-	tid := fmt.Sprintf("%s:%s", idPrefix, thingID)
+func (tc *clientCache) Remove(ctx context.Context, clientID string) error {
+	tid := fmt.Sprintf("%s:%s", idPrefix, clientID)
 	key, err := tc.client.Get(ctx, tid).Result()
 	// Redis returns Nil Reply when key does not exist.
 	if err == redis.Nil {

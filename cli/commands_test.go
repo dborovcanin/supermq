@@ -26,7 +26,7 @@ const (
 	domsCmd       = "domains"
 )
 
-// Things commands
+// Clients commands
 const (
 	cliCmd     = "clients"
 	connsCmd   = "connections"

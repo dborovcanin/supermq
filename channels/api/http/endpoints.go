@@ -284,7 +284,7 @@ func connectChannelClientEndpoint(svc channels.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return connectChannelThingsRes{}, nil
+		return connectChannelClientsRes{}, nil
 	}
 }
 
@@ -304,7 +304,7 @@ func disconnectChannelClientsEndpoint(svc channels.Service) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return disconnectChannelThingsRes{}, nil
+		return disconnectChannelClientsRes{}, nil
 	}
 }
 

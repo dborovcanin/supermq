@@ -60,7 +60,7 @@ func SetupDomainsClient(ctx context.Context, cfg Config) (grpcDomainsV1.DomainsS
 //
 // For example:
 //
-// thingClient, thingHandler, err := grpcclient.SetupThings(ctx, grpcclient.Config{}).
+// clientClient, clientHandler, err := grpcclient.SetupClients(ctx, grpcclient.Config{}).
 func SetupClientsClient(ctx context.Context, cfg Config) (grpcClientsV1.ClientsServiceClient, Handler, error) {
 	client, err := NewHandler(cfg)
 	if err != nil {

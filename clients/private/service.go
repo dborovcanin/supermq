@@ -83,20 +83,20 @@ func (svc service) RemoveChannelConnections(ctx context.Context, channelID strin
 }
 
 func (svc service) UnsetParentGroupFromClient(ctx context.Context, parentGroupID string) (retErr error) {
-	ths, err := svc.repo.RetrieveParentGroupThings(ctx, parentGroupID)
+	clients, err := svc.repo.RetrieveParentGroupClients(ctx, parentGroupID)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrViewEntity, err)
 	}
 
-	if len(ths) > 0 {
+	if len(clients) > 0 {
 		prs := []policies.Policy{}
-		for _, th := range ths {
+		for _, client := range clients {
 			prs = append(prs, policies.Policy{
 				SubjectType: policies.GroupType,
-				Subject:     th.ParentGroup,
+				Subject:     client.ParentGroup,
 				Relation:    policies.ParentGroupRelation,
 				ObjectType:  policies.ClientType,
-				Object:      th.ID,
+				Object:      client.ID,
 			})
 		}
 

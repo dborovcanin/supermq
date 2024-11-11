@@ -118,7 +118,7 @@ paths:
       description: |
         Update is performed by replacing the current resource data with values
         provided in a request payload. Note that the owner, ID, external ID,
-        external key, Magistrala Thing ID and key cannot be changed.
+        external key, Magistrala Client ID and key cannot be changed.
       tags:
         - configs
       parameters:
@@ -205,7 +205,7 @@ paths:
       summary: Updates channels the client is connected to
       description: |
         Update connections performs update of the channel list corresponding
-        Thing is connected to.
+        Client is connected to.
       tags:
         - configs
       parameters:
@@ -287,7 +287,7 @@ paths:
       summary: Updates Config state.
       description: |
         Updating state represents enabling/disabling Config, i.e. connecting
-        and disconnecting corresponding Magistrala Thing to the list of Channels.
+        and disconnecting corresponding Magistrala Client to the list of Channels.
       tags:
         - configs
       parameters:
@@ -333,11 +333,11 @@ components:
         client_id:
           type: string
           format: uuid
-          description: Corresponding Magistrala Thing ID.
+          description: Corresponding Magistrala Client ID.
         magistrala_secret:
           type: string
           format: uuid
-          description: Corresponding Magistrala Thing key.
+          description: Corresponding Magistrala Client key.
         channels:
           type: array
           minItems: 0
@@ -405,11 +405,11 @@ components:
         client_id:
           type: string
           format: uuid
-          description: Corresponding Magistrala Thing ID.
-        thing_key:
+          description: Corresponding Magistrala Client ID.
+        client_key:
           type: string
           format: uuid
-          description: Corresponding Magistrala Thing key.
+          description: Corresponding Magistrala Client key.
         channels:
           type: array
           minItems: 0
@@ -429,7 +429,7 @@ components:
           description: Issuing CA certificate.
       required:
         - client_id
-        - thing_key
+        - client_key
         - channels
         - content
     ConfigUpdateCerts:
@@ -438,7 +438,7 @@ components:
         client_id:
           type: string
           format: uuid
-          description: Corresponding Magistrala Thing ID.
+          description: Corresponding Magistrala Client ID.
         client_cert:
           type: string
           description: Client certificate.
@@ -450,14 +450,14 @@ components:
           description: Issuing CA certificate.
       required:
         - client_id
-        - thing_key
+        - client_key
         - channels
         - content
 
   parameters:
     ConfigId:
       name: configId
-      description: Unique Config identifier. It's the ID of the corresponding Thing.
+      description: Unique Config identifier. It's the ID of the corresponding Client.
       in: path
       schema:
         type: string
@@ -522,7 +522,7 @@ components:
               client_id:
                 type: string
                 format: uuid
-                description: ID of the corresponding Magistrala Thing.
+                description: ID of the corresponding Magistrala Client.
               channels:
                 type: array
                 minItems: 0
@@ -535,17 +535,17 @@ components:
                 type: string
               client_cert:
                 type: string
-                description: Thing Certificate.
+                description: Client Certificate.
               client_key:
                 type: string
-                description: Thing Private Key.
+                description: Client Private Key.
               ca_cert:
                 type: string
             required:
               - external_id
               - external_key
     ConfigUpdateReq:
-      description: JSON-formatted document describing the updated thing.
+      description: JSON-formatted document describing the updated client.
       content:
         application/json:
           schema:
@@ -559,7 +559,7 @@ components:
               - content
               - name
     ConfigCertUpdateReq:
-      description: JSON-formatted document describing the updated thing.
+      description: JSON-formatted document describing the updated client.
       content:
         application/json:
           schema:
@@ -673,14 +673,14 @@ components:
       scheme: bearer
       bearerFormat: string
       description: |
-        * Clients access: "Authorization: Thing <external_key>"
+        * Clients access: "Authorization: Client <external_key>"
 
     bootstrapEncAuth:
       type: http
       scheme: bearer
       bearerFormat: aes-sha256-uuid
       description: |
-        * Clients access: "Authorization: Thing <external_enc_key>"
+        * Clients access: "Authorization: Client <external_enc_key>"
         Hex-encoded configuration external key encrypted using
         the AES algorithm and SHA256 sum of the external key
         itself as an encryption key.

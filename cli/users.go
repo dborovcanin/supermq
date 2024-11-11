@@ -399,7 +399,7 @@ var cmdUsers = []cobra.Command{
 
 	{
 		Use:   "clients <user_id> <user_auth_token>",
-		Short: "List things",
+		Short: "List clients",
 		Long: "List clients of user\n" +
 			"Usage:\n" +
 			"\tmagistrala-cli users clients <user_id> <user_auth_token>\n",

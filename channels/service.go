@@ -369,7 +369,7 @@ func (svc service) Disconnect(ctx context.Context, session authn.Session, chIDs,
 		}
 
 		if resp.GetEntity().GetDomainId() != session.DomainID {
-			return errors.Wrap(svcerr.ErrCreateEntity, fmt.Errorf("thing id %s has invalid domain id", thID))
+			return errors.Wrap(svcerr.ErrCreateEntity, fmt.Errorf("client id %s has invalid domain id", thID))
 		}
 	}
 
@@ -505,7 +505,7 @@ func (svc service) listChannelIDs(ctx context.Context, userID, permission string
 }
 
 func (svc service) retrievePermissions(ctx context.Context, userID string, channel *Channel) error {
-	permissions, err := svc.listUserThingPermission(ctx, userID, channel.ID)
+	permissions, err := svc.listUserClientPermission(ctx, userID, channel.ID)
 	if err != nil {
 		return err
 	}
@@ -513,11 +513,11 @@ func (svc service) retrievePermissions(ctx context.Context, userID string, chann
 	return nil
 }
 
-func (svc service) listUserThingPermission(ctx context.Context, userID, thingID string) ([]string, error) {
+func (svc service) listUserClientPermission(ctx context.Context, userID, clientID string) ([]string, error) {
 	lp, err := svc.policy.ListPermissions(ctx, policies.Policy{
 		SubjectType: policies.UserType,
 		Subject:     userID,
-		Object:      thingID,
+		Object:      clientID,
 		ObjectType:  policies.ChannelType,
 	}, []string{})
 	if err != nil {

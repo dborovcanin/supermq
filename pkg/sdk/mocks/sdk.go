@@ -1492,9 +1492,9 @@ func (_m *SDK) Invitations(pm sdk.PageMetadata, domainID string, token string) (
 	return r0, r1
 }
 
-// IssueCert provides a mock function with given fields: thingID, validity, domainID, token
-func (_m *SDK) IssueCert(thingID string, validity string, domainID string, token string) (sdk.Cert, errors.SDKError) {
-	ret := _m.Called(thingID, validity, domainID, token)
+// IssueCert provides a mock function with given fields: clientID, validity, domainID, token
+func (_m *SDK) IssueCert(clientID string, validity string, domainID string, token string) (sdk.Cert, errors.SDKError) {
+	ret := _m.Called(clientID, validity, domainID, token)
 
 	if len(ret) == 0 {
 		panic("no return value specified for IssueCert")
@@ -1503,16 +1503,16 @@ func (_m *SDK) IssueCert(thingID string, validity string, domainID string, token
 	var r0 sdk.Cert
 	var r1 errors.SDKError
 	if rf, ok := ret.Get(0).(func(string, string, string, string) (sdk.Cert, errors.SDKError)); ok {
-		return rf(thingID, validity, domainID, token)
+		return rf(clientID, validity, domainID, token)
 	}
 	if rf, ok := ret.Get(0).(func(string, string, string, string) sdk.Cert); ok {
-		r0 = rf(thingID, validity, domainID, token)
+		r0 = rf(clientID, validity, domainID, token)
 	} else {
 		r0 = ret.Get(0).(sdk.Cert)
 	}
 
 	if rf, ok := ret.Get(1).(func(string, string, string, string) errors.SDKError); ok {
-		r1 = rf(thingID, validity, domainID, token)
+		r1 = rf(clientID, validity, domainID, token)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -2158,9 +2158,9 @@ func (_m *SDK) ResetPasswordRequest(email string) errors.SDKError {
 	return r0
 }
 
-// RevokeCert provides a mock function with given fields: thingID, domainID, token
-func (_m *SDK) RevokeCert(thingID string, domainID string, token string) (time.Time, errors.SDKError) {
-	ret := _m.Called(thingID, domainID, token)
+// RevokeCert provides a mock function with given fields: clientID, domainID, token
+func (_m *SDK) RevokeCert(clientID string, domainID string, token string) (time.Time, errors.SDKError) {
+	ret := _m.Called(clientID, domainID, token)
 
 	if len(ret) == 0 {
 		panic("no return value specified for RevokeCert")
@@ -2169,16 +2169,16 @@ func (_m *SDK) RevokeCert(thingID string, domainID string, token string) (time.T
 	var r0 time.Time
 	var r1 errors.SDKError
 	if rf, ok := ret.Get(0).(func(string, string, string) (time.Time, errors.SDKError)); ok {
-		return rf(thingID, domainID, token)
+		return rf(clientID, domainID, token)
 	}
 	if rf, ok := ret.Get(0).(func(string, string, string) time.Time); ok {
-		r0 = rf(thingID, domainID, token)
+		r0 = rf(clientID, domainID, token)
 	} else {
 		r0 = ret.Get(0).(time.Time)
 	}
 
 	if rf, ok := ret.Get(1).(func(string, string, string) errors.SDKError); ok {
-		r1 = rf(thingID, domainID, token)
+		r1 = rf(clientID, domainID, token)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -2926,27 +2926,27 @@ func (_m *SDK) ViewCert(certID string, domainID string, token string) (sdk.Cert,
 	return r0, r1
 }
 
-// ViewCertByThing provides a mock function with given fields: thingID, domainID, token
-func (_m *SDK) ViewCertByThing(thingID string, domainID string, token string) (sdk.CertSerials, errors.SDKError) {
-	ret := _m.Called(thingID, domainID, token)
+// ViewCertByClient provides a mock function with given fields: clientID, domainID, token
+func (_m *SDK) ViewCertByClient(clientID string, domainID string, token string) (sdk.CertSerials, errors.SDKError) {
+	ret := _m.Called(clientID, domainID, token)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ViewCertByThing")
+		panic("no return value specified for ViewCertByClient")
 	}
 
 	var r0 sdk.CertSerials
 	var r1 errors.SDKError
 	if rf, ok := ret.Get(0).(func(string, string, string) (sdk.CertSerials, errors.SDKError)); ok {
-		return rf(thingID, domainID, token)
+		return rf(clientID, domainID, token)
 	}
 	if rf, ok := ret.Get(0).(func(string, string, string) sdk.CertSerials); ok {
-		r0 = rf(thingID, domainID, token)
+		r0 = rf(clientID, domainID, token)
 	} else {
 		r0 = ret.Get(0).(sdk.CertSerials)
 	}
 
 	if rf, ok := ret.Get(1).(func(string, string, string) errors.SDKError); ok {
-		r1 = rf(thingID, domainID, token)
+		r1 = rf(clientID, domainID, token)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(errors.SDKError)
@@ -2986,9 +2986,9 @@ func (_m *SDK) ViewSubscription(id string, token string) (sdk.Subscription, erro
 	return r0, r1
 }
 
-// Whitelist provides a mock function with given fields: thingID, state, domainID, token
-func (_m *SDK) Whitelist(thingID string, state int, domainID string, token string) errors.SDKError {
-	ret := _m.Called(thingID, state, domainID, token)
+// Whitelist provides a mock function with given fields: clientID, state, domainID, token
+func (_m *SDK) Whitelist(clientID string, state int, domainID string, token string) errors.SDKError {
+	ret := _m.Called(clientID, state, domainID, token)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Whitelist")
@@ -2996,7 +2996,7 @@ func (_m *SDK) Whitelist(thingID string, state int, domainID string, token strin
 
 	var r0 errors.SDKError
 	if rf, ok := ret.Get(0).(func(string, int, string, string) errors.SDKError); ok {
-		r0 = rf(thingID, state, domainID, token)
+		r0 = rf(clientID, state, domainID, token)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(errors.SDKError)

@@ -200,9 +200,9 @@ func usersHandler(svc users.Service, authn mgauthn.Authentication, tokenClient g
 			opts...,
 		), "list_users_by_channel_id").ServeHTTP)
 
-		r.Get("/{domainID}/things/{thingID}/users", otelhttp.NewHandler(kithttp.NewServer(
-			listMembersByThingEndpoint(svc),
-			decodeListMembersByThing,
+		r.Get("/{domainID}/clients/{clientID}/users", otelhttp.NewHandler(kithttp.NewServer(
+			listMembersByClientEndpoint(svc),
+			decodeListMembersByClient,
 			api.EncodeResponse,
 			opts...,
 		), "list_users_by_client_id").ServeHTTP)
@@ -576,7 +576,7 @@ func decodeListMembersByChannel(_ context.Context, r *http.Request) (interface{}
 	return req, nil
 }
 
-func decodeListMembersByThing(_ context.Context, r *http.Request) (interface{}, error) {
+func decodeListMembersByClient(_ context.Context, r *http.Request) (interface{}, error) {
 	page, err := queryPageParams(r, api.DefPermission)
 	if err != nil {
 		return nil, err

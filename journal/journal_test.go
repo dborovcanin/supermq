@@ -71,8 +71,8 @@ func TestEntityType(t *testing.T) {
 			authString: "user",
 		},
 		{
-			desc:       "ThingEntity",
-			e:          journal.ThingEntity,
+			desc:       "ClientEntity",
+			e:          journal.ClientEntity,
 			str:        "client",
 			authString: "client",
 		},
@@ -112,9 +112,9 @@ func TestToEntityType(t *testing.T) {
 			expected:   journal.UserEntity,
 		},
 		{
-			desc:       "ThingEntity",
+			desc:       "ClientEntity",
 			entityType: "client",
-			expected:   journal.ThingEntity,
+			expected:   journal.ClientEntity,
 		},
 		{
 			desc:       "GroupEntity",

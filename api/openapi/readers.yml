@@ -293,13 +293,13 @@ components:
       description: |
         * Users access: "Authorization: Bearer <user_token>"
 
-    thingAuth:
+    clientAuth:
       type: http
       scheme: bearer
       bearerFormat: uuid
       description: |
-        * Things access: "Authorization: Thing <client_key>"
+        * Clients access: "Authorization: Client <client_key>"
 
 security:
   - bearerAuth: []
-  - thingAuth: []
+  - clientAuth: []

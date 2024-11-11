@@ -115,7 +115,7 @@ func TestID(t *testing.T) {
 			err:  nil,
 		},
 		{
-			desc: "Get client ID from cache for non existing thing",
+			desc: "Get client ID from cache for non existing client",
 			key:  "nonExistingKey",
 			id:   "",
 			err:  repoerr.ErrNotFound,

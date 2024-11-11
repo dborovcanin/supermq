@@ -18,7 +18,7 @@ var cmdCerts = []cobra.Command{
 				return
 			}
 			if args[0] == "client" {
-				cert, err := sdk.ViewCertByThing(args[1], args[2], args[3])
+				cert, err := sdk.ViewCertByClient(args[1], args[2], args[3])
 				if err != nil {
 					logErrorCmd(*cmd, err)
 					return
@@ -60,16 +60,16 @@ func NewCertsCmd() *cobra.Command {
 	issueCmd := cobra.Command{
 		Use:   "issue <client_id> <domain_id> <user_auth_token> [--ttl=8760h]",
 		Short: "Issue certificate",
-		Long:  `Issues new certificate for a thing`,
+		Long:  `Issues new certificate for a client`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 3 {
 				logUsageCmd(*cmd, cmd.Use)
 				return
 			}
 
-			thingID := args[0]
+			clientID := args[0]
 
-			c, err := sdk.IssueCert(thingID, ttl, args[1], args[2])
+			c, err := sdk.IssueCert(clientID, ttl, args[1], args[2])
 			if err != nil {
 				logErrorCmd(*cmd, err)
 				return
@@ -83,7 +83,7 @@ func NewCertsCmd() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "certs [issue | get | revoke ]",
 		Short: "Certificates management",
-		Long:  `Certificates management: issue, get or revoke certificates for things"`,
+		Long:  `Certificates management: issue, get or revoke certificates for clients"`,
 	}
 
 	cmdCerts = append(cmdCerts, issueCmd)

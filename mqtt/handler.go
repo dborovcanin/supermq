@@ -63,19 +63,19 @@ var (
 // Event implements events.Event interface.
 type handler struct {
 	publisher messaging.Publisher
-	things    grpcClientsV1.ClientsServiceClient
+	clients   grpcClientsV1.ClientsServiceClient
 	channels  grpcChannelsV1.ChannelsServiceClient
 	logger    *slog.Logger
 	es        events.EventStore
 }
 
 // NewHandler creates new Handler entity.
-func NewHandler(publisher messaging.Publisher, es events.EventStore, logger *slog.Logger, thingsClient grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient) session.Handler {
+func NewHandler(publisher messaging.Publisher, es events.EventStore, logger *slog.Logger, clients grpcClientsV1.ClientsServiceClient, channels grpcChannelsV1.ChannelsServiceClient) session.Handler {
 	return &handler{
 		es:        es,
 		logger:    logger,
 		publisher: publisher,
-		things:    thingsClient,
+		clients:   clients,
 		channels:  channels,
 	}
 }
@@ -94,7 +94,7 @@ func (h *handler) AuthConnect(ctx context.Context) error {
 
 	pwd := string(s.Password)
 
-	res, err := h.things.Authenticate(ctx, &grpcClientsV1.AuthnReq{ClientSecret: pwd})
+	res, err := h.clients.Authenticate(ctx, &grpcClientsV1.AuthnReq{ClientSecret: pwd})
 	if err != nil {
 		return errors.Wrap(svcerr.ErrAuthentication, err)
 	}
@@ -229,7 +229,7 @@ func (h *handler) Disconnect(ctx context.Context) error {
 	return nil
 }
 
-func (h *handler) authAccess(ctx context.Context, thingID, topic string, msgType connections.ConnType) error {
+func (h *handler) authAccess(ctx context.Context, clientID, topic string, msgType connections.ConnType) error {
 	// Topics are in the format:
 	// channels/<channel_id>/messages/<subtopic>/.../ct/<content_type>
 	if !channelRegExp.MatchString(topic) {
@@ -245,7 +245,7 @@ func (h *handler) authAccess(ctx context.Context, thingID, topic string, msgType
 
 	ar := &grpcChannelsV1.AuthzReq{
 		Type:       uint32(msgType),
-		ClientId:   thingID,
+		ClientId:   clientID,
 		ClientType: policies.ClientType,
 		ChannelId:  chanID,
 	}

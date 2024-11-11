@@ -1218,14 +1218,14 @@ func TestListUserChannelsCmd(t *testing.T) {
 	}
 }
 
-func TestListUserThingsCmd(t *testing.T) {
+func TestListUserClientsCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	usersCmd := cli.NewUsersCmd()
 	rootCmd := setFlags(usersCmd)
 	th := mgsdk.Client{
 		ID:   testsutil.GenerateUUID(t),
-		Name: "testthing",
+		Name: "testclient",
 	}
 
 	var pg mgsdk.ClientsPage
@@ -1235,7 +1235,7 @@ func TestListUserThingsCmd(t *testing.T) {
 		args          []string
 		sdkerr        errors.SDKError
 		errLogMessage string
-		thing         mgsdk.Client
+		client        mgsdk.Client
 		page          mgsdk.ClientsPage
 		logType       outputLog
 	}{
@@ -1274,7 +1274,7 @@ func TestListUserThingsCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ListUserThings", tc.args[0], mock.Anything, tc.args[1]).Return(tc.page, tc.sdkerr)
+			sdkCall := sdkMock.On("ListUserClients", tc.args[0], mock.Anything, tc.args[1]).Return(tc.page, tc.sdkerr)
 			out := executeCommand(t, rootCmd, append([]string{cliCmd}, tc.args...)...)
 
 			switch tc.logType {

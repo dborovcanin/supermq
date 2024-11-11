@@ -1,6 +1,6 @@
 # Certs Service
 
-Issues certificates for things. `Certs` service can create certificates to be used when `Magistrala` is deployed to support mTLS.
+Issues certificates for clients. `Certs` service can create certificates to be used when `Magistrala` is deployed to support mTLS.
 Certificate service can create certificates using PKI mode - where certificates issued by PKI, when you deploy `Vault` as PKI certificate management `cert` service will proxy requests to `Vault` previously checking access rights and saving info on successfully created certificate.
 
 ## PKI mode
@@ -48,8 +48,8 @@ The service is configured using the environment variables presented in the follo
 | MG_CERTS_VAULT_NAMESPACE                   | Vault namespace in which pki is present                                     | magistrala                                                          |
 | MG_CERTS_VAULT_APPROLE_ROLEID              | Vault AppRole auth RoleID                                                   | magistrala                                                          |
 | MG_CERTS_VAULT_APPROLE_SECRET              | Vault AppRole auth Secret                                                   | magistrala                                                          |
-| MG_CERTS_VAULT_CLIENTS_CERTS_PKI_PATH      | Vault PKI path for issuing Things Certificates                              | pki_int                                                             |
-| MG_CERTS_VAULT_CLIENTS_CERTS_PKI_ROLE_NAME | Vault PKI Role Name for issuing Things Certificates                         | magistrala_clients_certs                                            |
+| MG_CERTS_VAULT_CLIENTS_CERTS_PKI_PATH      | Vault PKI path for issuing Clients Certificates                              | pki_int                                                             |
+| MG_CERTS_VAULT_CLIENTS_CERTS_PKI_ROLE_NAME | Vault PKI Role Name for issuing Clients Certificates                         | magistrala_clients_certs                                            |
 | MG_CERTS_DB_HOST                           | Database host                                                               | localhost                                                           |
 | MG_CERTS_DB_PORT                           | Database port                                                               | 5432                                                                |
 | MG_CERTS_DB_PASS                           | Database password                                                           | magistrala                                                          |

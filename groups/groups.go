@@ -174,10 +174,10 @@ const (
 	OpRemoveChannels
 	OpRemoveAllChannels
 	OpListChannels
-	OpAddThings
-	OpRemoveThings
-	OpRemoveAllThings
-	OpListThings
+	OpAddClients
+	OpRemoveClients
+	OpRemoveAllClients
+	OpListClients
 	OpDeleteGroup
 )
 
@@ -200,10 +200,10 @@ var expectedOperations = []svcutil.Operation{
 	OpRemoveChannels,
 	OpRemoveAllChannels,
 	OpListChannels,
-	OpAddThings,
-	OpRemoveThings,
-	OpRemoveAllThings,
-	OpListThings,
+	OpAddClients,
+	OpRemoveClients,
+	OpRemoveAllClients,
+	OpListClients,
 	OpDeleteGroup,
 }
 
@@ -226,10 +226,10 @@ var operationNames = []string{
 	"OpRemoveChannels",
 	"OpRemoveAllChannels",
 	"OpListChannels",
-	"OpAddThings",
-	"OpRemoveThings",
-	"OpRemoveAllThings",
-	"OpListThings",
+	"OpAddClients",
+	"OpRemoveClients",
+	"OpRemoveAllClients",
+	"OpListClients",
 	"OpDeleteGroup",
 }
 
@@ -271,10 +271,10 @@ func NewOperationPermissionMap() map[svcutil.Operation]svcutil.Permission {
 		OpRemoveChannels:          "",
 		OpRemoveAllChannels:       "",
 		OpListChannels:            "",
-		OpAddThings:               "",
-		OpRemoveThings:            "",
-		OpRemoveAllThings:         "",
-		OpListThings:              "",
+		OpAddClients:               "",
+		OpRemoveClients:            "",
+		OpRemoveAllClients:         "",
+		OpListClients:              "",
 		OpDeleteGroup:             deletePermission,
 	}
 	return opPerm

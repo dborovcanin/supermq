@@ -202,15 +202,15 @@ func (lce listChannelEvent) Encode() (map[string]interface{}, error) {
 	return val, nil
 }
 
-type listChannelByThingEvent struct {
-	thingID string
+type listChannelByClientEvent struct {
+	clientID string
 	channels.PageMetadata
 }
 
-func (lcte listChannelByThingEvent) Encode() (map[string]interface{}, error) {
+func (lcte listChannelByClientEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
 		"operation": channelList,
-		"client_id": lcte.thingID,
+		"client_id": lcte.clientID,
 		"total":     lcte.Total,
 		"offset":    lcte.Offset,
 		"limit":     lcte.Limit,

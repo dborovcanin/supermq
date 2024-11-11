@@ -17,8 +17,8 @@ var (
 	_ magistrala.Response = (*channelsPageRes)(nil)
 	_ magistrala.Response = (*updateChannelRes)(nil)
 	_ magistrala.Response = (*deleteChannelRes)(nil)
-	_ magistrala.Response = (*connectChannelThingsRes)(nil)
-	_ magistrala.Response = (*disconnectChannelThingsRes)(nil)
+	_ magistrala.Response = (*connectChannelClientsRes)(nil)
+	_ magistrala.Response = (*disconnectChannelClientsRes)(nil)
 	_ magistrala.Response = (*connectRes)(nil)
 	_ magistrala.Response = (*disconnectRes)(nil)
 	_ magistrala.Response = (*changeChannelStatusRes)(nil)
@@ -164,31 +164,31 @@ func (res deleteChannelRes) Empty() bool {
 	return true
 }
 
-type connectChannelThingsRes struct{}
+type connectChannelClientsRes struct{}
 
-func (res connectChannelThingsRes) Code() int {
+func (res connectChannelClientsRes) Code() int {
 	return http.StatusCreated
 }
 
-func (res connectChannelThingsRes) Headers() map[string]string {
+func (res connectChannelClientsRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
-func (res connectChannelThingsRes) Empty() bool {
+func (res connectChannelClientsRes) Empty() bool {
 	return true
 }
 
-type disconnectChannelThingsRes struct{}
+type disconnectChannelClientsRes struct{}
 
-func (res disconnectChannelThingsRes) Code() int {
+func (res disconnectChannelClientsRes) Code() int {
 	return http.StatusNoContent
 }
 
-func (res disconnectChannelThingsRes) Headers() map[string]string {
+func (res disconnectChannelClientsRes) Headers() map[string]string {
 	return map[string]string{}
 }
 
-func (res disconnectChannelThingsRes) Empty() bool {
+func (res disconnectChannelClientsRes) Empty() bool {
 	return true
 }
 

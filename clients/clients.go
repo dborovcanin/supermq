@@ -72,21 +72,21 @@ type Repository interface {
 
 	RemoveConnections(ctx context.Context, conns []Connection) error
 
-	ThingConnectionsCount(ctx context.Context, id string) (uint64, error)
+	ClientConnectionsCount(ctx context.Context, id string) (uint64, error)
 
-	DoesThingHaveConnections(ctx context.Context, id string) (bool, error)
+	DoesClientHaveConnections(ctx context.Context, id string) (bool, error)
 
 	RemoveChannelConnections(ctx context.Context, channelID string) error
 
-	RemoveThingConnections(ctx context.Context, thingID string) error
+	RemoveClientConnections(ctx context.Context, clientID string) error
 
 	// SetParentGroup set parent group id to a given channel id
-	SetParentGroup(ctx context.Context, th Client) error
+	SetParentGroup(ctx context.Context, cli Client) error
 
 	// RemoveParentGroup remove parent group id fr given chanel id
-	RemoveParentGroup(ctx context.Context, th Client) error
+	RemoveParentGroup(ctx context.Context, cli Client) error
 
-	RetrieveParentGroupThings(ctx context.Context, parentGroupID string) ([]Client, error)
+	RetrieveParentGroupClients(ctx context.Context, parentGroupID string) ([]Client, error)
 
 	UnsetParentGroupFromClient(ctx context.Context, parentGroupID string) error
 

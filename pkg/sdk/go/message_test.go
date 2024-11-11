@@ -9,13 +9,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/absmach/magistrala"
+	chmocks "github.com/absmach/magistrala/channels/mocks"
 	climocks "github.com/absmach/magistrala/clients/mocks"
 	adapter "github.com/absmach/magistrala/http"
 	"github.com/absmach/magistrala/http/api"
+	grpcClientsV1 "github.com/absmach/magistrala/internal/grpc/clients/v1"
 	mglog "github.com/absmach/magistrala/logger"
 	"github.com/absmach/magistrala/pkg/apiutil"
-	authzmocks "github.com/absmach/magistrala/pkg/authz/mocks"
+	authnmocks "github.com/absmach/magistrala/pkg/authn/mocks"
 	"github.com/absmach/magistrala/pkg/errors"
 	svcerr "github.com/absmach/magistrala/pkg/errors/service"
 	pubsub "github.com/absmach/magistrala/pkg/messaging/mocks"
@@ -32,8 +33,10 @@ import (
 
 func setupMessages() (*httptest.Server, *climocks.ClientsServiceClient, *pubsub.PubSub) {
 	clients := new(climocks.ClientsServiceClient)
+	channels := new(chmocks.ChannelsServiceClient)
 	pub := new(pubsub.PubSub)
-	handler := adapter.NewHandler(pub, mglog.NewMock(), clients)
+	authn := new(authnmocks.Authentication)
+	handler := adapter.NewHandler(pub, authn, clients, channels, mglog.NewMock())
 
 	mux := api.MakeHandler(mglog.NewMock(), "")
 	target := httptest.NewServer(mux)
@@ -50,13 +53,14 @@ func setupMessages() (*httptest.Server, *climocks.ClientsServiceClient, *pubsub.
 	return httptest.NewServer(http.HandlerFunc(mp.ServeHTTP)), clients, pub
 }
 
-func setupReader() (*httptest.Server, *authzmocks.Authorization, *readersmocks.MessageRepository) {
+func setupReader() (*httptest.Server, *authnmocks.Authentication, *readersmocks.MessageRepository) {
 	repo := new(readersmocks.MessageRepository)
-	authz := new(authzmocks.Authorization)
+	authn := new(authnmocks.Authentication)
 	clients := new(climocks.ClientsServiceClient)
+	channels := new(chmocks.ChannelsServiceClient)
 
-	mux := readersapi.MakeHandler(repo, authz, clients, "test", "")
-	return httptest.NewServer(mux), authz, repo
+	mux := readersapi.MakeHandler(repo, authn, clients, channels, "test", "")
+	return httptest.NewServer(mux), authn, repo
 }
 
 func TestSendMessage(t *testing.T) {
@@ -64,7 +68,7 @@ func TestSendMessage(t *testing.T) {
 	defer ts.Close()
 
 	msg := `[{"n":"current","t":-1,"v":1.6}]`
-	thingKey := "thingKey"
+	clientKey := "clientKey"
 	channelID := "channelID"
 
 	sdkConf := sdk.Config{
@@ -76,81 +80,81 @@ func TestSendMessage(t *testing.T) {
 	mgsdk := sdk.NewSDK(sdkConf)
 
 	cases := []struct {
-		desc     string
-		chanName string
-		msg      string
-		thingKey string
-		authRes  *magistrala.ThingsAuthzRes
-		authErr  error
-		svcErr   error
-		err      errors.SDKError
+		desc      string
+		chanName  string
+		msg       string
+		clientKey string
+		authRes   *grpcClientsV1.AuthnRes
+		authErr   error
+		svcErr    error
+		err       errors.SDKError
 	}{
 		{
-			desc:     "publish message successfully",
-			chanName: channelID,
-			msg:      msg,
-			thingKey: thingKey,
-			authRes:  &magistrala.ThingsAuthzRes{Authorized: true, Id: ""},
-			authErr:  nil,
-			svcErr:   nil,
-			err:      nil,
+			desc:      "publish message successfully",
+			chanName:  channelID,
+			msg:       msg,
+			clientKey: clientKey,
+			authRes:   &grpcClientsV1.AuthnRes{Authenticated: true, Id: ""},
+			authErr:   nil,
+			svcErr:    nil,
+			err:       nil,
 		},
 		{
-			desc:     "publish message with empty client key",
-			chanName: channelID,
-			msg:      msg,
-			thingKey: "",
-			authRes:  &magistrala.ThingsAuthzRes{Authorized: false, Id: ""},
-			authErr:  svcerr.ErrAuthorization,
-			svcErr:   nil,
-			err:      errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusBadRequest),
+			desc:      "publish message with empty client key",
+			chanName:  channelID,
+			msg:       msg,
+			clientKey: "",
+			authRes:   &grpcClientsV1.AuthnRes{Authenticated: false, Id: ""},
+			authErr:   svcerr.ErrAuthorization,
+			svcErr:    nil,
+			err:       errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusBadRequest),
 		},
 		{
-			desc:     "publish message with invalid client key",
-			chanName: channelID,
-			msg:      msg,
-			thingKey: "invalid",
-			authRes:  &magistrala.ThingsAuthzRes{Authorized: false, Id: ""},
-			authErr:  svcerr.ErrAuthorization,
-			svcErr:   svcerr.ErrAuthorization,
-			err:      errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusBadRequest),
+			desc:      "publish message with invalid client key",
+			chanName:  channelID,
+			msg:       msg,
+			clientKey: "invalid",
+			authRes:   &grpcClientsV1.AuthnRes{Authenticated: false, Id: ""},
+			authErr:   svcerr.ErrAuthorization,
+			svcErr:    svcerr.ErrAuthorization,
+			err:       errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusBadRequest),
 		},
 		{
-			desc:     "publish message with invalid channel ID",
-			chanName: wrongID,
-			msg:      msg,
-			thingKey: thingKey,
-			authRes:  &magistrala.ThingsAuthzRes{Authorized: false, Id: ""},
-			authErr:  svcerr.ErrAuthorization,
-			svcErr:   svcerr.ErrAuthorization,
-			err:      errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusBadRequest),
+			desc:      "publish message with invalid channel ID",
+			chanName:  wrongID,
+			msg:       msg,
+			clientKey: clientKey,
+			authRes:   &grpcClientsV1.AuthnRes{Authenticated: false, Id: ""},
+			authErr:   svcerr.ErrAuthorization,
+			svcErr:    svcerr.ErrAuthorization,
+			err:       errors.NewSDKErrorWithStatus(svcerr.ErrAuthorization, http.StatusBadRequest),
 		},
 		{
-			desc:     "publish message with empty message body",
-			chanName: channelID,
-			msg:      "",
-			thingKey: thingKey,
-			authRes:  &magistrala.ThingsAuthzRes{Authorized: true, Id: ""},
-			authErr:  nil,
-			svcErr:   nil,
-			err:      errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrEmptyMessage), http.StatusBadRequest),
+			desc:      "publish message with empty message body",
+			chanName:  channelID,
+			msg:       "",
+			clientKey: clientKey,
+			authRes:   &grpcClientsV1.AuthnRes{Authenticated: true, Id: ""},
+			authErr:   nil,
+			svcErr:    nil,
+			err:       errors.NewSDKErrorWithStatus(errors.Wrap(apiutil.ErrValidation, apiutil.ErrEmptyMessage), http.StatusBadRequest),
 		},
 		{
-			desc:     "publish message with channel subtopic",
-			chanName: channelID + ".subtopic",
-			msg:      msg,
-			thingKey: thingKey,
-			authRes:  &magistrala.ThingsAuthzRes{Authorized: true, Id: ""},
-			authErr:  nil,
-			svcErr:   nil,
-			err:      nil,
+			desc:      "publish message with channel subtopic",
+			chanName:  channelID + ".subtopic",
+			msg:       msg,
+			clientKey: clientKey,
+			authRes:   &grpcClientsV1.AuthnRes{Authenticated: true, Id: ""},
+			authErr:   nil,
+			svcErr:    nil,
+			err:       nil,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			authCall := clients.On("Authorize", mock.Anything, mock.Anything).Return(tc.authRes, tc.authErr)
 			svcCall := pub.On("Publish", mock.Anything, channelID, mock.Anything).Return(tc.svcErr)
-			err := mgsdk.SendMessage(tc.chanName, tc.msg, tc.thingKey)
+			err := mgsdk.SendMessage(tc.chanName, tc.msg, tc.clientKey)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
 				ok := svcCall.Parent.AssertCalled(t, "Publish", mock.Anything, channelID, mock.Anything)

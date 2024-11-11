@@ -24,7 +24,7 @@ type grpcServer struct {
 	grpcChannelsV1.UnimplementedChannelsServiceServer
 
 	authorize                    kitgrpc.Handler
-	removeThingConnections       kitgrpc.Handler
+	removeClientConnections       kitgrpc.Handler
 	unsetParentGroupFromChannels kitgrpc.Handler
 }
 
@@ -36,10 +36,10 @@ func NewServer(svc channels.Service) grpcChannelsV1.ChannelsServiceServer {
 			decodeAuthorizeRequest,
 			encodeAuthorizeResponse,
 		),
-		removeThingConnections: kitgrpc.NewServer(
-			removeThingConnectionsEndpoint(svc),
-			decodeRemoveThingConnectionsRequest,
-			encodeRemoveThingConnectionsResponse,
+		removeClientConnections: kitgrpc.NewServer(
+			removeClientConnectionsEndpoint(svc),
+			decodeRemoveClientConnectionsRequest,
+			encodeRemoveClientConnectionsResponse,
 		),
 		unsetParentGroupFromChannels: kitgrpc.NewServer(
 			unsetParentGroupFromChannelsEndpoint(svc),
@@ -78,25 +78,25 @@ func encodeAuthorizeResponse(_ context.Context, grpcRes interface{}) (interface{
 	return &grpcChannelsV1.AuthzRes{Authorized: res.authorized}, nil
 }
 
-func (s *grpcServer) RemoveThingConnections(ctx context.Context, req *grpcChannelsV1.RemoveThingConnectionsReq) (*grpcChannelsV1.RemoveThingConnectionsRes, error) {
-	_, res, err := s.removeThingConnections.ServeGRPC(ctx, req)
+func (s *grpcServer) RemoveClientConnections(ctx context.Context, req *grpcChannelsV1.RemoveClientConnectionsReq) (*grpcChannelsV1.RemoveClientConnectionsRes, error) {
+	_, res, err := s.removeClientConnections.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, encodeError(err)
 	}
-	return res.(*grpcChannelsV1.RemoveThingConnectionsRes), nil
+	return res.(*grpcChannelsV1.RemoveClientConnectionsRes), nil
 }
 
-func decodeRemoveThingConnectionsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(*grpcChannelsV1.RemoveThingConnectionsReq)
+func decodeRemoveClientConnectionsRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*grpcChannelsV1.RemoveClientConnectionsReq)
 
-	return removeThingConnectionsReq{
+	return removeClientConnectionsReq{
 		clientID: req.GetClientId(),
 	}, nil
 }
 
-func encodeRemoveThingConnectionsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
-	_ = grpcRes.(removeThingConnectionsRes)
-	return &grpcChannelsV1.RemoveThingConnectionsRes{}, nil
+func encodeRemoveClientConnectionsResponse(_ context.Context, grpcRes interface{}) (interface{}, error) {
+	_ = grpcRes.(removeClientConnectionsRes)
+	return &grpcChannelsV1.RemoveClientConnectionsRes{}, nil
 }
 
 func (s *grpcServer) UnsetParentGroupFromChannels(ctx context.Context, req *grpcChannelsV1.UnsetParentGroupFromChannelsReq) (*grpcChannelsV1.UnsetParentGroupFromChannelsRes, error) {

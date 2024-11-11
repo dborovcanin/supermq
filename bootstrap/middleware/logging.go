@@ -88,7 +88,7 @@ func (lm *loggingMiddleware) Update(ctx context.Context, session mgauthn.Session
 
 // UpdateCert logs the update_cert request. It logs client ID and the time it took to complete the request.
 // If the request fails, it logs the error.
-func (lm *loggingMiddleware) UpdateCert(ctx context.Context, session mgauthn.Session, thingID, clientCert, clientKey, caCert string) (cfg bootstrap.Config, err error) {
+func (lm *loggingMiddleware) UpdateCert(ctx context.Context, session mgauthn.Session, clientID, clientCert, clientKey, caCert string) (cfg bootstrap.Config, err error) {
 	defer func(begin time.Time) {
 		args := []any{
 			slog.String("duration", time.Since(begin).String()),
@@ -102,7 +102,7 @@ func (lm *loggingMiddleware) UpdateCert(ctx context.Context, session mgauthn.Ses
 		lm.logger.Info("Update bootstrap config certificate completed successfully", args...)
 	}(time.Now())
 
-	return lm.svc.UpdateCert(ctx, session, thingID, clientCert, clientKey, caCert)
+	return lm.svc.UpdateCert(ctx, session, clientID, clientCert, clientKey, caCert)
 }
 
 // UpdateConnections logs the update_connections request. It logs bootstrap ID and the time it took to complete the request.

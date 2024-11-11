@@ -25,14 +25,14 @@ func (req createClientReq) validate() error {
 }
 
 type createClientsReq struct {
-	Things []clients.Client
+	Clients []clients.Client
 }
 
 func (req createClientsReq) validate() error {
-	if len(req.Things) == 0 {
+	if len(req.Clients) == 0 {
 		return apiutil.ErrEmptyList
 	}
-	for _, c := range req.Things {
+	for _, c := range req.Clients {
 		if c.ID != "" {
 			if err := api.ValidateUUID(c.ID); err != nil {
 				return err
@@ -175,12 +175,12 @@ func (req changeClientStatusReq) validate() error {
 	return nil
 }
 
-type setThingParentGroupReq struct {
+type setClientParentGroupReq struct {
 	id            string
 	ParentGroupID string `json:"parent_group_id"`
 }
 
-func (req setThingParentGroupReq) validate() error {
+func (req setClientParentGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
@@ -190,11 +190,11 @@ func (req setThingParentGroupReq) validate() error {
 	return nil
 }
 
-type removeThingParentGroupReq struct {
+type removeClientParentGroupReq struct {
 	id string
 }
 
-func (req removeThingParentGroupReq) validate() error {
+func (req removeClientParentGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}

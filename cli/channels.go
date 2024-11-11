@@ -363,7 +363,7 @@ func NewChannelsCmd() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "channels [create | get | update | delete | connections | not-connected | assign | unassign | users | groups]",
 		Short: "Channels management",
-		Long:  `Channels management: create, get, update or delete Channel and get list of Things connected or not connected to a Channel`,
+		Long:  `Channels management: create, get, update or delete Channel and get list of Clients connected or not connected to a Channel`,
 	}
 
 	for i := range cmdChannels {

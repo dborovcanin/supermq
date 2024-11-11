@@ -155,13 +155,13 @@ func Provision(conf Config) error {
 	fmt.Println("# List of clients that can be connected to MQTT broker")
 
 	for i := 0; i < conf.Num; i++ {
-		clients[i] = sdk.Client{Name: fmt.Sprintf("%s-thing-%d", conf.Prefix, i)}
+		clients[i] = sdk.Client{Name: fmt.Sprintf("%s-client-%d", conf.Prefix, i)}
 		channels[i] = sdk.Channel{Name: fmt.Sprintf("%s-channel-%d", conf.Prefix, i)}
 	}
 
 	clients, err = s.CreateClients(clients, domain.ID, token.AccessToken)
 	if err != nil {
-		return fmt.Errorf("failed to create the things: %s", err.Error())
+		return fmt.Errorf("failed to create the clients: %s", err.Error())
 	}
 
 	var chs []sdk.Channel
@@ -241,7 +241,7 @@ func Provision(conf Config) error {
 		}
 
 		// Print output
-		fmt.Printf("[[things]]\nclient_id = \"%s\"\nthing_key = \"%s\"\n", clients[i].ID, clients[i].Credentials.Secret)
+		fmt.Printf("[[clients]]\nclient_id = \"%s\"\nclient_key = \"%s\"\n", clients[i].ID, clients[i].Credentials.Secret)
 		if conf.SSL {
 			fmt.Printf("mtls_cert = \"\"\"%s\"\"\"\n", cert)
 			fmt.Printf("mtls_key = \"\"\"%s\"\"\"\n", key)

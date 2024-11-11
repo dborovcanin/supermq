@@ -433,7 +433,7 @@ func TestListSerials(t *testing.T) {
 		token           string
 		domainID        string
 		session         mgauthn.Session
-		thingID         string
+		clientID        string
 		revoked         string
 		offset          uint64
 		limit           uint64
@@ -448,7 +448,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list certs successfully with default limit",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			offset:   0,
 			limit:    10,
@@ -467,7 +467,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list certs successfully with default revoke",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			offset:   0,
 			limit:    10,
@@ -486,7 +486,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list certs successfully with all certs",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  "all",
 			offset:   0,
 			limit:    10,
@@ -505,7 +505,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list certs successfully with limit",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			offset:   0,
 			limit:    5,
@@ -524,7 +524,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list certs successfully with offset",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			offset:   1,
 			limit:    10,
@@ -543,7 +543,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list certs successfully with offset and limit",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			offset:   1,
 			limit:    5,
@@ -562,7 +562,7 @@ func TestListSerials(t *testing.T) {
 			desc:            "list with invalid token",
 			domainID:        valid,
 			token:           invalid,
-			thingID:         clientID,
+			clientID:        clientID,
 			revoked:         revoked,
 			offset:          0,
 			limit:           10,
@@ -576,7 +576,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list with empty token",
 			domainID: valid,
 			token:    "",
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			offset:   0,
 			limit:    10,
@@ -590,7 +590,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list with limit exceeding max limit",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			query:    "?limit=1000",
 			status:   http.StatusBadRequest,
@@ -602,7 +602,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list with invalid offset",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			query:    "?offset=invalid",
 			status:   http.StatusBadRequest,
@@ -614,7 +614,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list with invalid limit",
 			domainID: valid,
 			token:    valid,
-			thingID:  clientID,
+			clientID: clientID,
 			revoked:  revoked,
 			query:    "?limit=invalid",
 			status:   http.StatusBadRequest,
@@ -626,7 +626,7 @@ func TestListSerials(t *testing.T) {
 			desc:     "list with invalid client id",
 			domainID: valid,
 			token:    valid,
-			thingID:  invalid,
+			clientID: invalid,
 			revoked:  revoked,
 			offset:   0,
 			limit:    10,
@@ -642,14 +642,14 @@ func TestListSerials(t *testing.T) {
 			req := testRequest{
 				client: cs.Client(),
 				method: http.MethodGet,
-				url:    fmt.Sprintf("%s/%s/serials/%s", cs.URL, tc.domainID, tc.thingID) + tc.query,
+				url:    fmt.Sprintf("%s/%s/serials/%s", cs.URL, tc.domainID, tc.clientID) + tc.query,
 				token:  tc.token,
 			}
 			if tc.token == valid {
 				tc.session = mgauthn.Session{DomainUserID: validID, UserID: validID, DomainID: validID}
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
-			svcCall := svc.On("ListSerials", mock.Anything, tc.thingID, certs.PageMetadata{Revoked: tc.revoked, Offset: tc.offset, Limit: tc.limit}).Return(tc.svcRes, tc.svcErr)
+			svcCall := svc.On("ListSerials", mock.Anything, tc.clientID, certs.PageMetadata{Revoked: tc.revoked, Offset: tc.offset, Limit: tc.limit}).Return(tc.svcRes, tc.svcErr)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			var errRes respBody

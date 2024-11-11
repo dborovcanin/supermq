@@ -76,14 +76,14 @@ func (req updateReq) validate() error {
 }
 
 type updateCertReq struct {
-	thingID    string
+	clientID    string
 	ClientCert string `json:"client_cert"`
 	ClientKey  string `json:"client_key"`
 	CACert     string `json:"ca_cert"`
 }
 
 func (req updateCertReq) validate() error {
-	if req.thingID == "" {
+	if req.clientID == "" {
 		return apiutil.ErrMissingID
 	}
 

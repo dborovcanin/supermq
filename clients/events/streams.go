@@ -40,21 +40,21 @@ func NewEventStoreMiddleware(ctx context.Context, svc clients.Service, url strin
 }
 
 func (es *eventStore) CreateClients(ctx context.Context, session authn.Session, clients ...clients.Client) ([]clients.Client, error) {
-	sths, err := es.svc.CreateClients(ctx, session, clients...)
+	clis, err := es.svc.CreateClients(ctx, session, clients...)
 	if err != nil {
-		return sths, err
+		return clis, err
 	}
 
-	for _, th := range sths {
+	for _, cli := range clis {
 		event := createClientEvent{
-			th,
+			cli,
 		}
 		if err := es.Publish(ctx, event); err != nil {
-			return sths, err
+			return clis, err
 		}
 	}
 
-	return sths, nil
+	return clis, nil
 }
 
 func (es *eventStore) Update(ctx context.Context, session authn.Session, client clients.Client) (clients.Client, error) {
@@ -97,19 +97,19 @@ func (es *eventStore) update(ctx context.Context, operation string, client clien
 }
 
 func (es *eventStore) View(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
-	thi, err := es.svc.View(ctx, session, id)
+	cli, err := es.svc.View(ctx, session, id)
 	if err != nil {
-		return thi, err
+		return cli, err
 	}
 
 	event := viewClientEvent{
-		thi,
+		cli,
 	}
 	if err := es.Publish(ctx, event); err != nil {
-		return thi, err
+		return cli, err
 	}
 
-	return thi, nil
+	return cli, nil
 }
 
 func (es *eventStore) ListClients(ctx context.Context, session authn.Session, reqUserID string, pm clients.Page) (clients.ClientsPage, error) {
@@ -129,35 +129,35 @@ func (es *eventStore) ListClients(ctx context.Context, session authn.Session, re
 }
 
 func (es *eventStore) Enable(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
-	thi, err := es.svc.Enable(ctx, session, id)
+	cli, err := es.svc.Enable(ctx, session, id)
 	if err != nil {
-		return thi, err
+		return cli, err
 	}
 
-	return es.changeStatus(ctx, thi)
+	return es.changeStatus(ctx, cli)
 }
 
 func (es *eventStore) Disable(ctx context.Context, session authn.Session, id string) (clients.Client, error) {
-	thi, err := es.svc.Disable(ctx, session, id)
+	cli, err := es.svc.Disable(ctx, session, id)
 	if err != nil {
-		return thi, err
+		return cli, err
 	}
 
-	return es.changeStatus(ctx, thi)
+	return es.changeStatus(ctx, cli)
 }
 
-func (es *eventStore) changeStatus(ctx context.Context, thi clients.Client) (clients.Client, error) {
+func (es *eventStore) changeStatus(ctx context.Context, cli clients.Client) (clients.Client, error) {
 	event := changeStatusClientEvent{
-		id:        thi.ID,
-		updatedAt: thi.UpdatedAt,
-		updatedBy: thi.UpdatedBy,
-		status:    thi.Status.String(),
+		id:        cli.ID,
+		updatedAt: cli.UpdatedAt,
+		updatedBy: cli.UpdatedBy,
+		status:    cli.Status.String(),
 	}
 	if err := es.Publish(ctx, event); err != nil {
-		return thi, err
+		return cli, err
 	}
 
-	return thi, nil
+	return cli, nil
 }
 
 func (es *eventStore) Delete(ctx context.Context, session authn.Session, id string) error {

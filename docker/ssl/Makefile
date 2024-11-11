@@ -82,8 +82,8 @@ client_cert:
 	rm $(CRT_LOCATION)/$(CRT_FILE_NAME).csr
 
 clients_grpc_certs:
-	# Things server grpc certificates
-	$(file > $(CRT_LOCATION)/$(CLIENTS_GRPC_SERVER_CRT_FILE_NAME).conf,$(subst <<SERVICE_NAME>>,$(THINGS_GRPC_SERVER_CN),$(GRPC_CERT_CONFIG)) )
+	# Clients server grpc certificates
+	$(file > $(CRT_LOCATION)/$(CLIENTS_GRPC_SERVER_CRT_FILE_NAME).conf,$(subst <<SERVICE_NAME>>,$(CLIENTS_GRPC_SERVER_CN),$(GRPC_CERT_CONFIG)) )
 
 	openssl req -new -sha256  -newkey rsa:4096 -nodes \
 				-keyout $(CRT_LOCATION)/$(CLIENTS_GRPC_SERVER_CRT_FILE_NAME).key  \
@@ -102,7 +102,7 @@ clients_grpc_certs:
 			-extensions v3_req
 
 	rm -rf  $(CRT_LOCATION)/$(CLIENTS_GRPC_SERVER_CRT_FILE_NAME).csr $(CRT_LOCATION)/$(CLIENTS_GRPC_SERVER_CRT_FILE_NAME).conf
-	# Things client grpc certificates
+	# Clients client grpc certificates
 	$(file > $(CRT_LOCATION)/$(CLIENTS_GRPC_CLIENT_CRT_FILE_NAME).conf,$(subst <<SERVICE_NAME>>,$(CLIENTS_GRPC_CLIENT_CN),$(GRPC_CERT_CONFIG)) )
 
 	openssl req -new -sha256 -newkey rsa:4096 -nodes \
@@ -164,7 +164,7 @@ auth_grpc_certs:
 			-extensions v3_req
 
 	rm -rf  $(CRT_LOCATION)/$(AUTH_GRPC_CLIENT_CRT_FILE_NAME).csr $(CRT_LOCATION)/$(AUTH_GRPC_CLIENT_CRT_FILE_NAME).conf
-	
+
 clean_certs:
 	rm -r $(CRT_LOCATION)/*.crt
 	rm -r $(CRT_LOCATION)/*.key

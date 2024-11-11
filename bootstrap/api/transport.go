@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	fullMatch    = []string{"state", "external_id", "client_id", "thing_key"}
+	fullMatch    = []string{"state", "external_id", "client_id", "client_key"}
 	partialMatch = []string{"name"}
 	// ErrBootstrap indicates error in getting bootstrap configuration.
 	ErrBootstrap = errors.New("failed to read bootstrap configuration")
@@ -96,7 +96,7 @@ func MakeHandler(svc bootstrap.Service, authn mgauthn.Authentication, reader boo
 			})
 		})
 
-		r.With(api.AuthenticateMiddleware(authn, true)).Put("/state/{thingID}", otelhttp.NewHandler(kithttp.NewServer(
+		r.With(api.AuthenticateMiddleware(authn, true)).Put("/state/{clientID}", otelhttp.NewHandler(kithttp.NewServer(
 			stateEndpoint(svc),
 			decodeStateRequest,
 			api.EncodeResponse,
@@ -163,7 +163,7 @@ func decodeUpdateCertRequest(_ context.Context, r *http.Request) (interface{}, e
 	}
 
 	req := updateCertReq{
-		thingID: chi.URLParam(r, "certID"),
+		clientID: chi.URLParam(r, "certID"),
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, errors.Wrap(apiutil.ErrValidation, errors.Wrap(err, errors.ErrMalformedEntity))

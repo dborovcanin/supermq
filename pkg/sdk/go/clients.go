@@ -23,7 +23,7 @@ const (
 	unshareEndpoint     = "unshare"
 )
 
-// Client represents magistrala thing.
+// Client represents magistrala client.
 type Client struct {
 	ID          string                 `json:"id,omitempty"`
 	Name        string                 `json:"name,omitempty"`
@@ -250,32 +250,32 @@ func (sdk mgSDK) changeClientStatus(id, status, domainID, token string) (Client,
 	return t, nil
 }
 
-func (sdk mgSDK) ShareClient(thingID string, req UsersRelationRequest, domainID, token string) errors.SDKError {
+func (sdk mgSDK) ShareClient(clientID string, req UsersRelationRequest, domainID, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
 	}
 
-	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, thingID, shareEndpoint)
+	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, clientID, shareEndpoint)
 
 	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusCreated)
 	return sdkerr
 }
 
-func (sdk mgSDK) UnshareClient(thingID string, req UsersRelationRequest, domainID, token string) errors.SDKError {
+func (sdk mgSDK) UnshareClient(clientID string, req UsersRelationRequest, domainID, token string) errors.SDKError {
 	data, err := json.Marshal(req)
 	if err != nil {
 		return errors.NewSDKError(err)
 	}
 
-	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, thingID, unshareEndpoint)
+	url := fmt.Sprintf("%s/%s/%s/%s/%s", sdk.clientsURL, domainID, clientsEndpoint, clientID, unshareEndpoint)
 
 	_, _, sdkerr := sdk.processRequest(http.MethodPost, url, token, data, nil, http.StatusNoContent)
 	return sdkerr
 }
 
-func (sdk mgSDK) ListClientUsers(thingID string, pm PageMetadata, domainID, token string) (UsersPage, errors.SDKError) {
-	url, err := sdk.withQueryParams(sdk.usersURL, fmt.Sprintf("%s/%s/%s/%s", domainID, clientsEndpoint, thingID, usersEndpoint), pm)
+func (sdk mgSDK) ListClientUsers(clientID string, pm PageMetadata, domainID, token string) (UsersPage, errors.SDKError) {
+	url, err := sdk.withQueryParams(sdk.usersURL, fmt.Sprintf("%s/%s/%s/%s", domainID, clientsEndpoint, clientID, usersEndpoint), pm)
 	if err != nil {
 		return UsersPage{}, errors.NewSDKError(err)
 	}

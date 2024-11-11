@@ -12,7 +12,7 @@ type authorizeReq struct {
 	clientType string
 	connType   connections.ConnType
 }
-type removeThingConnectionsReq struct {
+type removeClientConnectionsReq struct {
 	clientID string
 }
 

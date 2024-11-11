@@ -98,7 +98,7 @@ func (es *eventStore) UpdateConnections(ctx context.Context, session mgauthn.Ses
 	}
 
 	ev := updateConnectionsEvent{
-		mgThing:    id,
+		mgClient:   id,
 		mgChannels: connections,
 	}
 
@@ -163,8 +163,8 @@ func (es *eventStore) ChangeState(ctx context.Context, session mgauthn.Session, 
 	}
 
 	ev := changeStateEvent{
-		mgThing: id,
-		state:   state,
+		mgClient: id,
+		state:    state,
 	}
 
 	return es.Publish(ctx, ev)
@@ -213,8 +213,8 @@ func (es *eventStore) ConnectClientHandler(ctx context.Context, channelID, clien
 		return err
 	}
 
-	ev := connectThingEvent{
-		thingID:   clientID,
+	ev := connectClientEvent{
+		clientID:  clientID,
 		channelID: channelID,
 	}
 
@@ -226,8 +226,8 @@ func (es *eventStore) DisconnectClientHandler(ctx context.Context, channelID, cl
 		return err
 	}
 
-	ev := disconnectThingEvent{
-		thingID:   clientID,
+	ev := disconnectClientEvent{
+		clientID:  clientID,
 		channelID: channelID,
 	}
 

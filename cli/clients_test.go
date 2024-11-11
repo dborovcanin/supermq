@@ -32,7 +32,7 @@ var (
 
 var client = sdk.Client{
 	ID:   testsutil.GenerateUUID(&testing.T{}),
-	Name: "testthing",
+	Name: "testclient",
 	Credentials: sdk.ClientCredentials{
 		Secret: "secret",
 	},
@@ -43,7 +43,7 @@ var client = sdk.Client{
 func TestCreateClientsCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
-	thingJson := "{\"name\":\"testthing\", \"metadata\":{\"key1\":\"value1\"}}"
+	clientJson := "{\"name\":\"testclient\", \"metadata\":{\"key1\":\"value1\"}}"
 	clientsCmd := cli.NewClientsCmd()
 	rootCmd := setFlags(clientsCmd)
 
@@ -54,23 +54,23 @@ func TestCreateClientsCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		thing         sdk.Client
+		client        sdk.Client
 		logType       outputLog
 	}{
 		{
 			desc: "create client successfully with token",
 			args: []string{
-				thingJson,
+				clientJson,
 				domainID,
 				token,
 			},
-			thing:   client,
+			client:  client,
 			logType: entityLog,
 		},
 		{
 			desc: "create client without token",
 			args: []string{
-				thingJson,
+				clientJson,
 				domainID,
 			},
 			logType: usageLog,
@@ -78,7 +78,7 @@ func TestCreateClientsCmd(t *testing.T) {
 		{
 			desc: "create client with invalid token",
 			args: []string{
-				thingJson,
+				clientJson,
 				domainID,
 				invalidToken,
 			},
@@ -87,9 +87,9 @@ func TestCreateClientsCmd(t *testing.T) {
 			logType:       errLog,
 		},
 		{
-			desc: "failed to create thing",
+			desc: "failed to create client",
 			args: []string{
-				thingJson,
+				clientJson,
 				domainID,
 				token,
 			},
@@ -100,7 +100,7 @@ func TestCreateClientsCmd(t *testing.T) {
 		{
 			desc: "create client with invalid metadata",
 			args: []string{
-				"{\"name\":\"testthing\", \"metadata\":{\"key1\":value1}}",
+				"{\"name\":\"testclient\", \"metadata\":{\"key1\":value1}}",
 				domainID,
 				token,
 			},
@@ -112,14 +112,14 @@ func TestCreateClientsCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("CreateThing", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.thing, tc.sdkErr)
+			sdkCall := sdkMock.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{createCmd}, tc.args...)...)
 
 			switch tc.logType {
 			case entityLog:
 				err := json.Unmarshal([]byte(out), &tg)
 				assert.Nil(t, err)
-				assert.Equal(t, tc.thing, tg, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.thing, tg))
+				assert.Equal(t, tc.client, tg, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.client, tg))
 			case errLog:
 				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
 			case usageLog:
@@ -145,7 +145,7 @@ func TestGetClientssCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		thing         sdk.Client
+		client        sdk.Client
 		page          sdk.ClientsPage
 		logType       outputLog
 	}{
@@ -169,7 +169,7 @@ func TestGetClientssCmd(t *testing.T) {
 				token,
 			},
 			logType: entityLog,
-			thing:   client,
+			client:  client,
 		},
 		{
 			desc: "get clients with invalid token",
@@ -221,7 +221,7 @@ func TestGetClientssCmd(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			sdkCall := sdkMock.On("Clients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.page, tc.sdkErr)
-			sdkCall1 := sdkMock.On("Client", mock.Anything, mock.Anything, mock.Anything).Return(tc.thing, tc.sdkErr)
+			sdkCall1 := sdkMock.On("Client", mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
 
 			out := executeCommand(t, rootCmd, append([]string{getCmd}, tc.args...)...)
 
@@ -249,7 +249,7 @@ func TestGetClientssCmd(t *testing.T) {
 
 			if tc.logType == entityLog {
 				if tc.args[1] != all {
-					assert.Equal(t, tc.thing, tg, fmt.Sprintf("%v unexpected response, expected: %v, got: %v", tc.desc, tc.thing, tg))
+					assert.Equal(t, tc.client, tg, fmt.Sprintf("%v unexpected response, expected: %v, got: %v", tc.desc, tc.client, tg))
 				} else {
 					assert.Equal(t, tc.page, page, fmt.Sprintf("%v unexpected response, expected: %v, got: %v", tc.desc, tc.page, page))
 				}
@@ -271,7 +271,7 @@ func TestUpdateClientCmd(t *testing.T) {
 	secretUpdateType := "secret"
 	newTagsJson := "[\"tag1\", \"tag2\"]"
 	newTagString := []string{"tag1", "tag2"}
-	newNameandMeta := "{\"name\": \"thingName\", \"metadata\": {\"role\": \"general\"}}"
+	newNameandMeta := "{\"name\": \"clientName\", \"metadata\": {\"role\": \"general\"}}"
 	newSecret := "secret"
 
 	cases := []struct {
@@ -279,7 +279,7 @@ func TestUpdateClientCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		thing         sdk.Client
+		client        sdk.Client
 		logType       outputLog
 	}{
 		{
@@ -290,8 +290,8 @@ func TestUpdateClientCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			thing: sdk.Client{
-				Name: "thingName",
+			client: sdk.Client{
+				Name: "clientName",
 				Metadata: map[string]interface{}{
 					"metadata": map[string]interface{}{
 						"role": "general",
@@ -307,7 +307,7 @@ func TestUpdateClientCmd(t *testing.T) {
 			desc: "update client name and metadata with invalid json",
 			args: []string{
 				client.ID,
-				"{\"name\": \"thingName\", \"metadata\": {\"role\": \"general\"}",
+				"{\"name\": \"clientName\", \"metadata\": {\"role\": \"general\"}",
 				domainID,
 				token,
 			},
@@ -336,7 +336,7 @@ func TestUpdateClientCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			thing: sdk.Client{
+			client: sdk.Client{
 				Name:     client.Name,
 				ID:       client.ID,
 				DomainID: client.DomainID,
@@ -380,7 +380,7 @@ func TestUpdateClientCmd(t *testing.T) {
 				domainID,
 				token,
 			},
-			thing: sdk.Client{
+			client: sdk.Client{
 				Name:     client.Name,
 				ID:       client.ID,
 				DomainID: client.DomainID,
@@ -434,9 +434,9 @@ func TestUpdateClientCmd(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			var tg sdk.Client
-			sdkCall := sdkMock.On("UpdateClient", mock.Anything, mock.Anything, mock.Anything).Return(tc.thing, tc.sdkErr)
-			sdkCall1 := sdkMock.On("UpdateClientTags", mock.Anything, mock.Anything, mock.Anything).Return(tc.thing, tc.sdkErr)
-			sdkCall2 := sdkMock.On("UpdateClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.thing, tc.sdkErr)
+			sdkCall := sdkMock.On("UpdateClient", mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
+			sdkCall1 := sdkMock.On("UpdateClientTags", mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
+			sdkCall2 := sdkMock.On("UpdateClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.client, tc.sdkErr)
 
 			switch {
 			case tc.args[0] == tagUpdateType:
@@ -444,13 +444,13 @@ func TestUpdateClientCmd(t *testing.T) {
 				th.Tags = []string{"tag1", "tag2"}
 				th.ID = tc.args[1]
 
-				sdkCall1 = sdkMock.On("UpdateClientTags", th, tc.args[3]).Return(tc.thing, tc.sdkErr)
+				sdkCall1 = sdkMock.On("UpdateClientTags", th, tc.args[3]).Return(tc.client, tc.sdkErr)
 			case tc.args[0] == secretUpdateType:
 				var th sdk.Client
 				th.Credentials.Secret = tc.args[2]
 				th.ID = tc.args[1]
 
-				sdkCall2 = sdkMock.On("UpdateClientSecret", th, tc.args[2], tc.args[3]).Return(tc.thing, tc.sdkErr)
+				sdkCall2 = sdkMock.On("UpdateClientSecret", th, tc.args[2], tc.args[3]).Return(tc.client, tc.sdkErr)
 			}
 			out := executeCommand(t, rootCmd, append([]string{updCmd}, tc.args...)...)
 
@@ -458,7 +458,7 @@ func TestUpdateClientCmd(t *testing.T) {
 			case entityLog:
 				err := json.Unmarshal([]byte(out), &tg)
 				assert.Nil(t, err)
-				assert.Equal(t, tc.thing, tg, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.thing, tg))
+				assert.Equal(t, tc.client, tg, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.client, tg))
 			case errLog:
 				assert.Equal(t, tc.errLogMessage, out, fmt.Sprintf("%s unexpected error response: expected %s got errLogMessage:%s", tc.desc, tc.errLogMessage, out))
 			case usageLog:
@@ -530,7 +530,7 @@ func TestDeleteClientCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DeleteThing", tc.args[0], tc.args[1], tc.args[2]).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("DeleteClient", tc.args[0], tc.args[1], tc.args[2]).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{delCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -546,7 +546,7 @@ func TestDeleteClientCmd(t *testing.T) {
 	}
 }
 
-func TestEnableThingCmd(t *testing.T) {
+func TestEnableClientCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	clientsCmd := cli.NewClientsCmd()
@@ -558,7 +558,7 @@ func TestEnableThingCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		thing         sdk.Client
+		client        sdk.Client
 		logType       outputLog
 	}{
 		{
@@ -569,7 +569,7 @@ func TestEnableThingCmd(t *testing.T) {
 				validToken,
 			},
 			sdkErr:  nil,
-			thing:   client,
+			client:  client,
 			logType: entityLog,
 		},
 		{
@@ -608,7 +608,7 @@ func TestEnableThingCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("EnableThing", tc.args[0], tc.args[1], tc.args[2]).Return(tc.thing, tc.sdkErr)
+			sdkCall := sdkMock.On("EnableClient", tc.args[0], tc.args[1], tc.args[2]).Return(tc.client, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{enableCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -619,7 +619,7 @@ func TestEnableThingCmd(t *testing.T) {
 			case entityLog:
 				err := json.Unmarshal([]byte(out), &tg)
 				assert.Nil(t, err)
-				assert.Equal(t, tc.thing, tg, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.thing, tg))
+				assert.Equal(t, tc.client, tg, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.client, tg))
 			}
 
 			sdkCall.Unset()
@@ -627,7 +627,7 @@ func TestEnableThingCmd(t *testing.T) {
 	}
 }
 
-func TestDisablethingCmd(t *testing.T) {
+func TestDisableclientCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	clientsCmd := cli.NewClientsCmd()
@@ -640,7 +640,7 @@ func TestDisablethingCmd(t *testing.T) {
 		args          []string
 		sdkErr        errors.SDKError
 		errLogMessage string
-		thing         sdk.Client
+		client        sdk.Client
 		logType       outputLog
 	}{
 		{
@@ -651,7 +651,7 @@ func TestDisablethingCmd(t *testing.T) {
 				validToken,
 			},
 			logType: entityLog,
-			thing:   client,
+			client:  client,
 		},
 		{
 			desc: "delete client with invalid token",
@@ -689,7 +689,7 @@ func TestDisablethingCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("DisableThing", tc.args[0], tc.args[1], tc.args[2]).Return(tc.thing, tc.sdkErr)
+			sdkCall := sdkMock.On("DisableClient", tc.args[0], tc.args[1], tc.args[2]).Return(tc.client, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{disableCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -702,7 +702,7 @@ func TestDisablethingCmd(t *testing.T) {
 				if err != nil {
 					t.Fatalf("json.Unmarshal failed: %v", err)
 				}
-				assert.Equal(t, tc.thing, tg, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.thing, tg))
+				assert.Equal(t, tc.client, tg, fmt.Sprintf("%s unexpected response: expected: %v, got: %v", tc.desc, tc.client, tg))
 			}
 
 			sdkCall.Unset()
@@ -710,7 +710,7 @@ func TestDisablethingCmd(t *testing.T) {
 	}
 }
 
-func TestUsersThingCmd(t *testing.T) {
+func TestUsersClientCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	clientsCmd := cli.NewClientsCmd()
@@ -727,7 +727,7 @@ func TestUsersThingCmd(t *testing.T) {
 		sdkErr        errors.SDKError
 	}{
 		{
-			desc: "get thing's users successfully",
+			desc: "get client's users successfully",
 			args: []string{
 				client.ID,
 				domainID,
@@ -779,7 +779,7 @@ func TestUsersThingCmd(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ListThingUsers", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.page, tc.sdkErr)
+			sdkCall := sdkMock.On("ListClientUsers", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.page, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{usrCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -799,7 +799,7 @@ func TestUsersThingCmd(t *testing.T) {
 	}
 }
 
-func TestConnectThingCmd(t *testing.T) {
+func TestConnectClientCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	clientsCmd := cli.NewClientsCmd()
@@ -1046,7 +1046,7 @@ func TestListConnectionCmd(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ChannelsByThing", tc.args[0], mock.Anything, tc.args[1], tc.args[2]).Return(tc.page, tc.sdkErr)
+			sdkCall := sdkMock.On("ChannelsByClient", tc.args[0], mock.Anything, tc.args[1], tc.args[2]).Return(tc.page, tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{connsCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -1067,7 +1067,7 @@ func TestListConnectionCmd(t *testing.T) {
 	}
 }
 
-func TestShareThingCmd(t *testing.T) {
+func TestShareClientCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	clientCmd := cli.NewClientsCmd()
@@ -1145,7 +1145,7 @@ func TestShareThingCmd(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("ShareThing", tc.args[0], mock.Anything, tc.args[3], tc.args[4]).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("ShareClient", tc.args[0], mock.Anything, tc.args[3], tc.args[4]).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{shrCmd}, tc.args...)...)
 
 			switch tc.logType {
@@ -1161,7 +1161,7 @@ func TestShareThingCmd(t *testing.T) {
 	}
 }
 
-func TestUnshareThingCmd(t *testing.T) {
+func TestUnshareClientCmd(t *testing.T) {
 	sdkMock := new(sdkmocks.SDK)
 	cli.SetSDK(sdkMock)
 	clientsCmd := cli.NewClientsCmd()
@@ -1226,7 +1226,7 @@ func TestUnshareThingCmd(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			sdkCall := sdkMock.On("UnshareThing", tc.args[0], mock.Anything, tc.args[3], tc.args[4]).Return(tc.sdkErr)
+			sdkCall := sdkMock.On("UnshareClient", tc.args[0], mock.Anything, tc.args[3], tc.args[4]).Return(tc.sdkErr)
 			out := executeCommand(t, rootCmd, append([]string{unshrCmd}, tc.args...)...)
 
 			switch tc.logType {

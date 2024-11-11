@@ -148,14 +148,14 @@ components:
   parameters:
     entity_type:
       name: entity_type
-      description: Type of entity, e.g. user, group, thing, etc.
+      description: Type of entity, e.g. user, group, client, etc.
       in: path
       schema:
         type: string
         enum:
           - user
           - group
-          - thing
+          - client
           - channel
       required: true
       example: user

@@ -165,7 +165,7 @@ func main() {
 		return
 	}
 
-	if err = subscribeToThingsES(ctx, svc, cfg, logger); err != nil {
+	if err = subscribeToClientsES(ctx, svc, cfg, logger); err != nil {
 		logger.Error(fmt.Sprintf("failed to subscribe to clients event store: %s", err))
 		exitCode = 1
 		return
@@ -228,7 +228,7 @@ func newService(ctx context.Context, authz mgauthz.Authorization, policySvc poli
 	return svc, nil
 }
 
-func subscribeToThingsES(ctx context.Context, svc bootstrap.Service, cfg config, logger *slog.Logger) error {
+func subscribeToClientsES(ctx context.Context, svc bootstrap.Service, cfg config, logger *slog.Logger) error {
 	subscriber, err := store.NewSubscriber(ctx, cfg.ESURL, logger)
 	if err != nil {
 		return err

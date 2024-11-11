@@ -27,13 +27,13 @@ func createClientEndpoint(svc clients.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		thing, err := svc.CreateClients(ctx, session, req.client)
+		client, err := svc.CreateClients(ctx, session, req.client)
 		if err != nil {
 			return nil, err
 		}
 
 		return createClientRes{
-			Client:  thing[0],
+			Client:  client[0],
 			created: true,
 		}, nil
 	}
@@ -51,7 +51,7 @@ func createClientsEndpoint(svc clients.Service) endpoint.Endpoint {
 			return nil, svcerr.ErrAuthentication
 		}
 
-		page, err := svc.CreateClients(ctx, session, req.Things...)
+		page, err := svc.CreateClients(ctx, session, req.Clients...)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +251,7 @@ func disableClientEndpoint(svc clients.Service) endpoint.Endpoint {
 
 func setClientParentGroupEndpoint(svc clients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(setThingParentGroupReq)
+		req := request.(setClientParentGroupReq)
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}
@@ -270,7 +270,7 @@ func setClientParentGroupEndpoint(svc clients.Service) endpoint.Endpoint {
 
 func removeClientParentGroupEndpoint(svc clients.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(removeThingParentGroupReq)
+		req := request.(removeClientParentGroupReq)
 		if err := req.validate(); err != nil {
 			return nil, errors.Wrap(apiutil.ErrValidation, err)
 		}

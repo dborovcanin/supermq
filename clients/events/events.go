@@ -278,18 +278,18 @@ func (lcge listClientByGroupEvent) Encode() (map[string]interface{}, error) {
 }
 
 type identifyClientEvent struct {
-	thingID string
+	clientID string
 }
 
 func (ice identifyClientEvent) Encode() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"operation": clientIdentify,
-		"id":        ice.thingID,
+		"id":        ice.clientID,
 	}, nil
 }
 
 type authorizeClientEvent struct {
-	thingID    string
+	clientID   string
 	channelID  string
 	permission string
 }
@@ -297,7 +297,7 @@ type authorizeClientEvent struct {
 func (ice authorizeClientEvent) Encode() (map[string]interface{}, error) {
 	val := map[string]interface{}{
 		"operation": clientAuthorize,
-		"id":        ice.thingID,
+		"id":        ice.clientID,
 	}
 
 	if ice.permission != "" {

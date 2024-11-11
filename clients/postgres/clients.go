@@ -88,28 +88,28 @@ func (repo *clientRepo) RetrieveBySecret(ctx context.Context, key string) (clien
         FROM clients
         WHERE secret = :secret AND status = %d`, clients.EnabledStatus)
 
-	dbt := DBClient{
+	dbc := DBClient{
 		Secret: key,
 	}
 
-	rows, err := repo.DB.NamedQueryContext(ctx, q, dbt)
+	rows, err := repo.DB.NamedQueryContext(ctx, q, dbc)
 	if err != nil {
 		return clients.Client{}, postgres.HandleError(repoerr.ErrViewEntity, err)
 	}
 	defer rows.Close()
 
-	dbt = DBClient{}
+	dbc = DBClient{}
 	if rows.Next() {
-		if err = rows.StructScan(&dbt); err != nil {
+		if err = rows.StructScan(&dbc); err != nil {
 			return clients.Client{}, postgres.HandleError(repoerr.ErrViewEntity, err)
 		}
 
-		thing, err := ToClient(dbt)
+		client, err := ToClient(dbc)
 		if err != nil {
 			return clients.Client{}, errors.Wrap(repoerr.ErrFailedOpDB, err)
 		}
 
-		return thing, nil
+		return client, nil
 	}
 
 	return clients.Client{}, repoerr.ErrNotFound
@@ -172,23 +172,23 @@ func (repo *clientRepo) RetrieveByID(ctx context.Context, id string) (clients.Cl
 	q := `SELECT id, name, tags, COALESCE(domain_id, '') AS domain_id, COALESCE(parent_group_id, '') AS parent_group_id, identity, secret, metadata, created_at, updated_at, updated_by, status
         FROM clients WHERE id = :id`
 
-	dbt := DBClient{
+	dbc := DBClient{
 		ID: id,
 	}
 
-	row, err := repo.DB.NamedQueryContext(ctx, q, dbt)
+	row, err := repo.DB.NamedQueryContext(ctx, q, dbc)
 	if err != nil {
 		return clients.Client{}, errors.Wrap(repoerr.ErrViewEntity, err)
 	}
 	defer row.Close()
 
-	dbt = DBClient{}
+	dbc = DBClient{}
 	if row.Next() {
-		if err := row.StructScan(&dbt); err != nil {
+		if err := row.StructScan(&dbc); err != nil {
 			return clients.Client{}, errors.Wrap(repoerr.ErrViewEntity, err)
 		}
 
-		return ToClient(dbt)
+		return ToClient(dbc)
 	}
 
 	return clients.Client{}, repoerr.ErrNotFound
@@ -216,12 +216,12 @@ func (repo *clientRepo) RetrieveAll(ctx context.Context, pm clients.Page) (clien
 
 	var items []clients.Client
 	for rows.Next() {
-		dbt := DBClient{}
-		if err := rows.StructScan(&dbt); err != nil {
+		dbc := DBClient{}
+		if err := rows.StructScan(&dbc); err != nil {
 			return clients.ClientsPage{}, errors.Wrap(repoerr.ErrViewEntity, err)
 		}
 
-		c, err := ToClient(dbt)
+		c, err := ToClient(dbc)
 		if err != nil {
 			return clients.ClientsPage{}, err
 		}
@@ -271,12 +271,12 @@ func (repo *clientRepo) SearchClients(ctx context.Context, pm clients.Page) (cli
 
 	var items []clients.Client
 	for rows.Next() {
-		dbt := DBClient{}
-		if err := rows.StructScan(&dbt); err != nil {
+		dbc := DBClient{}
+		if err := rows.StructScan(&dbc); err != nil {
 			return clients.ClientsPage{}, errors.Wrap(repoerr.ErrViewEntity, err)
 		}
 
-		c, err := ToClient(dbt)
+		c, err := ToClient(dbc)
 		if err != nil {
 			return clients.ClientsPage{}, err
 		}
@@ -329,12 +329,12 @@ func (repo *clientRepo) RetrieveAllByIDs(ctx context.Context, pm clients.Page) (
 
 	var items []clients.Client
 	for rows.Next() {
-		dbt := DBClient{}
-		if err := rows.StructScan(&dbt); err != nil {
+		dbc := DBClient{}
+		if err := rows.StructScan(&dbc); err != nil {
 			return clients.ClientsPage{}, errors.Wrap(repoerr.ErrViewEntity, err)
 		}
 
-		c, err := ToClient(dbt)
+		c, err := ToClient(dbc)
 		if err != nil {
 			return clients.ClientsPage{}, err
 		}
@@ -474,7 +474,7 @@ func ToClient(t DBClient) (clients.Client, error) {
 		updatedAt = t.UpdatedAt.Time
 	}
 
-	thg := clients.Client{
+	cli := clients.Client{
 		ID:          t.ID,
 		Name:        t.Name,
 		Tags:        tags,
@@ -490,7 +490,7 @@ func ToClient(t DBClient) (clients.Client, error) {
 		UpdatedBy: updatedBy,
 		Status:    t.Status,
 	}
-	return thg, nil
+	return cli, nil
 }
 
 func ToDBClientsPage(pm clients.Page) (dbClientsPage, error) {
@@ -698,10 +698,10 @@ func (repo *clientRepo) RemoveConnections(ctx context.Context, conns []clients.C
 	return nil
 }
 
-func (repo *clientRepo) SetParentGroup(ctx context.Context, th clients.Client) error {
+func (repo *clientRepo) SetParentGroup(ctx context.Context, cli clients.Client) error {
 	q := "UPDATE clients SET parent_group_id = :parent_group_id, updated_at = :updated_at, updated_by = :updated_by WHERE id = :id"
 
-	dbcli, err := ToDBClient(th)
+	dbcli, err := ToDBClient(cli)
 	if err != nil {
 		return errors.Wrap(repoerr.ErrUpdateEntity, err)
 	}
@@ -715,9 +715,9 @@ func (repo *clientRepo) SetParentGroup(ctx context.Context, th clients.Client) e
 	return nil
 }
 
-func (repo *clientRepo) RemoveParentGroup(ctx context.Context, th clients.Client) error {
+func (repo *clientRepo) RemoveParentGroup(ctx context.Context, cli clients.Client) error {
 	q := "UPDATE clients SET parent_group_id = NULL, updated_at = :updated_at, updated_by = :updated_by WHERE id = :id"
-	dbcli, err := ToDBClient(th)
+	dbcli, err := ToDBClient(cli)
 	if err != nil {
 		return errors.Wrap(repoerr.ErrUpdateEntity, err)
 	}
@@ -731,7 +731,7 @@ func (repo *clientRepo) RemoveParentGroup(ctx context.Context, th clients.Client
 	return nil
 }
 
-func (repo *clientRepo) ThingConnectionsCount(ctx context.Context, id string) (uint64, error) {
+func (repo *clientRepo) ClientConnectionsCount(ctx context.Context, id string) (uint64, error) {
 	query := `SELECT COUNT(*) FROM connections WHERE client_id = :client_id`
 	dbConn := dbConnection{ClientID: id}
 
@@ -742,7 +742,7 @@ func (repo *clientRepo) ThingConnectionsCount(ctx context.Context, id string) (u
 	return total, nil
 }
 
-func (repo *clientRepo) DoesThingHaveConnections(ctx context.Context, id string) (bool, error) {
+func (repo *clientRepo) DoesClientHaveConnections(ctx context.Context, id string) (bool, error) {
 	query := `SELECT 1 FROM connections WHERE client_id = :client_id`
 	dbConn := dbConnection{ClientID: id}
 
@@ -765,17 +765,17 @@ func (repo *clientRepo) RemoveChannelConnections(ctx context.Context, channelID 
 	return nil
 }
 
-func (repo *clientRepo) RemoveThingConnections(ctx context.Context, thingID string) error {
+func (repo *clientRepo) RemoveClientConnections(ctx context.Context, clientID string) error {
 	query := `DELETE FROM connections WHERE client_id = :client_id`
 
-	dbConn := dbConnection{ClientID: thingID}
+	dbConn := dbConnection{ClientID: clientID}
 	if _, err := repo.DB.NamedExecContext(ctx, query, dbConn); err != nil {
 		return errors.Wrap(repoerr.ErrRemoveEntity, err)
 	}
 	return nil
 }
 
-func (repo *clientRepo) RetrieveParentGroupThings(ctx context.Context, parentGroupID string) ([]clients.Client, error) {
+func (repo *clientRepo) RetrieveParentGroupClients(ctx context.Context, parentGroupID string) ([]clients.Client, error) {
 	query := `SELECT c.id, c.name, c.tags,  c.metadata, COALESCE(c.domain_id, '') AS domain_id, COALESCE(parent_group_id, '') AS parent_group_id, c.status,
 					c.created_at, c.updated_at, COALESCE(c.updated_by, '') AS updated_by FROM clients c WHERE c.parent_group_id = :parent_group_id ;`
 
@@ -785,21 +785,21 @@ func (repo *clientRepo) RetrieveParentGroupThings(ctx context.Context, parentGro
 	}
 	defer rows.Close()
 
-	var ths []clients.Client
+	var clis []clients.Client
 	for rows.Next() {
-		dbTh := DBClient{}
-		if err := rows.StructScan(&dbTh); err != nil {
+		dbCli := DBClient{}
+		if err := rows.StructScan(&dbCli); err != nil {
 			return []clients.Client{}, errors.Wrap(repoerr.ErrViewEntity, err)
 		}
 
-		th, err := ToClient(dbTh)
+		cli, err := ToClient(dbCli)
 		if err != nil {
 			return []clients.Client{}, err
 		}
 
-		ths = append(ths, th)
+		clis = append(clis, cli)
 	}
-	return ths, nil
+	return clis, nil
 }
 
 func (repo *clientRepo) UnsetParentGroupFromClient(ctx context.Context, parentGroupID string) error {

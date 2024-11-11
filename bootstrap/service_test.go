@@ -106,12 +106,12 @@ func TestAdd(t *testing.T) {
 		session         mgauthn.Session
 		userID          string
 		domainID        string
-		thingErr        error
-		createThingErr  error
+		clientErr        error
+		createClientErr  error
 		channelErr      error
 		listExistingErr error
 		saveErr         error
-		deleteThingErr  error
+		deleteClientErr  error
 		err             error
 	}{
 		{
@@ -128,7 +128,7 @@ func TestAdd(t *testing.T) {
 			token:    validToken,
 			userID:   validID,
 			domainID: domainID,
-			thingErr: errors.NewSDKError(svcerr.ErrNotFound),
+			clientErr: errors.NewSDKError(svcerr.ErrNotFound),
 			err:      svcerr.ErrNotFound,
 		},
 		{
@@ -152,9 +152,9 @@ func TestAdd(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			tc.session = mgauthn.Session{UserID: tc.userID, DomainID: tc.domainID, DomainUserID: validID}
-			repoCall := sdk.On("Thing", tc.config.ClientID, mock.Anything, tc.token).Return(mgsdk.Client{ID: tc.config.ClientID, Credentials: mgsdk.ClientCredentials{Secret: tc.config.ClientSecret}}, tc.thingErr)
-			repoCall1 := sdk.On("CreateThing", mock.Anything, tc.domainID, tc.token).Return(mgsdk.Client{}, tc.createThingErr)
-			repoCall2 := sdk.On("DeleteThing", tc.config.ClientID, tc.domainID, tc.token).Return(tc.deleteThingErr)
+			repoCall := sdk.On("Client", tc.config.ClientID, mock.Anything, tc.token).Return(mgsdk.Client{ID: tc.config.ClientID, Credentials: mgsdk.ClientCredentials{Secret: tc.config.ClientSecret}}, tc.clientErr)
+			repoCall1 := sdk.On("CreateClient", mock.Anything, tc.domainID, tc.token).Return(mgsdk.Client{}, tc.createClientErr)
+			repoCall2 := sdk.On("DeleteClient", tc.config.ClientID, tc.domainID, tc.token).Return(tc.deleteClientErr)
 			repoCall3 := boot.On("ListExisting", context.Background(), tc.domainID, mock.Anything).Return(tc.config.Channels, tc.listExistingErr)
 			repoCall4 := boot.On("Save", context.Background(), mock.Anything, mock.Anything).Return(mock.Anything, tc.saveErr)
 			_, err := svc.Add(context.Background(), tc.session, tc.token, tc.config)
@@ -176,11 +176,11 @@ func TestView(t *testing.T) {
 		configID    string
 		userID      string
 		domain      string
-		thingDomain string
+		clientDomain string
 		token       string
 		session     mgauthn.Session
 		retrieveErr error
-		thingErr    error
+		clientErr    error
 		channelErr  error
 		err         error
 	}{
@@ -188,7 +188,7 @@ func TestView(t *testing.T) {
 			desc:        "view an existing config",
 			configID:    config.ClientID,
 			userID:      validID,
-			thingDomain: domainID,
+			clientDomain: domainID,
 			domain:      domainID,
 			token:       validToken,
 			err:         nil,
@@ -197,7 +197,7 @@ func TestView(t *testing.T) {
 			desc:        "view a non-existing config",
 			configID:    unknown,
 			userID:      validID,
-			thingDomain: domainID,
+			clientDomain: domainID,
 			domain:      domainID,
 			token:       validToken,
 			retrieveErr: svcerr.ErrNotFound,
@@ -207,7 +207,7 @@ func TestView(t *testing.T) {
 			desc:        "view a config with invalid domain",
 			configID:    config.ClientID,
 			userID:      validID,
-			thingDomain: invalidDomainID,
+			clientDomain: invalidDomainID,
 			domain:      invalidDomainID,
 			token:       validToken,
 			retrieveErr: svcerr.ErrNotFound,
@@ -218,7 +218,7 @@ func TestView(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			tc.session = mgauthn.Session{UserID: tc.userID, DomainID: tc.domain, DomainUserID: validID}
-			repoCall := boot.On("RetrieveByID", context.Background(), tc.thingDomain, tc.configID).Return(config, tc.retrieveErr)
+			repoCall := boot.On("RetrieveByID", context.Background(), tc.clientDomain, tc.configID).Return(config, tc.retrieveErr)
 			_, err := svc.View(context.Background(), tc.session, tc.configID)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 			repoCall.Unset()
@@ -304,7 +304,7 @@ func TestUpdateCert(t *testing.T) {
 		session         mgauthn.Session
 		userID          string
 		domainID        string
-		thingID         string
+		clientID         string
 		clientCert      string
 		clientKey       string
 		caCert          string
@@ -318,7 +318,7 @@ func TestUpdateCert(t *testing.T) {
 			desc:       "update certs for the valid config",
 			userID:     validID,
 			domainID:   domainID,
-			thingID:    c.ClientID,
+			clientID:    c.ClientID,
 			clientCert: "newCert",
 			clientKey:  "newKey",
 			caCert:     "newCert",
@@ -343,7 +343,7 @@ func TestUpdateCert(t *testing.T) {
 			desc:           "update cert for a non-existing config",
 			userID:         validID,
 			domainID:       domainID,
-			thingID:        "empty",
+			clientID:        "empty",
 			clientCert:     "newCert",
 			clientKey:      "newKey",
 			caCert:         "newCert",
@@ -358,7 +358,7 @@ func TestUpdateCert(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			tc.session = mgauthn.Session{UserID: tc.userID, DomainID: tc.domainID, DomainUserID: validID}
 			repoCall := boot.On("UpdateCert", context.Background(), mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(tc.expectedConfig, tc.updateErr)
-			cfg, err := svc.UpdateCert(context.Background(), tc.session, tc.thingID, tc.clientCert, tc.clientKey, tc.caCert)
+			cfg, err := svc.UpdateCert(context.Background(), tc.session, tc.clientID, tc.clientCert, tc.clientKey, tc.caCert)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 			sort.Slice(cfg.Channels, func(i, j int) bool {
 				return cfg.Channels[i].ID < cfg.Channels[j].ID
@@ -393,7 +393,7 @@ func TestUpdateConnections(t *testing.T) {
 		domainID    string
 		connections []string
 		updateErr   error
-		thingErr    error
+		clientErr    error
 		channelErr  error
 		retrieveErr error
 		listErr     error
@@ -451,9 +451,9 @@ func TestUpdateConnections(t *testing.T) {
 func TestList(t *testing.T) {
 	svc := newService()
 
-	numThings := 101
+	numClients := 101
 	var saved []bootstrap.Config
-	for i := 0; i < numThings; i++ {
+	for i := 0; i < numClients; i++ {
 		c := config
 		c.ExternalID = testsutil.GenerateUUID(t)
 		c.ExternalKey = testsutil.GenerateUUID(t)
@@ -1038,7 +1038,7 @@ func TestRemoveConfigHandler(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := boot.On("RemoveThing", context.Background(), mock.Anything).Return(tc.err)
+			repoCall := boot.On("RemoveClient", context.Background(), mock.Anything).Return(tc.err)
 			err := svc.RemoveConfigHandler(context.Background(), tc.id)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 			repoCall.Unset()
@@ -1046,66 +1046,66 @@ func TestRemoveConfigHandler(t *testing.T) {
 	}
 }
 
-func TestConnectThingsHandler(t *testing.T) {
+func TestConnectClientHandler(t *testing.T) {
 	svc := newService()
 
 	cases := []struct {
 		desc      string
-		thingID   string
+		clientID   string
 		channelID string
 		err       error
 	}{
 		{
 			desc:      "connect",
 			channelID: channel.ID,
-			thingID:   config.ClientID,
+			clientID:   config.ClientID,
 			err:       nil,
 		},
 		{
 			desc:      "connect connected",
 			channelID: channel.ID,
-			thingID:   config.ClientID,
+			clientID:   config.ClientID,
 			err:       svcerr.ErrAddPolicies,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := boot.On("ConnectThing", context.Background(), mock.Anything, mock.Anything).Return(tc.err)
-			err := svc.ConnectThingHandler(context.Background(), tc.channelID, tc.thingID)
+			repoCall := boot.On("ConnectClient", context.Background(), mock.Anything, mock.Anything).Return(tc.err)
+			err := svc.ConnectClientHandler(context.Background(), tc.channelID, tc.clientID)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 			repoCall.Unset()
 		})
 	}
 }
 
-func TestDisconnectThingsHandler(t *testing.T) {
+func TestDisconnectClientsHandler(t *testing.T) {
 	svc := newService()
 
 	cases := []struct {
 		desc      string
-		thingID   string
+		clientID   string
 		channelID string
 		err       error
 	}{
 		{
 			desc:      "disconnect",
 			channelID: channel.ID,
-			thingID:   config.ClientID,
+			clientID:   config.ClientID,
 			err:       nil,
 		},
 		{
 			desc:      "disconnect disconnected",
 			channelID: channel.ID,
-			thingID:   config.ClientID,
+			clientID:   config.ClientID,
 			err:       nil,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			repoCall := boot.On("DisconnectThing", context.Background(), mock.Anything, mock.Anything).Return(tc.err)
-			err := svc.DisconnectThingHandler(context.Background(), tc.channelID, tc.thingID)
+			repoCall := boot.On("DisconnectClient", context.Background(), mock.Anything, mock.Anything).Return(tc.err)
+			err := svc.DisconnectClientHandler(context.Background(), tc.channelID, tc.clientID)
 			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 			repoCall.Unset()
 		})

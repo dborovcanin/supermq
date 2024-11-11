@@ -151,7 +151,7 @@ type Service interface {
 	// ListUsers retrieves users list for a valid auth token.
 	ListUsers(ctx context.Context, session authn.Session, pm Page) (UsersPage, error)
 
-	// ListMembers retrieves everything that is assigned to a group/thing identified by objectID.
+	// ListMembers retrieves everything that is assigned to a group/client identified by objectID.
 	ListMembers(ctx context.Context, session authn.Session, objectKind, objectID string, pm Page) (MembersPage, error)
 
 	// SearchUsers searches for users with provided filters for a valid auth token.

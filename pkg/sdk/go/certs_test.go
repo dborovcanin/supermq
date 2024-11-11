@@ -279,7 +279,7 @@ func TestViewCert(t *testing.T) {
 	}
 }
 
-func TestViewCertByThing(t *testing.T) {
+func TestViewCertByClient(t *testing.T) {
 	ts, svc, auth := setupCerts()
 	defer ts.Close()
 
@@ -291,7 +291,7 @@ func TestViewCertByThing(t *testing.T) {
 
 	mgsdk := sdk.NewSDK(sdkConf)
 
-	viewCertThingRes := sdk.CertSerials{
+	viewCertClientRes := sdk.CertSerials{
 		Certs: []sdk.Cert{{
 			SerialNumber: serial,
 		}},
@@ -360,10 +360,10 @@ func TestViewCertByThing(t *testing.T) {
 			}
 			authCall := auth.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authenticateErr)
 			svcCall := svc.On("ListSerials", mock.Anything, tc.clientID, certs.PageMetadata{Revoked: defRevoke, Offset: defOffset, Limit: defLimit}).Return(tc.svcRes, tc.svcErr)
-			resp, err := mgsdk.ViewCertByThing(tc.clientID, tc.domainID, tc.token)
+			resp, err := mgsdk.ViewCertByClient(tc.clientID, tc.domainID, tc.token)
 			assert.Equal(t, tc.err, err)
 			if tc.err == nil {
-				assert.Equal(t, viewCertThingRes, resp)
+				assert.Equal(t, viewCertClientRes, resp)
 				ok := svcCall.Parent.AssertCalled(t, "ListSerials", mock.Anything, tc.clientID, certs.PageMetadata{Revoked: defRevoke, Offset: defOffset, Limit: defLimit})
 				assert.True(t, ok)
 			}

@@ -209,7 +209,7 @@ func listMembersByChannelEndpoint(svc users.Service) endpoint.Endpoint {
 	}
 }
 
-func listMembersByThingEndpoint(svc users.Service) endpoint.Endpoint {
+func listMembersByClientEndpoint(svc users.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(listMembersByObjectReq)
 		req.objectKind = "clients"

@@ -1,4 +1,4 @@
-# Magistrala Things and Channels Provisioning Tool
+# Magistrala Clients and Channels Provisioning Tool
 
 A simple utility to create a list of channels and clients connected to these channels with possibility to create certificates for mTLS use case.
 
@@ -6,13 +6,15 @@ This tool is useful for testing, and it creates a TOML format output (on stdout,
 that can be used by Magistrala MQTT benchmarking tool (`mqtt-bench`).
 
 ## Installation
-```
+
+```bash
 cd tools/provision
 make
 ```
 
 ### Usage
-```
+
+```bash
 ./provision --help
 Tool for provisioning series of Magistrala channels and clients and connecting them together.
 Complete documentation is available at https://docs.magistrala.abstractmachines.fr
@@ -33,29 +35,29 @@ Flags:
 ```
 
 Example:
-```
+
+```bash
 go run tools/provision/cmd/main.go -u test@magistrala.com -p test1234 --host https://142.93.118.47
 ```
 
 If you want to create a list of channels with certificates:
 
-```
+```bash
 go run tools/provision/cmd/main.go  --host http://localhost --num 10 -u test@magistrala.com -p test1234 --ssl true --ca docker/ssl/certs/ca.crt --cakey docker/ssl/certs/ca.key
 
 ```
 
->`ca.crt` and `ca.key` are used for creating clients certificate and for HTTPS,
+> `ca.crt` and `ca.key` are used for creating clients certificate and for HTTPS,
 > if you are provisioning on remote server you will have to get these files to your local
-> directory so that you can create certificates for things
-
+> directory so that you can create certificates for clients
 
 Example of output:
 
-```
+```bash
 # List of clients that can be connected to MQTT broker
-[[things]]
+[[clients]]
 client_id = "0eac601b-6d54-4767-b8b7-594aaf9990d3"
-thing_key = "07713103-513f-43c7-b7fe-500c1af23d7d"
+client_key = "07713103-513f-43c7-b7fe-500c1af23d7d"
 mtls_cert = """-----BEGIN CERTIFICATE-----
 MIIEmTCCA4GgAwIBAgIRAO50qOfXsU+cHm/QY2NYu+0wDQYJKoZIhvcNAQELBQAw
 VzESMBAGA1UEAwwJbG9jYWxob3N0MREwDwYDVQQKDAhNYWluZmx1eDEMMAoGA1UE
@@ -139,7 +141,7 @@ uCRt+TFMyEfqilipmNsV7esgbroiyEGXGMI8JdBY9OsnK6ZSlXaMnQ9vq2kK
 
 # List of channels that clients can publish to
 # each channel is connected to each client from clients list
-# Things connected to channel 1f18afa1-29c4-4634-99d1-68dfa1b74e6a: 0eac601b-6d54-4767-b8b7-594aaf9990d3
+# Clients connected to channel 1f18afa1-29c4-4634-99d1-68dfa1b74e6a: 0eac601b-6d54-4767-b8b7-594aaf9990d3
 [[channels]]
 channel_id = "1f18afa1-29c4-4634-99d1-68dfa1b74e6a"
 

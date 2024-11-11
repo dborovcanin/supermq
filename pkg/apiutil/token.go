@@ -11,7 +11,7 @@ import (
 // BearerPrefix represents the token prefix for Bearer authentication scheme.
 const BearerPrefix = "Bearer "
 
-// ClientPrefix represents the key prefix for Thing authentication scheme.
+// ClientPrefix represents the key prefix for Client authentication scheme.
 const ClientPrefix = "Client "
 
 // ExtractBearerToken returns value of the bearer token. If there is no bearer token - an empty value is returned.

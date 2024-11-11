@@ -1185,7 +1185,7 @@ func TestBootstrap(t *testing.T) {
 		err         error
 	}{
 		{
-			desc:        "bootstrap a Thing with unknown ID",
+			desc:        "bootstrap a Client with unknown ID",
 			externalID:  unknown,
 			externalKey: c.ExternalKey,
 			status:      http.StatusNotFound,
@@ -1194,7 +1194,7 @@ func TestBootstrap(t *testing.T) {
 			err:         bootstrap.ErrBootstrap,
 		},
 		{
-			desc:        "bootstrap a Thing with an empty ID",
+			desc:        "bootstrap a Client with an empty ID",
 			externalID:  "",
 			externalKey: c.ExternalKey,
 			status:      http.StatusBadRequest,
@@ -1203,7 +1203,7 @@ func TestBootstrap(t *testing.T) {
 			err:         errors.Wrap(bootstrap.ErrBootstrap, svcerr.ErrMalformedEntity),
 		},
 		{
-			desc:        "bootstrap a Thing with unknown key",
+			desc:        "bootstrap a Client with unknown key",
 			externalID:  c.ExternalID,
 			externalKey: unknown,
 			status:      http.StatusForbidden,
@@ -1212,7 +1212,7 @@ func TestBootstrap(t *testing.T) {
 			err:         errors.Wrap(bootstrap.ErrExternalKey, errors.New("")),
 		},
 		{
-			desc:        "bootstrap a Thing with an empty key",
+			desc:        "bootstrap a Client with an empty key",
 			externalID:  c.ExternalID,
 			externalKey: "",
 			status:      http.StatusBadRequest,
@@ -1221,7 +1221,7 @@ func TestBootstrap(t *testing.T) {
 			err:         errors.Wrap(bootstrap.ErrBootstrap, svcerr.ErrAuthentication),
 		},
 		{
-			desc:        "bootstrap known Thing",
+			desc:        "bootstrap known Client",
 			externalID:  c.ExternalID,
 			externalKey: c.ExternalKey,
 			status:      http.StatusOK,

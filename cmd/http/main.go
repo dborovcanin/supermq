@@ -44,7 +44,7 @@ import (
 const (
 	svcName           = "http_adapter"
 	envPrefix         = "MG_HTTP_ADAPTER_"
-	envPrefixThings   = "MG_CLIENTS_AUTH_GRPC_"
+	envPrefixClients   = "MG_CLIENTS_AUTH_GRPC_"
 	envPrefixChannels = "MG_CHANNELS_GRPC_"
 	envPrefixAuth     = "MG_AUTH_GRPC_"
 	defSvcHTTPPort    = "80"
@@ -93,21 +93,21 @@ func main() {
 		return
 	}
 
-	thingsClientCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&thingsClientCfg, env.Options{Prefix: envPrefixThings}); err != nil {
+	clientsClientCfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&clientsClientCfg, env.Options{Prefix: envPrefixClients}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load clients gRPC client configuration : %s", err))
 		exitCode = 1
 		return
 	}
 
-	clientsClient, thingsHandler, err := grpcclient.SetupClientsClient(ctx, thingsClientCfg)
+	clientsClient, clientsHandler, err := grpcclient.SetupClientsClient(ctx, clientsClientCfg)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
 		return
 	}
-	defer thingsHandler.Close()
-	logger.Info("Things service gRPC client successfully connected to clients gRPC server " + thingsHandler.Secure())
+	defer clientsHandler.Close()
+	logger.Info("Clients service gRPC client successfully connected to clients gRPC server " + clientsHandler.Secure())
 
 	channelsClientCfg := grpcclient.Config{}
 	if err := env.ParseWithOptions(&channelsClientCfg, env.Options{Prefix: envPrefixChannels}); err != nil {

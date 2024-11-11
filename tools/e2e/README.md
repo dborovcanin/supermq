@@ -1,4 +1,4 @@
-# Magistrala Users Groups Things and Channels E2E Testing Tool
+# Magistrala Users Groups Clients and Channels E2E Testing Tool
 
 A simple utility to create a list of groups and users connected to these groups and channels and clients connected to these channels.
 

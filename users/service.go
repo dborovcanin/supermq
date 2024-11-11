@@ -409,7 +409,7 @@ func (svc service) Enable(ctx context.Context, session authn.Session, id string)
 	}
 	user, err := svc.changeUserStatus(ctx, session, u)
 	if err != nil {
-		return User{}, errors.Wrap(ErrEnableClient, err)
+		return User{}, errors.Wrap(svcerr.ErrEnableUser, err)
 	}
 
 	return user, nil
@@ -423,7 +423,7 @@ func (svc service) Disable(ctx context.Context, session authn.Session, id string
 	}
 	user, err := svc.changeUserStatus(ctx, session, user)
 	if err != nil {
-		return User{}, err
+		return User{}, errors.Wrap(svcerr.ErrDisableUser, err)
 	}
 
 	return user, nil

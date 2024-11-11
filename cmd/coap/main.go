@@ -34,7 +34,7 @@ const (
 	svcName           = "coap_adapter"
 	envPrefix         = "MG_COAP_ADAPTER_"
 	envPrefixHTTP     = "MG_COAP_ADAPTER_HTTP_"
-	envPrefixThings   = "MG_CLIENTS_AUTH_GRPC_"
+	envPrefixClients   = "MG_CLIENTS_AUTH_GRPC_"
 	envPrefixChannels = "MG_CHANNELS_GRPC_"
 	defSvcHTTPPort    = "5683"
 	defSvcCoAPPort    = "5683"
@@ -88,22 +88,22 @@ func main() {
 		return
 	}
 
-	thingsClientCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&thingsClientCfg, env.Options{Prefix: envPrefixThings}); err != nil {
+	clientsClientCfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&clientsClientCfg, env.Options{Prefix: envPrefixClients}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s auth configuration : %s", svcName, err))
 		exitCode = 1
 		return
 	}
 
-	thingsClient, thingsHandler, err := grpcclient.SetupClientsClient(ctx, thingsClientCfg)
+	clientsClient, clientsHandler, err := grpcclient.SetupClientsClient(ctx, clientsClientCfg)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
 		return
 	}
-	defer thingsHandler.Close()
+	defer clientsHandler.Close()
 
-	logger.Info("Things service gRPC client successfully connected to clients gRPC server " + thingsHandler.Secure())
+	logger.Info("Clients service gRPC client successfully connected to clients gRPC server " + clientsHandler.Secure())
 
 	channelsClientCfg := grpcclient.Config{}
 	if err := env.ParseWithOptions(&channelsClientCfg, env.Options{Prefix: envPrefixChannels}); err != nil {
@@ -143,7 +143,7 @@ func main() {
 	defer nps.Close()
 	nps = brokerstracing.NewPubSub(coapServerConfig, tracer, nps)
 
-	svc := coap.New(thingsClient, channelsClient, nps)
+	svc := coap.New(clientsClient, channelsClient, nps)
 
 	svc = tracing.New(tracer, svc)
 

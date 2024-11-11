@@ -62,7 +62,7 @@ const (
 	envPrefixAuth     = "MG_AUTH_GRPC_"
 	envPrefixDomains  = "MG_DOMAINS_GRPC_"
 	envPrefixChannels = "MG_CHANNELS_GRPC_"
-	envPrefixThings   = "MG_CLIENTS_AUTH_GRPC_"
+	envPrefixClients   = "MG_CLIENTS_AUTH_GRPC_"
 	defDB             = "groups"
 	defSvcHTTPPort    = "9004"
 	defSvcgRPCPort    = "7004"
@@ -187,21 +187,21 @@ func main() {
 	logger.Info("Groups gRPC client successfully connected to channels gRPC server " + channelsHandler.Secure())
 
 	thgrpcCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&thgrpcCfg, env.Options{Prefix: envPrefixThings}); err != nil {
+	if err := env.ParseWithOptions(&thgrpcCfg, env.Options{Prefix: envPrefixClients}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load clients gRPC client configuration : %s", err))
 		exitCode = 1
 		return
 	}
-	thingsClient, thingsHandler, err := grpcclient.SetupClientsClient(ctx, thgrpcCfg)
+	clientsClient, clientsHandler, err := grpcclient.SetupClientsClient(ctx, thgrpcCfg)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to connect to clients gRPC server: %s", err))
 		exitCode = 1
 		return
 	}
-	defer thingsHandler.Close()
-	logger.Info("Things gRPC client successfully connected to clients gRPC server " + thingsHandler.Secure())
+	defer clientsHandler.Close()
+	logger.Info("Clients gRPC client successfully connected to clients gRPC server " + clientsHandler.Secure())
 
-	svc, psvc, err := newService(ctx, authz, policyService, db, dbConfig, channelsClient, thingsClient, tracer, logger, cfg)
+	svc, psvc, err := newService(ctx, authz, policyService, db, dbConfig, channelsClient, clientsClient, tracer, logger, cfg)
 	if err != nil {
 		logger.Error(fmt.Sprintf("failed to setup service: %s", err))
 		exitCode = 1

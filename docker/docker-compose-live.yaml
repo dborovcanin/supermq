@@ -48,8 +48,8 @@ services:
       - $GOPATH/pkg/mod/cache:/go/pkg/mod/cache
     working_dir: /go/src/github.com/absmach/magistrala
     entrypoint: [ "air",
-                  "--build.cmd", "BUILD_DIR=/tmp make things",
-                  "--build.bin", "/tmp/things",
+                  "--build.cmd", "BUILD_DIR=/tmp make clients",
+                  "--build.bin", "/tmp/clients",
                   "--build.stop_on_error", "true",
                   "--build.send_interrupt", "true",
                   "--build.exclude_dir", ".vscode,.git,.docker,.github,api,build,tools,scripts",

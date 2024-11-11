@@ -185,7 +185,9 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 	case errors.Contains(err, svcerr.ErrCreateEntity),
 		errors.Contains(err, svcerr.ErrUpdateEntity),
 		errors.Contains(err, svcerr.ErrRemoveEntity),
-		errors.Contains(err, svcerr.ErrEnableClient):
+		errors.Contains(err, svcerr.ErrEnableClient),
+		errors.Contains(err, svcerr.ErrEnableUser),
+		errors.Contains(err, svcerr.ErrDisableUser):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 

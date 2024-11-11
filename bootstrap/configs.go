@@ -12,9 +12,9 @@ import (
 
 // Config represents Configuration entity. It wraps information about external entity
 // as well as info about corresponding Magistrala entities.
-// MGThing represents corresponding Magistrala Thing ID.
-// MGKey is key of corresponding Magistrala Thing.
-// MGChannels is a list of Magistrala Channels corresponding Magistrala Thing connects to.
+// MGClient represents corresponding Magistrala Client ID.
+// MGKey is key of corresponding Magistrala Client.
+// MGChannels is a list of Magistrala Channels corresponding Magistrala Client connects to.
 type Config struct {
 	ClientID     string    `json:"client_id"`
 	ClientSecret string    `json:"client_secret"`
@@ -30,7 +30,7 @@ type Config struct {
 	State        State     `json:"state"`
 }
 
-// Channel represents Magistrala channel corresponding Magistrala Thing is connected to.
+// Channel represents Magistrala channel corresponding Magistrala Client is connected to.
 type Channel struct {
 	ID          string                 `json:"id"`
 	Name        string                 `json:"name,omitempty"`
@@ -100,7 +100,7 @@ type ConfigRepository interface {
 	// ListExisting retrieves those channels from the given list that exist in DB.
 	ListExisting(ctx context.Context, domainID string, ids []string) ([]Channel, error)
 
-	// Methods RemoveThing, UpdateChannel, and RemoveChannel are related to
+	// Methods RemoveClient, UpdateChannel, and RemoveChannel are related to
 	// event sourcing. That's why these methods surpass ownership check.
 
 	// RemoveClient removes Config of the Client with the given ID.
@@ -113,8 +113,8 @@ type ConfigRepository interface {
 	RemoveChannel(ctx context.Context, id string) error
 
 	// ConnectClient changes state of the Config when the corresponding Client is connected to the Channel.
-	ConnectClient(ctx context.Context, channelID, thingID string) error
+	ConnectClient(ctx context.Context, channelID, clientID string) error
 
 	// DisconnectClient changes state of the Config when the corresponding Client is disconnected from the Channel.
-	DisconnectClient(ctx context.Context, channelID, thingID string) error
+	DisconnectClient(ctx context.Context, channelID, clientID string) error
 }

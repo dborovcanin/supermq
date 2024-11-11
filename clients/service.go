@@ -54,7 +54,7 @@ func NewService(repo Repository, policy policies.Service, cache Cache, channels 
 	}, nil
 }
 
-func (svc service) CreateClients(ctx context.Context, session authn.Session, cls ...Client) (retThings []Client, retErr error) {
+func (svc service) CreateClients(ctx context.Context, session authn.Session, cls ...Client) (retClients []Client, retErr error) {
 	var clients []Client
 	for _, c := range cls {
 		if c.ID == "" {
@@ -97,7 +97,7 @@ func (svc service) CreateClients(ctx context.Context, session authn.Session, cls
 	}()
 
 	newBuiltInRoleMembers := map[roles.BuiltInRoleName][]roles.Member{
-		ThingBuiltInRoleAdmin: {roles.Member(session.UserID)},
+		ClientBuiltInRoleAdmin: {roles.Member(session.UserID)},
 	}
 
 	optionalPolicies := []policies.Policy{}
@@ -239,11 +239,11 @@ func (svc service) filterAllowedClientIDs(ctx context.Context, userID, permissio
 	return ids, nil
 }
 
-func (svc service) Update(ctx context.Context, session authn.Session, thi Client) (Client, error) {
+func (svc service) Update(ctx context.Context, session authn.Session, cli Client) (Client, error) {
 	client := Client{
-		ID:        thi.ID,
-		Name:      thi.Name,
-		Metadata:  thi.Metadata,
+		ID:        cli.ID,
+		Name:      cli.Name,
+		Metadata:  cli.Metadata,
 		UpdatedAt: time.Now(),
 		UpdatedBy: session.UserID,
 	}
@@ -254,10 +254,10 @@ func (svc service) Update(ctx context.Context, session authn.Session, thi Client
 	return client, nil
 }
 
-func (svc service) UpdateTags(ctx context.Context, session authn.Session, thi Client) (Client, error) {
+func (svc service) UpdateTags(ctx context.Context, session authn.Session, cli Client) (Client, error) {
 	client := Client{
-		ID:        thi.ID,
-		Tags:      thi.Tags,
+		ID:        cli.ID,
+		Tags:      cli.Tags,
 		UpdatedAt: time.Now(),
 		UpdatedBy: session.UserID,
 	}
@@ -318,11 +318,11 @@ func (svc service) Disable(ctx context.Context, session authn.Session, id string
 }
 
 func (svc service) SetParentGroup(ctx context.Context, session authn.Session, parentGroupID string, id string) (retErr error) {
-	th, err := svc.repo.RetrieveByID(ctx, id)
+	cli, err := svc.repo.RetrieveByID(ctx, id)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
-	switch th.ParentGroup {
+	switch cli.ParentGroup {
 	case parentGroupID:
 		return nil
 	case "":
@@ -363,26 +363,26 @@ func (svc service) SetParentGroup(ctx context.Context, session authn.Session, pa
 			}
 		}
 	}()
-	th = Client{ID: id, ParentGroup: parentGroupID, UpdatedBy: session.UserID, UpdatedAt: time.Now()}
+	cli = Client{ID: id, ParentGroup: parentGroupID, UpdatedBy: session.UserID, UpdatedAt: time.Now()}
 
-	if err := svc.repo.SetParentGroup(ctx, th); err != nil {
+	if err := svc.repo.SetParentGroup(ctx, cli); err != nil {
 		return errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
 	return nil
 }
 
 func (svc service) RemoveParentGroup(ctx context.Context, session authn.Session, id string) (retErr error) {
-	th, err := svc.repo.RetrieveByID(ctx, id)
+	cli, err := svc.repo.RetrieveByID(ctx, id)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrViewEntity, err)
 	}
 
-	if th.ParentGroup != "" {
+	if cli.ParentGroup != "" {
 		var pols []policies.Policy
 		pols = append(pols, policies.Policy{
 			Domain:      session.DomainID,
 			SubjectType: policies.GroupType,
-			Subject:     th.ParentGroup,
+			Subject:     cli.ParentGroup,
 			Relation:    policies.ParentGroupRelation,
 			ObjectType:  policies.ClientType,
 			Object:      id,
@@ -399,9 +399,9 @@ func (svc service) RemoveParentGroup(ctx context.Context, session authn.Session,
 			}
 		}()
 
-		th := Client{ID: id, UpdatedBy: session.UserID, UpdatedAt: time.Now()}
+		cli := Client{ID: id, UpdatedBy: session.UserID, UpdatedAt: time.Now()}
 
-		if err := svc.repo.RemoveParentGroup(ctx, th); err != nil {
+		if err := svc.repo.RemoveParentGroup(ctx, cli); err != nil {
 			return err
 		}
 	}
@@ -409,12 +409,12 @@ func (svc service) RemoveParentGroup(ctx context.Context, session authn.Session,
 }
 
 func (svc service) Delete(ctx context.Context, session authn.Session, id string) error {
-	ok, err := svc.repo.DoesThingHaveConnections(ctx, id)
+	ok, err := svc.repo.DoesClientHaveConnections(ctx, id)
 	if err != nil {
 		return errors.Wrap(svcerr.ErrRemoveEntity, err)
 	}
 	if ok {
-		if _, err := svc.channels.RemoveThingConnections(ctx, &grpcChannelsV1.RemoveThingConnectionsReq{ClientId: id}); err != nil {
+		if _, err := svc.channels.RemoveClientConnections(ctx, &grpcChannelsV1.RemoveClientConnectionsReq{ClientId: id}); err != nil {
 			return errors.Wrap(svcerr.ErrRemoveEntity, err)
 		}
 	}

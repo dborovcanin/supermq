@@ -43,7 +43,7 @@ import (
 
 const (
 	svcName           = "mqtt"
-	envPrefixThings   = "MG_CLIENTS_AUTH_GRPC_"
+	envPrefixClients   = "MG_CLIENTS_AUTH_GRPC_"
 	envPrefixChannels = "MG_CHANNELS_GRPC_"
 	wsPathPrefix      = "/mqtt"
 )
@@ -166,21 +166,21 @@ func main() {
 		return
 	}
 
-	thingsClientCfg := grpcclient.Config{}
-	if err := env.ParseWithOptions(&thingsClientCfg, env.Options{Prefix: envPrefixThings}); err != nil {
+	clientsClientCfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&clientsClientCfg, env.Options{Prefix: envPrefixClients}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s auth configuration : %s", svcName, err))
 		exitCode = 1
 		return
 	}
 
-	thingsClient, thingsHandler, err := grpcclient.SetupClientsClient(ctx, thingsClientCfg)
+	clientsClient, clientsHandler, err := grpcclient.SetupClientsClient(ctx, clientsClientCfg)
 	if err != nil {
 		logger.Error(err.Error())
 		exitCode = 1
 		return
 	}
-	defer thingsHandler.Close()
-	logger.Info("Things service gRPC client successfully connected to clients gRPC server " + thingsHandler.Secure())
+	defer clientsHandler.Close()
+	logger.Info("Clients service gRPC client successfully connected to clients gRPC server " + clientsHandler.Secure())
 
 	channelsClientCfg := grpcclient.Config{}
 	if err := env.ParseWithOptions(&channelsClientCfg, env.Options{Prefix: envPrefixChannels}); err != nil {
@@ -198,7 +198,7 @@ func main() {
 	defer channelsHandler.Close()
 	logger.Info("Channels service gRPC client successfully connected to channels gRPC server " + channelsHandler.Secure())
 
-	h := mqtt.NewHandler(np, es, logger, thingsClient, channelsClient)
+	h := mqtt.NewHandler(np, es, logger, clientsClient, channelsClient)
 	h = handler.NewTracing(tracer, h)
 
 	if cfg.SendTelemetry {

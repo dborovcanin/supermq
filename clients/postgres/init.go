@@ -12,7 +12,7 @@ import (
 )
 
 func Migration() (*migrate.MemoryMigrationSource, error) {
-	thingsRolesMigration, err := rolesPostgres.Migration(rolesTableNamePrefix, entityTableName, entityIDColumnName)
+	clientsRolesMigration, err := rolesPostgres.Migration(rolesTableNamePrefix, entityTableName, entityIDColumnName)
 	if err != nil {
 		return &migrate.MemoryMigrationSource{}, errors.Wrap(repoerr.ErrRoleMigration, err)
 	}
@@ -21,7 +21,7 @@ func Migration() (*migrate.MemoryMigrationSource, error) {
 		Migrations: []*migrate.Migration{
 			{
 				Id: "clients_01",
-				// VARCHAR(36) for colums with IDs as UUIDS have a maximum of 36 characters
+				// VARCHAR(36) for columns with IDs as UUIDS have a maximum of 36 characters
 				// STATUS 0 to imply enabled and 1 to imply disabled
 				Up: []string{
 					`CREATE TABLE IF NOT EXISTS clients (
@@ -58,7 +58,7 @@ func Migration() (*migrate.MemoryMigrationSource, error) {
 		},
 	}
 
-	clientsMigration.Migrations = append(clientsMigration.Migrations, thingsRolesMigration.Migrations...)
+	clientsMigration.Migrations = append(clientsMigration.Migrations, clientsRolesMigration.Migrations...)
 
 	return clientsMigration, nil
 }

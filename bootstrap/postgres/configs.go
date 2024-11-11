@@ -48,7 +48,7 @@ func NewConfigRepository(db postgres.Database, log *slog.Logger) bootstrap.Confi
 	return &configRepository{db: db, log: log}
 }
 
-func (cr configRepository) Save(ctx context.Context, cfg bootstrap.Config, chsConnIDs []string) (thingID string, err error) {
+func (cr configRepository) Save(ctx context.Context, cfg bootstrap.Config, chsConnIDs []string) (clientID string, err error) {
 	q := `INSERT INTO configs (magistrala_client, domain_id, name, client_cert, client_key, ca_cert, magistrala_secret, external_id, external_key, content, state)
 	VALUES (:magistrala_client, :domain_id, :name, :client_cert, :client_key, :ca_cert, :magistrala_secret, :external_id, :external_key, :content, :state)`
 
@@ -281,12 +281,12 @@ func (cr configRepository) Update(ctx context.Context, cfg bootstrap.Config) err
 	return nil
 }
 
-func (cr configRepository) UpdateCert(ctx context.Context, domainID, thingID, clientCert, clientKey, caCert string) (bootstrap.Config, error) {
+func (cr configRepository) UpdateCert(ctx context.Context, domainID, clientID, clientCert, clientKey, caCert string) (bootstrap.Config, error) {
 	q := `UPDATE configs SET client_cert = :client_cert, client_key = :client_key, ca_cert = :ca_cert WHERE magistrala_client = :magistrala_client AND domain_id = :domain_id 
 	RETURNING magistrala_client, client_cert, client_key, ca_cert`
 
 	dbcfg := dbConfig{
-		ClientID:   thingID,
+		ClientID:   clientID,
 		ClientCert: nullString(clientCert),
 		DomainID:   domainID,
 		ClientKey:  nullString(clientKey),
@@ -474,23 +474,23 @@ func (cr configRepository) ConnectClient(ctx context.Context, channelID, clientI
 	return nil
 }
 
-func (cr configRepository) DisconnectClient(ctx context.Context, channelID, thingID string) error {
+func (cr configRepository) DisconnectClient(ctx context.Context, channelID, clientID string) error {
 	q := `UPDATE configs SET state = $1
 		WHERE magistrala_client = $2
 		AND EXISTS (SELECT 1 FROM connections WHERE config_id = $2 AND channel_id = $3)`
-	_, err := cr.db.ExecContext(ctx, q, bootstrap.Inactive, thingID, channelID)
+	_, err := cr.db.ExecContext(ctx, q, bootstrap.Inactive, clientID, channelID)
 	if err != nil {
 		return errors.Wrap(errDisconnectClient, err)
 	}
 	return nil
 }
 
-func buildRetrieveQueryParams(domainID string, thingIDs []string, filter bootstrap.Filter) (string, []interface{}) {
+func buildRetrieveQueryParams(domainID string, clientIDs []string, filter bootstrap.Filter) (string, []interface{}) {
 	params := []interface{}{}
 	queries := []string{}
 
-	if len(thingIDs) != 0 {
-		queries = append(queries, fmt.Sprintf("magistrala_client IN ('%s')", strings.Join(thingIDs, "','")))
+	if len(clientIDs) != 0 {
+		queries = append(queries, fmt.Sprintf("magistrala_client IN ('%s')", strings.Join(clientIDs, "','")))
 	} else if domainID != "" {
 		params = append(params, domainID)
 		queries = append(queries, fmt.Sprintf("domain_id = $%d", len(params)))

@@ -14,7 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// MakeHandler returns a HTTP handler for Things and Groups API endpoints.
+// MakeHandler returns a HTTP handler for clients and Groups API endpoints.
 func MakeHandler(tsvc clients.Service, authn mgauthn.Authentication, mux *chi.Mux, logger *slog.Logger, instanceID string) http.Handler {
 	mux = clientsHandler(tsvc, authn, mux, logger)
 

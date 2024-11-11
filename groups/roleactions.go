@@ -18,7 +18,7 @@ const (
 	ClientCreate          = "client_create"
 	ChannelCreate         = "channel_create"
 	SubgroupCreate        = "subgroup_create"
-	SubgroupThingCreate   = "subgroup_client_create"
+	SubgroupClientCreate   = "subgroup_client_create"
 	SubgroupChannelCreate = "subgroup_channel_create"
 
 	ClientUpdate           = "client_update"
@@ -36,7 +36,7 @@ const (
 	ChannelRead           = "channel_read"
 	ChannelDelete         = "channel_delete"
 	ChannelSetParentGroup = "channel_set_parent_group"
-	ChannelConnectToThing = "channel_connect_to_client"
+	ChannelConnectToClient = "channel_connect_to_client"
 	ChannelPublish        = "channel_publish"
 	ChannelSubscribe      = "channel_subscribe"
 
@@ -72,7 +72,7 @@ const (
 	SubgroupChannelRead           = "subgroup_channel_read"
 	SubgroupChannelDelete         = "subgroup_channel_delete"
 	SubgroupChannelSetParentGroup = "subgroup_channel_set_parent_group"
-	SubgroupChannelConnectToThing = "subgroup_channel_connect_to_client"
+	SubgroupChannelConnectToClient = "subgroup_channel_connect_to_client"
 	SubgroupChannelPublish        = "subgroup_channel_publish"
 	SubgroupChannelSubscribe      = "subgroup_channel_subscribe"
 
@@ -102,7 +102,7 @@ func AvailableActions() []roles.Action {
 		ClientCreate,
 		ChannelCreate,
 		SubgroupCreate,
-		SubgroupThingCreate,
+		SubgroupClientCreate,
 		SubgroupChannelCreate,
 		ClientUpdate,
 		ClientRead,
@@ -117,7 +117,7 @@ func AvailableActions() []roles.Action {
 		ChannelRead,
 		ChannelDelete,
 		ChannelSetParentGroup,
-		ChannelConnectToThing,
+		ChannelConnectToClient,
 		ChannelPublish,
 		ChannelSubscribe,
 		ChannelManageRole,
@@ -147,7 +147,7 @@ func AvailableActions() []roles.Action {
 		SubgroupChannelRead,
 		SubgroupChannelDelete,
 		SubgroupChannelSetParentGroup,
-		SubgroupChannelConnectToThing,
+		SubgroupChannelConnectToClient,
 		SubgroupChannelPublish,
 		SubgroupChannelSubscribe,
 		SubgroupChannelManageRole,

@@ -56,7 +56,7 @@ func NewOperationPerm() svcutil.OperationPerm {
 	return svcutil.NewOperationPerm(expectedOperations, operationNames)
 }
 
-// External Operations
+// External Operations.
 const (
 	DomainOpCreateClient svcutil.ExternalOperation = iota
 	DomainOpListClients
@@ -142,14 +142,13 @@ func NewRolesOperationPermissionMap() map[svcutil.Operation]svcutil.Permission {
 }
 
 const (
-	// External Permission
-	// Domains
+	// External Permission for domains.
 	domainCreateClientPermission = "client_create_permission"
 	domainListClientsPermission  = "list_clients_permission"
-	// Groups
+	// External Permission for groups.
 	groupSetChildClientPermission    = "client_create_permission"
 	groupRemoveChildClientPermission = "client_create_permission"
-	// Channels
+	// External Permission for channels.
 	channelsConnectClientPermission    = "connect_to_client_permission"
 	channelsDisconnectClientPermission = "connect_to_client_permission"
 )

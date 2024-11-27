@@ -389,7 +389,7 @@ func (svc service) RemoveParentGroup(ctx context.Context, session authn.Session,
 		})
 
 		if err := svc.policy.DeletePolicies(ctx, pols); err != nil {
-			return errors.Wrap(svcerr.ErrAddPolicies, err)
+			return errors.Wrap(svcerr.ErrDeletePolicies, err)
 		}
 		defer func() {
 			if retErr != nil {

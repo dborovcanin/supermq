@@ -240,7 +240,7 @@ func TestUserMarshalJSON(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			got, err := tc.user.MarshalJSON()
 			assert.Equal(t, tc.err, err, "MarshalJSON() error = %v, expected %v", err, tc.err)
-			assert.Equal(t, tc.expected, got, "MarshalJSON() = %v, expected %v", got, tc.expected)
+			assert.Equal(t, tc.expected, got, "MarshalJSON() = %v, expected %v", string(got), string(tc.expected))
 		})
 	}
 }

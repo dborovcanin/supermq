@@ -5,7 +5,7 @@ package grpc
 
 import "github.com/absmach/magistrala/pkg/connections"
 
-type enitity struct {
+type entity struct {
 	id          string
 	domain      string
 	parentGroup string
@@ -21,10 +21,10 @@ type retrieveEntitiesRes struct {
 	total   uint64
 	limit   uint64
 	offset  uint64
-	clients []enitity
+	clients []entity
 }
 
-type retrieveEntityRes enitity
+type retrieveEntityRes entity
 
 type connectionsReq struct {
 	connections []connection

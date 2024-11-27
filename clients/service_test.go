@@ -12,13 +12,17 @@ import (
 	"github.com/absmach/magistrala/clients"
 	climocks "github.com/absmach/magistrala/clients/mocks"
 	gpmocks "github.com/absmach/magistrala/groups/mocks"
+	grpcChannelsV1 "github.com/absmach/magistrala/internal/grpc/channels/v1"
+	grpcCommonV1 "github.com/absmach/magistrala/internal/grpc/common/v1"
 	"github.com/absmach/magistrala/internal/testsutil"
+	"github.com/absmach/magistrala/pkg/apiutil"
 	mgauthn "github.com/absmach/magistrala/pkg/authn"
 	"github.com/absmach/magistrala/pkg/errors"
 	repoerr "github.com/absmach/magistrala/pkg/errors/repository"
 	svcerr "github.com/absmach/magistrala/pkg/errors/service"
 	policysvc "github.com/absmach/magistrala/pkg/policies"
 	policymocks "github.com/absmach/magistrala/pkg/policies/mocks"
+	"github.com/absmach/magistrala/pkg/roles"
 	"github.com/absmach/magistrala/pkg/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -36,19 +40,17 @@ var (
 		Metadata:    validTMetadata,
 		Status:      clients.EnabledStatus,
 	}
-	validToken        = "token"
-	valid             = "valid"
-	invalid           = "invalid"
-	validID           = "d4ebb847-5d0e-4e46-bdd9-b6aceaaa3a22"
-	wrongID           = testsutil.GenerateUUID(&testing.T{})
-	errRemovePolicies = errors.New("failed to delete policies")
+	validToken = "token"
+	validID    = "d4ebb847-5d0e-4e46-bdd9-b6aceaaa3a22"
+	wrongID    = testsutil.GenerateUUID(&testing.T{})
 )
 
 var (
-	pService   *policymocks.Service
-	pEvaluator *policymocks.Evaluator
-	cache      *climocks.Cache
-	repo       *climocks.Repository
+	pService     *policymocks.Service
+	cache        *climocks.Cache
+	repo         *climocks.Repository
+	chgRPCClient *chmocks.ChannelsServiceClient
+	gpgRPCClient *gpmocks.GroupsServiceClient
 )
 
 func newService() clients.Service {
@@ -57,8 +59,8 @@ func newService() clients.Service {
 	idProvider := uuid.NewMock()
 	sidProvider := uuid.NewMock()
 	repo = new(climocks.Repository)
-	chgRPCClient := new(chmocks.ChannelsServiceClient)
-	gpgRPCClient := new(gpmocks.GroupsServiceClient)
+	chgRPCClient = new(chmocks.ChannelsServiceClient)
+	gpgRPCClient = new(gpmocks.GroupsServiceClient)
 	tsv, _ := clients.NewService(repo, pService, cache, chgRPCClient, gpgRPCClient, idProvider, sidProvider)
 	return tsv
 }
@@ -73,6 +75,8 @@ func TestCreateClients(t *testing.T) {
 		addPolicyErr    error
 		deletePolicyErr error
 		saveErr         error
+		addRoleErr      error
+		deleteErr       error
 		err             error
 	}{
 		{
@@ -272,8 +276,10 @@ func TestCreateClients(t *testing.T) {
 
 	for _, tc := range cases {
 		repoCall := repo.On("Save", context.Background(), mock.Anything).Return([]clients.Client{tc.client}, tc.saveErr)
-		policyCall := pService.On("AddPolicies", mock.Anything, mock.Anything).Return(tc.addPolicyErr)
-		policyCall1 := pService.On("DeletePolicies", mock.Anything, mock.Anything).Return(tc.deletePolicyErr)
+		policyCall := pService.On("AddPolicies", context.Background(), mock.Anything).Return(tc.addPolicyErr)
+		policyCall1 := pService.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePolicyErr)
+		repoCall1 := repo.On("AddRoles", context.Background(), mock.Anything).Return([]roles.Role{}, tc.addRoleErr)
+		repoCall2 := repo.On("Delete", context.Background(), mock.Anything).Return(tc.deleteErr)
 		expected, err := svc.CreateClients(context.Background(), mgauthn.Session{}, tc.client)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 		if err == nil {
@@ -288,6 +294,8 @@ func TestCreateClients(t *testing.T) {
 		repoCall.Unset()
 		policyCall.Unset()
 		policyCall1.Unset()
+		repoCall1.Unset()
+		repoCall2.Unset()
 	}
 }
 
@@ -343,7 +351,7 @@ func TestListClients(t *testing.T) {
 	adminID := testsutil.GenerateUUID(t)
 	domainID := testsutil.GenerateUUID(t)
 	nonAdminID := testsutil.GenerateUUID(t)
-	client.Permissions = []string{"read", "write"}
+	client.Permissions = []string{"read", "edit"}
 
 	cases := []struct {
 		desc                    string
@@ -380,7 +388,7 @@ func TestListClients(t *testing.T) {
 				},
 				Clients: []clients.Client{client, client},
 			},
-			listPermissionsResponse: []string{"read", "write"},
+			listPermissionsResponse: client.Permissions,
 			response: clients.ClientsPage{
 				Page: clients.Page{
 					Total:  2,
@@ -509,7 +517,7 @@ func TestListClients(t *testing.T) {
 				},
 				Clients: []clients.Client{client, client},
 			},
-			listPermissionsResponse: []string{"read", "write"},
+			listPermissionsResponse: client.Permissions,
 			response: clients.ClientsPage{
 				Page: clients.Page{
 					Total:  2,
@@ -897,52 +905,347 @@ func TestDelete(t *testing.T) {
 	}
 
 	cases := []struct {
-		desc            string
-		clientID        string
-		removeErr       error
-		deleteErr       error
-		deletePolicyErr error
-		err             error
+		desc                 string
+		clientID             string
+		checkConnectionsRes  bool
+		checkConnectionsErr  error
+		removeConnectionsErr error
+		changeStatusErr      error
+		deletePoliciesErr    error
+		removeErr            error
+		deleteErr            error
+		err                  error
 	}{
 		{
-			desc:     "Delete client successfully",
+			desc:     "Delete client without connections successfully",
 			clientID: client.ID,
 			err:      nil,
 		},
 		{
-			desc:      "Delete non-existing client",
-			clientID:  wrongID,
-			deleteErr: repoerr.ErrNotFound,
+			desc:                "Delete client with connections",
+			clientID:            client.ID,
+			checkConnectionsRes: true,
+			err:                 nil,
+		},
+		{
+			desc:                "Delete client with failed to check connections",
+			clientID:            client.ID,
+			checkConnectionsErr: svcerr.ErrRemoveEntity,
+			err:                 svcerr.ErrRemoveEntity,
+		},
+		{
+			desc:                 "Delete client with failed to remove connections",
+			clientID:             client.ID,
+			checkConnectionsRes:  true,
+			removeConnectionsErr: svcerr.ErrRemoveEntity,
+			err:                  svcerr.ErrRemoveEntity,
+		},
+		{
+			desc:      "Delete cliet with failed to remove from cache",
+			clientID:  client.ID,
+			removeErr: svcerr.ErrRemoveEntity,
 			err:       svcerr.ErrRemoveEntity,
 		},
 		{
-			desc:      "Delete client with repo error ",
-			clientID:  client.ID,
-			deleteErr: repoerr.ErrRemoveEntity,
-			err:       repoerr.ErrRemoveEntity,
-		},
-		{
-			desc:      "Delete client with cache error ",
-			clientID:  client.ID,
-			removeErr: svcerr.ErrRemoveEntity,
-			err:       repoerr.ErrRemoveEntity,
-		},
-		{
-			desc:            "Delete client with failed to delete policies",
+			desc:            "Delete client with failed to change status",
 			clientID:        client.ID,
-			deletePolicyErr: errRemovePolicies,
-			err:             errRemovePolicies,
+			changeStatusErr: svcerr.ErrNotFound,
+			err:             svcerr.ErrRemoveEntity,
+		},
+		{
+			desc:              "Delete client with failed to delete policies",
+			clientID:          client.ID,
+			deletePoliciesErr: svcerr.ErrNotFound,
+			err:               svcerr.ErrDeletePolicies,
+		},
+		{
+			desc:      "Delete client with failed to delete",
+			clientID:  client.ID,
+			deleteErr: svcerr.ErrNotFound,
+			err:       svcerr.ErrRemoveEntity,
 		},
 	}
 
 	for _, tc := range cases {
-		repoCall := cache.On("Remove", mock.Anything, tc.clientID).Return(tc.removeErr)
-		policyCall := pService.On("DeletePolicyFilter", context.Background(), mock.Anything).Return(tc.deletePolicyErr)
-		repoCall1 := repo.On("Delete", context.Background(), tc.clientID).Return(tc.deleteErr)
+		repoCall := repo.On("DoesClientHaveConnections", context.Background(), mock.Anything).Return(tc.checkConnectionsRes, tc.checkConnectionsErr)
+		channelsCall := chgRPCClient.On("RemoveClientConnections", context.Background(), &grpcChannelsV1.RemoveClientConnectionsReq{ClientId: tc.clientID}).Return(&grpcChannelsV1.RemoveClientConnectionsRes{}, tc.removeConnectionsErr)
+		repoCall1 := cache.On("Remove", mock.Anything, tc.clientID).Return(tc.removeErr)
+		repoCall2 := repo.On("ChangeStatus", context.Background(), clients.Client{ID: tc.clientID, Status: clients.DeletedStatus}).Return(client, tc.changeStatusErr)
+		repoCall3 := repo.On("RetrieveEntitiesRolesActionsMembers", context.Background(), []string{tc.clientID}).Return([]roles.EntityActionRole{}, []roles.EntityMemberRole{}, nil)
+		policyCall1 := pService.On("DeletePolicies", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
+		policyCall2 := pService.On("DeletePolicyFilter", context.Background(), mock.Anything).Return(tc.deletePoliciesErr)
+		repoCall4 := repo.On("Delete", context.Background(), tc.clientID).Return(tc.deleteErr)
 		err := svc.Delete(context.Background(), mgauthn.Session{}, tc.clientID)
 		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
 		repoCall.Unset()
-		policyCall.Unset()
 		repoCall1.Unset()
+		policyCall1.Unset()
+		repoCall2.Unset()
+		channelsCall.Unset()
+		repoCall3.Unset()
+		repoCall4.Unset()
+		policyCall2.Unset()
+	}
+}
+
+func TestSetParentGroup(t *testing.T) {
+	svc := newService()
+
+	parentedClient := client
+	parentedClient.ParentGroup = validID
+
+	cparentedClient := client
+	cparentedClient.ParentGroup = testsutil.GenerateUUID(t)
+
+	cases := []struct {
+		desc               string
+		clientID           string
+		parentGroupID      string
+		session            mgauthn.Session
+		retrieveByIDResp   clients.Client
+		retrieveByIDErr    error
+		retrieveEntityResp *grpcCommonV1.RetrieveEntityRes
+		retrieveEntityErr  error
+		addPoliciesErr     error
+		deletePoliciesErr  error
+		setParentGroupErr  error
+		err                error
+	}{
+		{
+			desc:             "set parent group successfully",
+			clientID:         client.ID,
+			parentGroupID:    testsutil.GenerateUUID(t),
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: client,
+			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
+				Entity: &grpcCommonV1.EntityBasic{
+					Id:       testsutil.GenerateUUID(t),
+					DomainId: validID,
+					Status:   uint32(clients.EnabledStatus),
+				},
+			},
+			err: nil,
+		},
+		{
+			desc:             "set parent group with failed to retrieve client",
+			clientID:         client.ID,
+			parentGroupID:    testsutil.GenerateUUID(t),
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: clients.Client{},
+			retrieveByIDErr:  svcerr.ErrNotFound,
+			err:              svcerr.ErrUpdateEntity,
+		},
+		{
+			desc:             "set parent group with parent already set",
+			clientID:         parentedClient.ID,
+			parentGroupID:    validID,
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: parentedClient,
+			err:              nil,
+		},
+		{
+			desc:             "set parent group of client with existing parent group",
+			clientID:         cparentedClient.ID,
+			parentGroupID:    testsutil.GenerateUUID(t),
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: cparentedClient,
+			err:              svcerr.ErrConflict,
+		},
+		{
+			desc:              "set parent group with failed to retrieve entity",
+			clientID:          client.ID,
+			parentGroupID:     testsutil.GenerateUUID(t),
+			session:           mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp:  client,
+			retrieveEntityErr: svcerr.ErrAuthorization,
+			err:               svcerr.ErrUpdateEntity,
+		},
+		{
+			desc:             "set parent group with parent group from different domain",
+			clientID:         client.ID,
+			parentGroupID:    testsutil.GenerateUUID(t),
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: client,
+			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
+				Entity: &grpcCommonV1.EntityBasic{
+					Id:       testsutil.GenerateUUID(t),
+					DomainId: testsutil.GenerateUUID(t),
+					Status:   uint32(clients.EnabledStatus),
+				},
+			},
+			err: svcerr.ErrUpdateEntity,
+		},
+		{
+			desc:             "set parent group with disabled parent group",
+			clientID:         client.ID,
+			parentGroupID:    testsutil.GenerateUUID(t),
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: client,
+			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
+				Entity: &grpcCommonV1.EntityBasic{
+					Id:       testsutil.GenerateUUID(t),
+					DomainId: validID,
+					Status:   uint32(clients.DisabledStatus),
+				},
+			},
+			err: svcerr.ErrUpdateEntity,
+		},
+		{
+			desc:             "set parent group with failed to add policies",
+			clientID:         client.ID,
+			parentGroupID:    testsutil.GenerateUUID(t),
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: client,
+			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
+				Entity: &grpcCommonV1.EntityBasic{
+					Id:       testsutil.GenerateUUID(t),
+					DomainId: validID,
+					Status:   uint32(clients.EnabledStatus),
+				},
+			},
+			addPoliciesErr: svcerr.ErrUpdateEntity,
+			err:            svcerr.ErrAddPolicies,
+		},
+		{
+			desc:             "set parent group with failed to set parent group",
+			clientID:         client.ID,
+			parentGroupID:    testsutil.GenerateUUID(t),
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: client,
+			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
+				Entity: &grpcCommonV1.EntityBasic{
+					Id:       testsutil.GenerateUUID(t),
+					DomainId: validID,
+					Status:   uint32(clients.EnabledStatus),
+				},
+			},
+			setParentGroupErr: svcerr.ErrUpdateEntity,
+			err:               svcerr.ErrUpdateEntity,
+		},
+		{
+			desc:             "set parent group with failed to set parent group and failed rollback",
+			clientID:         client.ID,
+			parentGroupID:    testsutil.GenerateUUID(t),
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: client,
+			retrieveEntityResp: &grpcCommonV1.RetrieveEntityRes{
+				Entity: &grpcCommonV1.EntityBasic{
+					Id:       testsutil.GenerateUUID(t),
+					DomainId: validID,
+					Status:   uint32(clients.EnabledStatus),
+				},
+			},
+			setParentGroupErr: svcerr.ErrUpdateEntity,
+			deletePoliciesErr: svcerr.ErrAuthorization,
+			err:               apiutil.ErrRollbackTx,
+		},
+	}
+
+	for _, tc := range cases {
+		pols := []policysvc.Policy{
+			{
+				Domain:      tc.session.DomainID,
+				SubjectType: policysvc.GroupType,
+				Subject:     tc.parentGroupID,
+				Relation:    policysvc.ParentGroupRelation,
+				ObjectType:  policysvc.ClientType,
+				Object:      tc.clientID,
+			},
+		}
+		repoCall := repo.On("RetrieveByID", context.Background(), tc.clientID).Return(tc.retrieveByIDResp, tc.retrieveByIDErr)
+		groupsCall := gpgRPCClient.On("RetrieveEntity", context.Background(), &grpcCommonV1.RetrieveEntityReq{Id: tc.parentGroupID}).Return(tc.retrieveEntityResp, tc.retrieveEntityErr)
+		policyCall := pService.On("AddPolicies", context.Background(), pols).Return(tc.addPoliciesErr)
+		policyCall1 := pService.On("DeletePolicies", context.Background(), pols).Return(tc.deletePoliciesErr)
+		repoCall2 := repo.On("SetParentGroup", context.Background(), mock.Anything).Return(tc.setParentGroupErr)
+		err := svc.SetParentGroup(context.Background(), tc.session, tc.parentGroupID, tc.clientID)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		repoCall.Unset()
+		groupsCall.Unset()
+		policyCall.Unset()
+		repoCall2.Unset()
+		policyCall1.Unset()
+	}
+}
+
+func TestRemoveParentGroup(t *testing.T) {
+	svc := newService()
+
+	parentedGroup := client
+	parentedGroup.ParentGroup = validID
+
+	cases := []struct {
+		desc                 string
+		clientID             string
+		session              mgauthn.Session
+		retrieveByIDResp     clients.Client
+		retrieveByIDErr      error
+		deletePoliciesErr    error
+		addPoliciesErr       error
+		removeParentGroupErr error
+		err                  error
+	}{
+		{
+			desc:             "remove parent group successfully",
+			clientID:         parentedGroup.ID,
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: parentedGroup,
+			err:              nil,
+		},
+		{
+			desc:             "remove parent group with failed to retrieve client",
+			clientID:         parentedGroup.ID,
+			session:          mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp: clients.Client{},
+			retrieveByIDErr:  svcerr.ErrNotFound,
+			err:              svcerr.ErrViewEntity,
+		},
+		{
+			desc:              "remove parent group with failed to delete policies",
+			clientID:          parentedGroup.ID,
+			session:           mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp:  parentedGroup,
+			deletePoliciesErr: svcerr.ErrAuthorization,
+			err:               svcerr.ErrDeletePolicies,
+		},
+		{
+			desc:                 "remove parent group with failed to remove parent group",
+			clientID:             parentedGroup.ID,
+			session:              mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp:     parentedGroup,
+			removeParentGroupErr: svcerr.ErrUpdateEntity,
+			err:                  svcerr.ErrUpdateEntity,
+		},
+		{
+			desc:                 "remove parent group with failed to remove parent group and failed to add policies",
+			clientID:             parentedGroup.ID,
+			session:              mgauthn.Session{UserID: validID, DomainID: validID, DomainUserID: validID + "_" + validID},
+			retrieveByIDResp:     parentedGroup,
+			removeParentGroupErr: svcerr.ErrUpdateEntity,
+			addPoliciesErr:       svcerr.ErrUpdateEntity,
+			err:                  apiutil.ErrRollbackTx,
+		},
+	}
+
+	for _, tc := range cases {
+		pols := []policysvc.Policy{
+			{
+				Domain:      tc.session.DomainID,
+				SubjectType: policysvc.GroupType,
+				Subject:     tc.retrieveByIDResp.ParentGroup,
+				Relation:    policysvc.ParentGroupRelation,
+				ObjectType:  policysvc.ClientType,
+				Object:      tc.clientID,
+			},
+		}
+		repoCall := repo.On("RetrieveByID", context.Background(), tc.clientID).Return(tc.retrieveByIDResp, tc.retrieveByIDErr)
+		policyCall := pService.On("DeletePolicies", context.Background(), pols).Return(tc.deletePoliciesErr)
+		policyCall1 := pService.On("AddPolicies", context.Background(), pols).Return(tc.addPoliciesErr)
+		repoCall2 := repo.On("RemoveParentGroup", context.Background(), mock.Anything).Return(tc.removeParentGroupErr)
+		err := svc.RemoveParentGroup(context.Background(), tc.session, tc.clientID)
+		assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+		repoCall.Unset()
+		policyCall.Unset()
+		repoCall2.Unset()
+		policyCall1.Unset()
 	}
 }

@@ -44,9 +44,9 @@ func retrieveEntitiesEndpoint(svc pClients.Service) endpoint.Endpoint {
 		if err != nil {
 			return retrieveEntitiesRes{}, err
 		}
-		clientsBasic := []enitity{}
+		clientsBasic := []entity{}
 		for _, client := range tp.Clients {
-			clientsBasic = append(clientsBasic, enitity{id: client.ID, domain: client.Domain, parentGroup: client.ParentGroup, status: uint8(client.Status)})
+			clientsBasic = append(clientsBasic, entity{id: client.ID, domain: client.Domain, parentGroup: client.ParentGroup, status: uint8(client.Status)})
 		}
 		return retrieveEntitiesRes{
 			total:   tp.Total,

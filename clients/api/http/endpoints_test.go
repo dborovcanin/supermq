@@ -840,103 +840,6 @@ func TestViewClient(t *testing.T) {
 	}
 }
 
-func TestViewClientPerms(t *testing.T) {
-	ts, svc, authn := newClientsServer()
-	defer ts.Close()
-
-	cases := []struct {
-		desc     string
-		domainID string
-		token    string
-		clientID string
-		response []string
-		status   int
-		authnRes mgauthn.Session
-		authnErr error
-		err      error
-	}{
-		{
-			desc:     "view client permissions with valid token",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			clientID: client.ID,
-			response: []string{"view", "delete", "membership"},
-			status:   http.StatusOK,
-
-			err: nil,
-		},
-		{
-			desc:     "view client permissions with invalid token",
-			domainID: domainID,
-			token:    inValidToken,
-			clientID: client.ID,
-			response: []string{},
-			status:   http.StatusUnauthorized,
-			authnErr: svcerr.ErrAuthentication,
-			err:      svcerr.ErrAuthentication,
-		},
-		{
-			desc:     "view client permissions with empty token",
-			domainID: domainID,
-			token:    "",
-			clientID: client.ID,
-			response: []string{},
-			status:   http.StatusUnauthorized,
-			err:      apiutil.ErrBearerToken,
-		},
-		{
-			desc:     "view client permissions with invalid id",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			clientID: inValid,
-			response: []string{},
-			status:   http.StatusForbidden,
-
-			err: svcerr.ErrAuthorization,
-		},
-		{
-			desc:     "view client permissions with empty id",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			clientID: "",
-			response: []string{},
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrMissingID,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			req := testRequest{
-				client: ts.Client(),
-				method: http.MethodGet,
-				url:    fmt.Sprintf("%s/%s/clients/%s/permissions", ts.URL, tc.domainID, tc.clientID),
-				token:  tc.token,
-			}
-
-			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("ViewPerms", mock.Anything, tc.authnRes, tc.clientID).Return(tc.response, tc.err)
-			res, err := req.make()
-			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
-			var resBody respBody
-			err = json.NewDecoder(res.Body).Decode(&resBody)
-			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error while decoding response body: %s", tc.desc, err))
-			if resBody.Err != "" || resBody.Message != "" {
-				err = errors.Wrap(errors.New(resBody.Err), errors.New(resBody.Message))
-			}
-			assert.Equal(t, len(tc.response), len(resBody.Permissions), fmt.Sprintf("%s: expected %d got %d", tc.desc, len(tc.response), len(resBody.Permissions)))
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
-			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
 func TestUpdateClient(t *testing.T) {
 	ts, svc, authn := newClientsServer()
 	defer ts.Close()
@@ -1553,320 +1456,6 @@ func TestDisableClient(t *testing.T) {
 	}
 }
 
-func TestShareClient(t *testing.T) {
-	ts, svc, authn := newClientsServer()
-	defer ts.Close()
-
-	cases := []struct {
-		desc        string
-		data        string
-		clientID    string
-		domainID    string
-		token       string
-		contentType string
-		status      int
-		authnRes    mgauthn.Session
-		authnErr    error
-		err         error
-	}{
-		{
-			desc:        "share client with valid token",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusCreated,
-
-			err: nil,
-		},
-		{
-			desc:        "share client with invalid token",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       inValidToken,
-			contentType: contentType,
-			status:      http.StatusUnauthorized,
-			authnErr:    svcerr.ErrAuthentication,
-			err:         svcerr.ErrAuthentication,
-		},
-		{
-			desc:        "share client with empty token",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       "",
-			contentType: contentType,
-			status:      http.StatusUnauthorized,
-			err:         apiutil.ErrBearerToken,
-		},
-		{
-			desc:        "share client with empty id",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    " ",
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrMissingID,
-		},
-		{
-			desc:        "share client with missing relation",
-			data:        fmt.Sprintf(`{"relation": "%s", user_ids" : ["%s", "%s"]}`, " ", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrMissingRelation,
-		},
-		{
-			desc:        "share client with malformed data",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : [%s, "%s"]}`, "editor", "invalid", validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:        "share client with empty client id",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    "",
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:        "share client with empty relation",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, " ", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrMissingRelation,
-		},
-		{
-			desc:        "share client with empty user ids",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : [" ", " "]}`, "editor"),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:        "share client with invalid content type",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: "application/xml",
-			status:      http.StatusUnsupportedMediaType,
-
-			err: apiutil.ErrValidation,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			req := testRequest{
-				client:      ts.Client(),
-				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/%s/clients/%s/share", ts.URL, tc.domainID, tc.clientID),
-				contentType: tc.contentType,
-				token:       tc.token,
-				body:        strings.NewReader(tc.data),
-			}
-
-			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("Share", mock.Anything, tc.authnRes, tc.clientID, mock.Anything, mock.Anything, mock.Anything).Return(tc.err)
-			res, err := req.make()
-			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
-			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
-func TestUnShareClient(t *testing.T) {
-	ts, svc, authn := newClientsServer()
-	defer ts.Close()
-
-	cases := []struct {
-		desc        string
-		data        string
-		clientID    string
-		domainID    string
-		token       string
-		contentType string
-		status      int
-		authnRes    mgauthn.Session
-		authnErr    error
-		err         error
-	}{
-		{
-			desc:        "unshare client with valid token",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusNoContent,
-
-			err: nil,
-		},
-		{
-			desc:        "unshare client with invalid token",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       inValidToken,
-			contentType: contentType,
-			status:      http.StatusUnauthorized,
-			authnErr:    svcerr.ErrAuthentication,
-			err:         svcerr.ErrAuthentication,
-		},
-		{
-			desc:        "unshare client with empty token",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       "",
-			contentType: contentType,
-			status:      http.StatusUnauthorized,
-			err:         apiutil.ErrBearerToken,
-		},
-		{
-			desc:        "unshare client with empty id",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    " ",
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrMissingID,
-		},
-		{
-			desc:        "unshare client with missing relation",
-			data:        fmt.Sprintf(`{"relation": "%s", user_ids" : ["%s", "%s"]}`, " ", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrMissingRelation,
-		},
-		{
-			desc:        "unshare client with malformed data",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : [%s, "%s"]}`, "editor", "invalid", validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:        "unshare client with empty client id",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    "",
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:        "unshare client with empty relation",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, " ", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrMissingRelation,
-		},
-		{
-			desc:        "unshare client with empty user ids",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : [" ", " "]}`, "editor"),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: contentType,
-			status:      http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:        "unshare client with invalid content type",
-			data:        fmt.Sprintf(`{"relation": "%s", "user_ids" : ["%s", "%s"]}`, "editor", validID, validID),
-			clientID:    client.ID,
-			domainID:    domainID,
-			token:       validToken,
-			authnRes:    mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			contentType: "application/xml",
-			status:      http.StatusUnsupportedMediaType,
-
-			err: apiutil.ErrValidation,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			req := testRequest{
-				client:      ts.Client(),
-				method:      http.MethodPost,
-				url:         fmt.Sprintf("%s/%s/clients/%s/unshare", ts.URL, tc.domainID, tc.clientID),
-				contentType: tc.contentType,
-				token:       tc.token,
-				body:        strings.NewReader(tc.data),
-			}
-
-			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("Unshare", mock.Anything, tc.authnRes, tc.clientID, mock.Anything, mock.Anything, mock.Anything).Return(tc.err)
-			res, err := req.make()
-			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
-			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
-			svcCall.Unset()
-			authCall.Unset()
-		})
-	}
-}
-
 func TestDeleteClient(t *testing.T) {
 	ts, svc, authn := newClientsServer()
 	defer ts.Close()
@@ -1941,400 +1530,222 @@ func TestDeleteClient(t *testing.T) {
 	}
 }
 
-func TestListMembers(t *testing.T) {
-	ts, svc, authn := newClientsServer()
-	defer ts.Close()
+func TestSetClientParentGroupEndpoint(t *testing.T) {
+	gs, svc, authn := newClientsServer()
+	defer gs.Close()
 
 	cases := []struct {
-		desc                string
-		query               string
-		groupID             string
-		domainID            string
-		token               string
-		listMembersResponse clients.MembersPage
-		status              int
-		authnRes            mgauthn.Session
-		authnErr            error
-		err                 error
+		desc        string
+		token       string
+		id          string
+		domainID    string
+		data        string
+		contentType string
+		session     mgauthn.Session
+		svcErr      error
+		resp        clients.Client
+		status      int
+		authnErr    error
+		err         error
 	}{
 		{
-			desc:     "list members with valid token",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Total: 1,
-				},
-				Members: []clients.Client{client},
-			},
-			status: http.StatusOK,
-
-			err: nil,
+			desc:        "set client parent group successfully",
+			token:       validToken,
+			domainID:    validID,
+			id:          validID,
+			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
+			contentType: contentType,
+			status:      http.StatusAccepted,
+			err:         nil,
 		},
 		{
-			desc:     "list members with empty token",
-			domainID: domainID,
-			token:    "",
-			groupID:  client.ID,
-			status:   http.StatusUnauthorized,
-			err:      apiutil.ErrBearerToken,
+			desc:        "set client parent group with invalid token",
+			token:       inValidToken,
+			domainID:    validID,
+			id:          validID,
+			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
+			contentType: contentType,
+			authnErr:    svcerr.ErrAuthentication,
+			status:      http.StatusUnauthorized,
+			err:         svcerr.ErrAuthentication,
 		},
 		{
-			desc:     "list members with invalid token",
-			domainID: domainID,
-			token:    inValidToken,
-			groupID:  client.ID,
-			status:   http.StatusUnauthorized,
-			authnErr: svcerr.ErrAuthentication,
-			err:      svcerr.ErrAuthentication,
+			desc:        "set client parent group with empty token",
+			token:       "",
+			domainID:    validID,
+			id:          validID,
+			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
+			contentType: contentType,
+			status:      http.StatusUnauthorized,
+			err:         apiutil.ErrBearerToken,
 		},
 		{
-			desc:     "list members with offset",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "offset=1",
-			groupID:  client.ID,
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Offset: 1,
-					Total:  1,
-				},
-				Members: []clients.Client{client},
-			},
-			status: http.StatusOK,
-
-			err: nil,
+			desc:        "set client parent group with empty domainID",
+			token:       validToken,
+			id:          validID,
+			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
+			contentType: contentType,
+			status:      http.StatusBadRequest,
+			err:         apiutil.ErrMissingDomainID,
 		},
 		{
-			desc:     "list members with invalid offset",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "offset=invalid",
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
+			desc:        "set client parent group with invalid content type",
+			token:       validToken,
+			id:          validID,
+			domainID:    validID,
+			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
+			contentType: "application/xml",
+			status:      http.StatusUnsupportedMediaType,
+			err:         apiutil.ErrUnsupportedContentType,
 		},
 		{
-			desc:     "list members with limit",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "limit=1",
-			groupID:  client.ID,
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Limit: 1,
-					Total: 1,
-				},
-				Members: []clients.Client{client},
-			},
-			status: http.StatusOK,
-
-			err: nil,
+			desc:        "set client parent group with empty id",
+			token:       validToken,
+			id:          "",
+			domainID:    validID,
+			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
+			contentType: contentType,
+			status:      http.StatusBadRequest,
+			err:         apiutil.ErrMissingID,
 		},
 		{
-			desc:     "list members with invalid limit",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "limit=invalid",
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
+			desc:        "set client parent group with empty parent group id",
+			token:       validToken,
+			id:          validID,
+			domainID:    validID,
+			data:        `{"parent_group_id":""}`,
+			contentType: contentType,
+			status:      http.StatusBadRequest,
+			err:         apiutil.ErrMissingParentGroupID,
 		},
 		{
-			desc:     "list members with limit greater than 100",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    fmt.Sprintf("limit=%d", api.MaxLimitSize+1),
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
+			desc:        "set client parent group with malformed request",
+			token:       validToken,
+			id:          validID,
+			domainID:    validID,
+			data:        fmt.Sprintf(`{"parent_group_id":"%s"`, validID),
+			contentType: contentType,
+			status:      http.StatusBadRequest,
+			err:         errors.ErrMalformedEntity,
 		},
 		{
-			desc:     "list members with channel_id",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    fmt.Sprintf("channel_id=%s", validID),
-			groupID:  client.ID,
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Total: 1,
-				},
-				Members: []clients.Client{client},
-			},
-			status: http.StatusOK,
-
-			err: nil,
-		},
-		{
-			desc:     "list members with invalid channel_id",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "channel_id=invalid",
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with duplicate channel_id",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    fmt.Sprintf("channel_id=%s&channel_id=%s", validID, validID),
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with connected set",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "connected=true",
-			groupID:  client.ID,
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Total: 1,
-				},
-				Members: []clients.Client{client},
-			},
-			status: http.StatusOK,
-
-			err: nil,
-		},
-		{
-			desc:     "list members with invalid connected set",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "connected=invalid",
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with duplicate connected set",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "connected=true&connected=false",
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with empty group id",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			query:    "",
-			groupID:  "",
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:  "list members with status",
-			query: fmt.Sprintf("status=%s", clients.EnabledStatus),
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Total: 1,
-				},
-				Members: []clients.Client{client},
-			},
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			status:   http.StatusOK,
-
-			err: nil,
-		},
-		{
-			desc:     "list members with invalid status",
-			query:    "status=invalid",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with duplicate status",
-			query:    fmt.Sprintf("status=%s&status=%s", clients.EnabledStatus, clients.DisabledStatus),
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with metadata",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Total: 1,
-				},
-				Members: []clients.Client{client},
-			},
-			groupID: client.ID,
-			query:   "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&",
-			status:  http.StatusOK,
-
-			err: nil,
-		},
-		{
-			desc:     "list members with invalid metadata",
-			query:    "metadata=invalid",
-			groupID:  client.ID,
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with duplicate metadata",
-			query:    "metadata=%7B%22domain%22%3A%20%22example.com%22%7D&metadata=%7B%22domain%22%3A%20%22example.com%22%7D",
-			groupID:  client.ID,
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrInvalidQueryParams,
-		},
-		{
-			desc:  "list members with permission",
-			query: fmt.Sprintf("permission=%s", "view"),
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Total: 1,
-				},
-				Members: []clients.Client{client},
-			},
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			status:   http.StatusOK,
-
-			err: nil,
-		},
-		{
-			desc:     "list members with duplicate permission",
-			query:    fmt.Sprintf("permission=%s&permission=%s", "view", "edit"),
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with list permission",
-			query:    "list_perms=true",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Total: 1,
-				},
-				Members: []clients.Client{client},
-			},
-			groupID: client.ID,
-			status:  http.StatusOK,
-
-			err: nil,
-		},
-		{
-			desc:     "list members with invalid list permission",
-			query:    "list_perms=invalid",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with duplicate list permission",
-			query:    "list_perms=true&list_perms=false",
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			status:   http.StatusBadRequest,
-
-			err: apiutil.ErrValidation,
-		},
-		{
-			desc:     "list members with all query params",
-			query:    fmt.Sprintf("offset=1&limit=1&channel_id=%s&connected=true&status=%s&metadata=%s&permission=%s&list_perms=true", validID, clients.EnabledStatus, "%7B%22domain%22%3A%20%22example.com%22%7D", "view"),
-			domainID: domainID,
-			token:    validToken,
-			authnRes: mgauthn.Session{DomainUserID: domainID + "_" + validID, UserID: validID, DomainID: domainID},
-			groupID:  client.ID,
-			listMembersResponse: clients.MembersPage{
-				Page: clients.Page{
-					Offset: 1,
-					Limit:  1,
-					Total:  1,
-				},
-				Members: []clients.Client{client},
-			},
-			status: http.StatusOK,
-
-			err: nil,
+			desc:        "set client parent group with service error",
+			token:       validToken,
+			id:          validID,
+			domainID:    validID,
+			data:        fmt.Sprintf(`{"parent_group_id":"%s"}`, validID),
+			contentType: contentType,
+			svcErr:      svcerr.ErrAuthorization,
+			status:      http.StatusForbidden,
+			err:         svcerr.ErrAuthorization,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
 			req := testRequest{
-				client:      ts.Client(),
-				method:      http.MethodGet,
-				url:         ts.URL + fmt.Sprintf("/%s/channels/%s/clients?", tc.domainID, tc.groupID) + tc.query,
-				contentType: contentType,
+				client:      gs.Client(),
+				method:      http.MethodPost,
+				url:         fmt.Sprintf("%s/%s/clients/%s/parent", gs.URL, tc.domainID, tc.id),
+				contentType: tc.contentType,
 				token:       tc.token,
+				body:        strings.NewReader(tc.data),
 			}
-
-			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.authnRes, tc.authnErr)
-			svcCall := svc.On("ListClientsByGroup", mock.Anything, tc.authnRes, mock.Anything, mock.Anything).Return(tc.listMembersResponse, tc.err)
+			if tc.token == validToken {
+				tc.session = mgauthn.Session{DomainUserID: validID + "_" + validID, UserID: validID, DomainID: validID}
+			}
+			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authnErr)
+			svcCall := svc.On("SetParentGroup", mock.Anything, tc.session, validID, tc.id).Return(tc.svcErr)
 			res, err := req.make()
 			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
+			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
+			svcCall.Unset()
+			authCall.Unset()
+		})
+	}
+}
 
-			var bodyRes respBody
-			err = json.NewDecoder(res.Body).Decode(&bodyRes)
-			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error while decoding response body: %s", tc.desc, err))
-			if bodyRes.Err != "" || bodyRes.Message != "" {
-				err = errors.Wrap(errors.New(bodyRes.Err), errors.New(bodyRes.Message))
+func TestRemoveClientParentGroupEndpoint(t *testing.T) {
+	gs, svc, authn := newClientsServer()
+	defer gs.Close()
+
+	cases := []struct {
+		desc     string
+		token    string
+		id       string
+		domainID string
+		session  mgauthn.Session
+		svcErr   error
+		resp     clients.Client
+		status   int
+		authnErr error
+		err      error
+	}{
+		{
+			desc:     "remove client parent group successfully",
+			token:    validToken,
+			id:       validID,
+			domainID: validID,
+			status:   http.StatusNoContent,
+			err:      nil,
+		},
+		{
+			desc:     "remove client parent group with invalid token",
+			token:    inValidToken,
+			session:  mgauthn.Session{},
+			id:       validID,
+			domainID: validID,
+			authnErr: svcerr.ErrAuthentication,
+			status:   http.StatusUnauthorized,
+			err:      svcerr.ErrAuthentication,
+		},
+		{
+			desc:   "remove client parent group with empty token",
+			token:  "",
+			id:     validID,
+			status: http.StatusUnauthorized,
+			err:    apiutil.ErrBearerToken,
+		},
+		{
+			desc:   "remove client parent group with empty domainID",
+			token:  validToken,
+			id:     validID,
+			status: http.StatusBadRequest,
+			err:    apiutil.ErrMissingDomainID,
+		},
+		{
+			desc:     "remove client parent group with empty id",
+			token:    validToken,
+			id:       "",
+			domainID: validID,
+			status:   http.StatusBadRequest,
+			err:      apiutil.ErrMissingID,
+		},
+		{
+			desc:     "remove client parent group with service error",
+			token:    validToken,
+			id:       validID,
+			domainID: validID,
+			svcErr:   svcerr.ErrAuthorization,
+			status:   http.StatusForbidden,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			req := testRequest{
+				client: gs.Client(),
+				method: http.MethodDelete,
+				url:    fmt.Sprintf("%s/%s/clients/%s/parent", gs.URL, tc.domainID, tc.id),
+				token:  tc.token,
 			}
-			assert.True(t, errors.Contains(err, tc.err), fmt.Sprintf("%s: expected %s got %s\n", tc.desc, tc.err, err))
+			if tc.token == validToken {
+				tc.session = mgauthn.Session{DomainUserID: validID + "_" + validID, UserID: validID, DomainID: validID}
+			}
+			authCall := authn.On("Authenticate", mock.Anything, tc.token).Return(tc.session, tc.authnErr)
+			svcCall := svc.On("RemoveParentGroup", mock.Anything, tc.session, tc.id).Return(tc.svcErr)
+			res, err := req.make()
+			assert.Nil(t, err, fmt.Sprintf("%s: unexpected error %s", tc.desc, err))
 			assert.Equal(t, tc.status, res.StatusCode, fmt.Sprintf("%s: expected status code %d got %d", tc.desc, tc.status, res.StatusCode))
 			svcCall.Unset()
 			authCall.Unset()
@@ -2350,12 +1761,4 @@ type respBody struct {
 	ID          string         `json:"id"`
 	Tags        []string       `json:"tags"`
 	Status      clients.Status `json:"status"`
-}
-
-type groupReqBody struct {
-	Relation  string   `json:"relation"`
-	UserIDs   []string `json:"user_ids"`
-	GroupIDs  []string `json:"group_ids"`
-	ChannelID string   `json:"channel_id"`
-	ClientID  string   `json:"client_id"`
 }

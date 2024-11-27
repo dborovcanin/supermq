@@ -17,6 +17,7 @@ import (
 	grpcChannelsV1 "github.com/absmach/magistrala/internal/grpc/channels/v1"
 	grpcClientsV1 "github.com/absmach/magistrala/internal/grpc/clients/v1"
 	mglog "github.com/absmach/magistrala/logger"
+	mgauthn "github.com/absmach/magistrala/pkg/authn"
 	authnMocks "github.com/absmach/magistrala/pkg/authn/mocks"
 	"github.com/absmach/magistrala/pkg/messaging/mocks"
 	"github.com/absmach/magistrala/ws"
@@ -105,6 +106,9 @@ func TestHandshake(t *testing.T) {
 	defer ts.Close()
 	pubsub.On("Subscribe", mock.Anything, mock.Anything).Return(nil)
 	pubsub.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	clients.On("Authenticate", mock.Anything, mock.Anything).Return(&grpcClientsV1.AuthnRes{Authenticated: true}, nil)
+	authn.On("Authenticate", mock.Anything, mock.Anything).Return(mgauthn.Session{}, nil)
+	channels.On("Authorize", mock.Anything, mock.Anything, mock.Anything).Return(&grpcChannelsV1.AuthzRes{Authorized: true}, nil)
 
 	cases := []struct {
 		desc      string

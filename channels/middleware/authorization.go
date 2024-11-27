@@ -198,7 +198,6 @@ func (am *authorizationMiddleware) RemoveChannel(ctx context.Context, session au
 }
 
 func (am *authorizationMiddleware) Connect(ctx context.Context, session authn.Session, chIDs, thIDs []string, connTypes []connections.ConnType) error {
-	// ToDo: This authorization will be changed with Bulk Authorization. For this we need to add bulk authorization API in policies.
 	for _, chID := range chIDs {
 		if err := am.authorize(ctx, channels.OpConnectClient, authz.PolicyReq{
 			Domain:      session.DomainID,
@@ -226,7 +225,6 @@ func (am *authorizationMiddleware) Connect(ctx context.Context, session authn.Se
 }
 
 func (am *authorizationMiddleware) Disconnect(ctx context.Context, session authn.Session, chIDs, thIDs []string, connTypes []connections.ConnType) error {
-	// ToDo: This authorization will be changed with Bulk Authorization. For this we need to add bulk authorization API in policies.
 	for _, chID := range chIDs {
 		if err := am.authorize(ctx, channels.OpDisconnectClient, authz.PolicyReq{
 			Domain:      session.DomainID,

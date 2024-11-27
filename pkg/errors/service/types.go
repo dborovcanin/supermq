@@ -81,4 +81,7 @@ var (
 
 	// ErrDisableUser indicates error in disabling user.
 	ErrDisableUser = errors.New("failed to disable user")
+
+	// ErrRollbackRepo indicates a failure to rollback repository.
+	ErrRollbackRepo = errors.New("failed to rollback repo")
 )

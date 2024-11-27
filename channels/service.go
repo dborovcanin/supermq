@@ -25,8 +25,6 @@ import (
 )
 
 var (
-	errCreateChannelsPolicies   = errors.New("failed to create channels policies")
-	errRollbackRepo             = errors.New("failed to rollback repo")
 	errAddConnectionsClients    = errors.New("failed to add connections in clients service")
 	errRemoveConnectionsClients = errors.New("failed to remove connections from clients service")
 	errSetParentGroup           = errors.New("channel already have parent")
@@ -90,7 +88,7 @@ func (svc service) CreateChannels(ctx context.Context, session authn.Session, ch
 	defer func() {
 		if retErr != nil {
 			if errRollBack := svc.repo.Remove(ctx, chIDs...); errRollBack != nil {
-				retErr = errors.Wrap(retErr, errors.Wrap(errRollbackRepo, errRollBack))
+				retErr = errors.Wrap(retErr, errors.Wrap(svcerr.ErrRollbackRepo, errRollBack))
 			}
 		}
 	}()
@@ -113,7 +111,7 @@ func (svc service) CreateChannels(ctx context.Context, session authn.Session, ch
 		)
 	}
 	if _, err := svc.AddNewEntitiesRoles(ctx, session.DomainID, session.UserID, chIDs, optionalPolicies, newBuiltInRoleMembers); err != nil {
-		return []Channel{}, errors.Wrap(errCreateChannelsPolicies, err)
+		return []Channel{}, errors.Wrap(svcerr.ErrAddPolicies, err)
 	}
 	return savedChs, nil
 }
@@ -358,21 +356,21 @@ func (svc service) Disconnect(ctx context.Context, session authn.Session, chIDs,
 	for _, chID := range chIDs {
 		c, err := svc.repo.RetrieveByID(ctx, chID)
 		if err != nil {
-			return errors.Wrap(svcerr.ErrCreateEntity, err)
+			return errors.Wrap(svcerr.ErrRemoveEntity, err)
 		}
 		if c.Domain != session.DomainID {
-			return errors.Wrap(svcerr.ErrCreateEntity, fmt.Errorf("channel id %s has invalid domain id", chID))
+			return errors.Wrap(svcerr.ErrRemoveEntity, fmt.Errorf("channel id %s has invalid domain id", chID))
 		}
 	}
 
 	for _, thID := range thIDs {
 		resp, err := svc.clients.RetrieveEntity(ctx, &grpcCommonV1.RetrieveEntityReq{Id: thID})
 		if err != nil {
-			return errors.Wrap(svcerr.ErrCreateEntity, err)
+			return errors.Wrap(svcerr.ErrRemoveEntity, err)
 		}
 
 		if resp.GetEntity().GetDomainId() != session.DomainID {
-			return errors.Wrap(svcerr.ErrCreateEntity, fmt.Errorf("client id %s has invalid domain id", thID))
+			return errors.Wrap(svcerr.ErrRemoveEntity, fmt.Errorf("client id %s has invalid domain id", thID))
 		}
 	}
 
@@ -459,7 +457,7 @@ func (svc service) SetParentGroup(ctx context.Context, session authn.Session, pa
 func (svc service) RemoveParentGroup(ctx context.Context, session authn.Session, id string) (retErr error) {
 	ch, err := svc.repo.RetrieveByID(ctx, id)
 	if err != nil {
-		return errors.Wrap(svcerr.ErrViewEntity, err)
+		return errors.Wrap(svcerr.ErrUpdateEntity, err)
 	}
 
 	if ch.ParentGroup != "" {
@@ -474,7 +472,7 @@ func (svc service) RemoveParentGroup(ctx context.Context, session authn.Session,
 		})
 
 		if err := svc.policy.DeletePolicies(ctx, pols); err != nil {
-			return errors.Wrap(svcerr.ErrAddPolicies, err)
+			return errors.Wrap(svcerr.ErrDeletePolicies, err)
 		}
 		defer func() {
 			if retErr != nil {

@@ -191,7 +191,9 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		errors.Contains(err, apiutil.ErrMissingIdentity),
 		errors.Contains(err, apiutil.ErrInvalidProfilePictureURL),
 		errors.Contains(err, apiutil.ErrSelfParentingNotAllowed),
-		errors.Contains(err, apiutil.ErrMissingChildrenGroupIDs):
+		errors.Contains(err, apiutil.ErrMissingChildrenGroupIDs),
+		errors.Contains(err, apiutil.ErrMissingParentGroupID),
+		errors.Contains(err, apiutil.ErrMissingConnectionType):
 		err = unwrap(err)
 		w.WriteHeader(http.StatusBadRequest)
 

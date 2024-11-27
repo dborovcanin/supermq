@@ -23,9 +23,8 @@ var _ grpcChannelsV1.ChannelsServiceServer = (*grpcServer)(nil)
 
 type grpcServer struct {
 	grpcChannelsV1.UnimplementedChannelsServiceServer
-
 	authorize                    kitgrpc.Handler
-	removeClientConnections       kitgrpc.Handler
+	removeClientConnections      kitgrpc.Handler
 	unsetParentGroupFromChannels kitgrpc.Handler
 	retrieveEntity               kitgrpc.Handler
 }

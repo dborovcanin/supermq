@@ -39,7 +39,7 @@ const (
 	ChannelRead            roles.Action = "channel_read"
 	ChannelDelete          roles.Action = "channel_delete"
 	ChannelSetParentGroup  roles.Action = "channel_set_parent_group"
-	ChannelConnectToClient  roles.Action = "channel_connect_to_client"
+	ChannelConnectToClient roles.Action = "channel_connect_to_client"
 	ChannelPublish         roles.Action = "channel_publish"
 	ChannelSubscribe       roles.Action = "channel_subscribe"
 	ChannelManageRole      roles.Action = "channel_manage_role"

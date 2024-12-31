@@ -3,9 +3,8 @@
 
 SMQ_DOCKER_IMAGE_NAME_PREFIX ?= supermq
 BUILD_DIR ?= build
-SERVICES = auth users clients groups channels domains http coap ws postgres-writer postgres-reader timescale-writer \
-	timescale-reader cli bootstrap mqtt provision certs invitations journal
-TEST_API_SERVICES = journal auth bootstrap certs http invitations notifiers provision readers clients users channels groups domains
+SERVICES = auth users clients groups channels domains http coap ws cli mqtt certs invitations journal
+TEST_API_SERVICES = journal auth certs http invitations notifiers clients users channels groups domains
 TEST_API = $(addprefix test_api_,$(TEST_API_SERVICES))
 DOCKERS = $(addprefix docker_,$(SERVICES))
 DOCKERS_DEV = $(addprefix docker_dev_,$(SERVICES))
@@ -221,9 +220,6 @@ release:
 		docker tag $(SMQ_DOCKER_IMAGE_NAME_PREFIX)/$$svc $(SMQ_DOCKER_IMAGE_NAME_PREFIX)/$$svc:$(version); \
 	done
 	$(call docker_push,$(version))
-
-rundev:
-	cd scripts && ./run.sh
 
 grpc_mtls_certs:
 	$(MAKE) -C docker/ssl auth_grpc_certs clients_grpc_certs

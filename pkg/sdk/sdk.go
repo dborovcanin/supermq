@@ -1244,7 +1244,7 @@ type SDK interface {
 	//  fmt.Println(actions)
 	AvailableDomainRoleActions(token string) ([]string, errors.SDKError)
 
-	// ListDomainUsers returns list of users for the given domain ID and filters.
+	// ListDomainMembers returns list of members for the given domain ID and filters.
 	//
 	// example:
 	//  pm := sdk.PageMetadata{

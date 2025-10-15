@@ -31,6 +31,7 @@ import (
 	"github.com/absmach/supermq/pkg/authz"
 	authsvcAuthz "github.com/absmach/supermq/pkg/authz/authsvc"
 	"github.com/absmach/supermq/pkg/callout"
+	cotracing "github.com/absmach/supermq/pkg/callout/tracing"
 	domainsAuthz "github.com/absmach/supermq/pkg/domains/psvc"
 	"github.com/absmach/supermq/pkg/grpcclient"
 	"github.com/absmach/supermq/pkg/jaeger"
@@ -206,6 +207,9 @@ func main() {
 		logger.Error(fmt.Sprintf("failed to create new callout: %s", err))
 		exitCode = 1
 		return
+	}
+	if len(callCfg.URLs) > 0 {
+		call = cotracing.New(call, tracer)
 	}
 
 	svc, err := newDomainService(ctx, domainsRepo, cache, tracer, cfg, authz, policyService, logger, call)

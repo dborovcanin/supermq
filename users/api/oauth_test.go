@@ -38,13 +38,13 @@ func TestOAuthAuthorizeEndpoint(t *testing.T) {
 	token := new(authmocks.TokenServiceClient)
 
 	cases := []struct {
-		name           string
-		provider       string
-		redirectURI    string
-		providerName   string
+		name            string
+		provider        string
+		redirectURI     string
+		providerName    string
 		providerEnabled bool
-		expectedStatus int
-		checkResponse  func(t *testing.T, res *http.Response)
+		expectedStatus  int
+		checkResponse   func(t *testing.T, res *http.Response)
 	}{
 		{
 			name:            "get authorization URL successfully",

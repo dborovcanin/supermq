@@ -82,18 +82,20 @@ func TestExchangeWithRedirect(t *testing.T) {
 
 		if code != testCode {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error": "invalid_grant"}`))
+			_, err := w.Write([]byte(`{"error": "invalid_grant"}`))
+			assert.NoError(t, err)
 			return
 		}
 
 		// Return a mock token
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, err = w.Write([]byte(`{
 			"access_token": "test-access-token",
 			"token_type": "Bearer",
 			"expires_in": 3600,
 			"refresh_token": "test-refresh-token"
 		}`))
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 

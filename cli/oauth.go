@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	callbackPath     = "/callback"
-	localServerPort  = "9090"
-	callbackTimeout  = 5 * time.Minute
-	shutdownTimeout  = 5 * time.Second
-	successHTML      = `<html><body><h1>Authentication Successful!</h1><p>You can close this window and return to the CLI.</p></body></html>`
-	errorHTML        = `<html><body><h1>Authentication Failed</h1><p>Error: %s</p><p>You can close this window and return to the CLI.</p></body></html>`
+	callbackPath    = "/callback"
+	localServerPort = "9090"
+	callbackTimeout = 5 * time.Minute
+	shutdownTimeout = 5 * time.Second
+	successHTML     = `<html><body><h1>Authentication Successful!</h1><p>You can close this window and return to the CLI.</p></body></html>`
+	errorHTML       = `<html><body><h1>Authentication Failed</h1><p>Error: %s</p><p>You can close this window and return to the CLI.</p></body></html>`
 )
 
 type oauthCallbackResult struct {

@@ -30,16 +30,16 @@ import (
 )
 
 const (
-	googleProvider    = "google"
-	jwtRefreshToken   = "jwt-refresh-token"
-	jwtAccessToken    = "jwt-access-token"
-	testAccessToken   = "access-token"
-	testCode          = "test-code"
-	testState         = "test-state"
-	testCallbackURL   = "http://localhost:9090/callback"
-	testAuthURLBase   = "https://accounts.google.com/o/oauth2/auth"
-	testUserEmail     = "test@example.com"
-	testUsername      = "testuser"
+	googleProvider  = "google"
+	jwtRefreshToken = "jwt-refresh-token"
+	jwtAccessToken  = "jwt-access-token"
+	testAccessToken = "access-token"
+	testCode        = "test-code"
+	testState       = "test-state"
+	testCallbackURL = "http://localhost:9090/callback"
+	testAuthURLBase = "https://accounts.google.com/o/oauth2/auth"
+	testUserEmail   = "test@example.com"
+	testUsername    = "testuser"
 )
 
 func setupOAuthServer() (*httptest.Server, *umocks.Service, *oauth2mocks.Provider, *authmocks.TokenServiceClient) {

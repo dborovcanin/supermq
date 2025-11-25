@@ -29,13 +29,26 @@ import (
 	goauth2 "golang.org/x/oauth2"
 )
 
+const (
+	googleProvider    = "google"
+	jwtRefreshToken   = "jwt-refresh-token"
+	jwtAccessToken    = "jwt-access-token"
+	testAccessToken   = "access-token"
+	testCode          = "test-code"
+	testState         = "test-state"
+	testCallbackURL   = "http://localhost:9090/callback"
+	testAuthURLBase   = "https://accounts.google.com/o/oauth2/auth"
+	testUserEmail     = "test@example.com"
+	testUsername      = "testuser"
+)
+
 func setupOAuthServer() (*httptest.Server, *umocks.Service, *oauth2mocks.Provider, *authmocks.TokenServiceClient) {
 	usvc := new(umocks.Service)
 	logger := smqlog.NewMock()
 	mux := chi.NewRouter()
 	idp := uuid.NewMock()
 	provider := new(oauth2mocks.Provider)
-	provider.On("Name").Return("google")
+	provider.On("Name").Return(googleProvider)
 	authn := new(authnmocks.Authentication)
 	am := smqauthn.NewAuthNMiddleware(authn, smqauthn.WithDomainCheck(false), smqauthn.WithAllowUnverifiedUser(true))
 	token := new(authmocks.TokenServiceClient)
@@ -64,25 +77,25 @@ func TestOAuthAuthorizationURL(t *testing.T) {
 	}{
 		{
 			desc:            "get authorization URL successfully",
-			providerName:    "google",
+			providerName:    googleProvider,
 			redirectURL:     "",
 			providerEnabled: true,
-			getAuthURL:      "https://accounts.google.com/o/oauth2/auth?client_id=test&state=test-state",
-			state:           "test-state",
+			getAuthURL:      testAuthURLBase + "?client_id=test&state=" + testState,
+			state:           testState,
 			err:             nil,
 		},
 		{
 			desc:            "get authorization URL with custom redirect",
-			providerName:    "google",
-			redirectURL:     "http://localhost:9090/callback",
+			providerName:    googleProvider,
+			redirectURL:     testCallbackURL,
 			providerEnabled: true,
-			getAuthURL:      "https://accounts.google.com/o/oauth2/auth?client_id=test&state=test-state&redirect_uri=http://localhost:9090/callback",
-			state:           "test-state",
+			getAuthURL:      testAuthURLBase + "?client_id=test&state=" + testState + "&redirect_uri=" + testCallbackURL,
+			state:           testState,
 			err:             nil,
 		},
 		{
 			desc:            "get authorization URL with disabled provider",
-			providerName:    "google",
+			providerName:    googleProvider,
 			redirectURL:     "",
 			providerEnabled: false,
 			getAuthURL:      "",
@@ -129,9 +142,9 @@ func TestOAuthCallback(t *testing.T) {
 
 	validUser := users.User{
 		ID:    generateUUID(t),
-		Email: "test@example.com",
+		Email: testUserEmail,
 		Credentials: users.Credentials{
-			Username: "testuser",
+			Username: testUsername,
 		},
 		Status: users.EnabledStatus,
 	}
@@ -149,69 +162,69 @@ func TestOAuthCallback(t *testing.T) {
 	}{
 		{
 			desc:            "successful OAuth callback",
-			providerName:    "google",
-			code:            "test-code",
-			state:           "test-state",
-			redirectURL:     "http://localhost:9090/callback",
+			providerName:    googleProvider,
+			code:            testCode,
+			state:           testState,
+			redirectURL:     testCallbackURL,
 			providerEnabled: true,
 			mockSetup: func() {
 				provider.On("IsEnabled").Return(true).Once()
-				provider.On("State").Return("test-state").Once()
-				provider.On("ExchangeWithRedirect", mock.Anything, "test-code", "http://localhost:9090/callback").
-					Return(goauth2.Token{AccessToken: "access-token"}, nil).Once()
-				provider.On("UserInfo", "access-token").Return(validUser, nil).Once()
+				provider.On("State").Return(testState).Once()
+				provider.On("ExchangeWithRedirect", mock.Anything, testCode, testCallbackURL).
+					Return(goauth2.Token{AccessToken: testAccessToken}, nil).Once()
+				provider.On("UserInfo", testAccessToken).Return(validUser, nil).Once()
 				svc.On("OAuthCallback", mock.Anything, mock.MatchedBy(func(u users.User) bool {
-					return u.Email == validUser.Email && u.AuthProvider == "google"
+					return u.Email == validUser.Email && u.AuthProvider == googleProvider
 				})).Return(validUser, nil).Once()
 				svc.On("OAuthAddUserPolicy", mock.Anything, validUser).Return(nil).Once()
-				refreshToken := "jwt-refresh-token"
+				refreshToken := jwtRefreshToken
 				tokenClient.On("Issue", mock.Anything, mock.Anything).
 					Return(&grpcTokenV1.Token{
-						AccessToken:  "jwt-access-token",
+						AccessToken:  jwtAccessToken,
 						RefreshToken: &refreshToken,
 					}, nil).Once()
 			},
 			expectedToken: sdk.Token{
-				AccessToken:  "jwt-access-token",
-				RefreshToken: "jwt-refresh-token",
+				AccessToken:  jwtAccessToken,
+				RefreshToken: jwtRefreshToken,
 			},
 			err: nil,
 		},
 		{
 			desc:            "OAuth callback without redirect URL",
-			providerName:    "google",
-			code:            "test-code",
-			state:           "test-state",
+			providerName:    googleProvider,
+			code:            testCode,
+			state:           testState,
 			redirectURL:     "",
 			providerEnabled: true,
 			mockSetup: func() {
 				provider.On("IsEnabled").Return(true).Once()
-				provider.On("State").Return("test-state").Once()
-				provider.On("Exchange", mock.Anything, "test-code").
-					Return(goauth2.Token{AccessToken: "access-token"}, nil).Once()
-				provider.On("UserInfo", "access-token").Return(validUser, nil).Once()
+				provider.On("State").Return(testState).Once()
+				provider.On("Exchange", mock.Anything, testCode).
+					Return(goauth2.Token{AccessToken: testAccessToken}, nil).Once()
+				provider.On("UserInfo", testAccessToken).Return(validUser, nil).Once()
 				svc.On("OAuthCallback", mock.Anything, mock.MatchedBy(func(u users.User) bool {
-					return u.Email == validUser.Email && u.AuthProvider == "google"
+					return u.Email == validUser.Email && u.AuthProvider == googleProvider
 				})).Return(validUser, nil).Once()
 				svc.On("OAuthAddUserPolicy", mock.Anything, validUser).Return(nil).Once()
-				refreshToken := "jwt-refresh-token"
+				refreshToken := jwtRefreshToken
 				tokenClient.On("Issue", mock.Anything, mock.Anything).
 					Return(&grpcTokenV1.Token{
-						AccessToken:  "jwt-access-token",
+						AccessToken:  jwtAccessToken,
 						RefreshToken: &refreshToken,
 					}, nil).Once()
 			},
 			expectedToken: sdk.Token{
-				AccessToken:  "jwt-access-token",
-				RefreshToken: "jwt-refresh-token",
+				AccessToken:  jwtAccessToken,
+				RefreshToken: jwtRefreshToken,
 			},
 			err: nil,
 		},
 		{
 			desc:            "OAuth callback with disabled provider",
-			providerName:    "google",
-			code:            "test-code",
-			state:           "test-state",
+			providerName:    googleProvider,
+			code:            testCode,
+			state:           testState,
 			redirectURL:     "",
 			providerEnabled: false,
 			mockSetup: func() {
@@ -222,29 +235,29 @@ func TestOAuthCallback(t *testing.T) {
 		},
 		{
 			desc:            "OAuth callback with invalid state",
-			providerName:    "google",
-			code:            "test-code",
+			providerName:    googleProvider,
+			code:            testCode,
 			state:           "wrong-state",
 			redirectURL:     "",
 			providerEnabled: true,
 			mockSetup: func() {
 				provider.On("IsEnabled").Return(true).Once()
-				provider.On("State").Return("test-state").Once()
+				provider.On("State").Return(testState).Once()
 			},
 			expectedToken: sdk.Token{},
 			err:           errors.NewSDKErrorWithStatus(errors.Wrap(errors.ErrMalformedEntity, errors.New("invalid state")), http.StatusBadRequest),
 		},
 		{
 			desc:            "OAuth callback with exchange error",
-			providerName:    "google",
-			code:            "test-code",
-			state:           "test-state",
+			providerName:    googleProvider,
+			code:            testCode,
+			state:           testState,
 			redirectURL:     "",
 			providerEnabled: true,
 			mockSetup: func() {
 				provider.On("IsEnabled").Return(true).Once()
-				provider.On("State").Return("test-state").Once()
-				provider.On("Exchange", mock.Anything, "test-code").
+				provider.On("State").Return(testState).Once()
+				provider.On("Exchange", mock.Anything, testCode).
 					Return(goauth2.Token{}, fmt.Errorf("exchange failed")).Once()
 			},
 			expectedToken: sdk.Token{},
@@ -285,25 +298,23 @@ func TestOAuthIntegration(t *testing.T) {
 
 	validUser := users.User{
 		ID:    generateUUID(t),
-		Email: "test@example.com",
+		Email: testUserEmail,
 		Credentials: users.Credentials{
-			Username: "testuser",
+			Username: testUsername,
 		},
 		Status: users.EnabledStatus,
 	}
 
-	redirectURL := "http://localhost:9090/callback"
-	testState := "test-state"
-	testCode := "test-code"
+	redirectURL := testCallbackURL
 
 	// Setup mocks for authorization URL
 	provider.On("IsEnabled").Return(true).Once()
 	provider.On("GetAuthURLWithRedirect", redirectURL).
-		Return("https://accounts.google.com/o/oauth2/auth?redirect_uri=" + redirectURL).Once()
+		Return(testAuthURLBase + "?redirect_uri=" + redirectURL).Once()
 	provider.On("State").Return(testState).Once()
 
 	// Step 1: Get authorization URL
-	authURL, state, err := mgsdk.OAuthAuthorizationURL(context.Background(), "google", redirectURL)
+	authURL, state, err := mgsdk.OAuthAuthorizationURL(context.Background(), googleProvider, redirectURL)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, authURL)
 	assert.Equal(t, testState, state)
@@ -313,21 +324,21 @@ func TestOAuthIntegration(t *testing.T) {
 	provider.On("IsEnabled").Return(true).Once()
 	provider.On("State").Return(testState).Once()
 	provider.On("ExchangeWithRedirect", mock.Anything, testCode, redirectURL).
-		Return(goauth2.Token{AccessToken: "access-token"}, nil).Once()
-	provider.On("UserInfo", "access-token").Return(validUser, nil).Once()
+		Return(goauth2.Token{AccessToken: testAccessToken}, nil).Once()
+	provider.On("UserInfo", testAccessToken).Return(validUser, nil).Once()
 	svc.On("OAuthCallback", mock.Anything, mock.MatchedBy(func(u users.User) bool {
-		return u.Email == validUser.Email && u.AuthProvider == "google"
+		return u.Email == validUser.Email && u.AuthProvider == googleProvider
 	})).Return(validUser, nil).Once()
 	svc.On("OAuthAddUserPolicy", mock.Anything, validUser).Return(nil).Once()
-	refreshToken := "jwt-refresh-token"
+	refreshToken := jwtRefreshToken
 	tokenClient.On("Issue", mock.Anything, mock.Anything).
 		Return(&grpcTokenV1.Token{
-			AccessToken:  "jwt-access-token",
+			AccessToken:  jwtAccessToken,
 			RefreshToken: &refreshToken,
 		}, nil).Once()
 
 	// Step 2: Exchange code for token
-	token, err := mgsdk.OAuthCallback(context.Background(), "google", testCode, state, redirectURL)
+	token, err := mgsdk.OAuthCallback(context.Background(), googleProvider, testCode, state, redirectURL)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token.AccessToken)
 	assert.NotEmpty(t, token.RefreshToken)

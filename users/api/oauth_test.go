@@ -325,6 +325,107 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 				assert.Contains(t, resp, "error")
 			},
 		},
+		{
+			name:            "user info retrieval error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			requestBody:     `{"code":"test-code","state":"test-state"}`,
+			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(users.User{}, fmt.Errorf("user info failed"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				body, err := io.ReadAll(res.Body)
+				assert.NoError(t, err)
+
+				var resp map[string]string
+				err = json.Unmarshal(body, &resp)
+				assert.NoError(t, err)
+				assert.Contains(t, resp, "error")
+			},
+		},
+		{
+			name:            "OAuth callback service error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			requestBody:     `{"code":"test-code","state":"test-state"}`,
+			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(validUser, nil)
+				svc.On("OAuthCallback", mock.Anything, mock.Anything).
+					Return(users.User{}, fmt.Errorf("service error"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				body, err := io.ReadAll(res.Body)
+				assert.NoError(t, err)
+
+				var resp map[string]string
+				err = json.Unmarshal(body, &resp)
+				assert.NoError(t, err)
+				assert.Contains(t, resp, "error")
+			},
+		},
+		{
+			name:            "add user policy error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			requestBody:     `{"code":"test-code","state":"test-state"}`,
+			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(validUser, nil)
+				svc.On("OAuthCallback", mock.Anything, mock.MatchedBy(func(u users.User) bool {
+					return u.Email == validUser.Email
+				})).Return(validUser, nil)
+				svc.On("OAuthAddUserPolicy", mock.Anything, validUser).
+					Return(fmt.Errorf("policy error"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				body, err := io.ReadAll(res.Body)
+				assert.NoError(t, err)
+
+				var resp map[string]string
+				err = json.Unmarshal(body, &resp)
+				assert.NoError(t, err)
+				assert.Contains(t, resp, "error")
+			},
+		},
+		{
+			name:            "token issuance error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			requestBody:     `{"code":"test-code","state":"test-state"}`,
+			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(validUser, nil)
+				svc.On("OAuthCallback", mock.Anything, mock.MatchedBy(func(u users.User) bool {
+					return u.Email == validUser.Email
+				})).Return(validUser, nil)
+				svc.On("OAuthAddUserPolicy", mock.Anything, validUser).Return(nil)
+				tokenClient.On("Issue", mock.Anything, mock.Anything).
+					Return(nil, fmt.Errorf("token issuance failed"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				body, err := io.ReadAll(res.Body)
+				assert.NoError(t, err)
+
+				var resp map[string]string
+				err = json.Unmarshal(body, &resp)
+				assert.NoError(t, err)
+				assert.Contains(t, resp, "error")
+			},
+		},
 	}
 
 	for _, tc := range cases {

@@ -34,6 +34,48 @@ supermq-cli users create <user_name> <user_email> <user_password> <user_token>
 supermq-cli users token <user_email> <user_password>
 ```
 
+#### OAuth Authentication
+
+Authenticate using OAuth providers (e.g., Google) to obtain access tokens. This command opens your browser for authentication and returns access and refresh tokens.
+
+```bash
+supermq-cli users oauth <provider>
+```
+
+Example with Google:
+
+```bash
+supermq-cli users oauth google
+```
+
+**How it works:**
+
+1. The CLI starts a local HTTP server on `localhost:9090` to receive the OAuth callback
+2. Opens your default browser to the OAuth provider's authorization page
+3. After you authenticate with the provider, you'll be redirected back to the CLI
+4. The CLI exchanges the authorization code for access and refresh tokens
+5. Tokens are displayed in JSON format
+
+**Output:**
+
+```json
+{
+  "access_token": "eyJhbGc...",
+  "refresh_token": "eyJhbGc..."
+}
+```
+
+**Prerequisites:**
+
+The OAuth provider must be configured on the SuperMQ server. For Google OAuth, the following environment variables must be set:
+
+- `SMQ_GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `SMQ_GOOGLE_CLIENT_SECRET` - Google OAuth client secret
+- `SMQ_GOOGLE_REDIRECT_URL` - OAuth redirect URL (e.g., `http://localhost:9002/oauth/callback/google`)
+- `SMQ_GOOGLE_STATE` - OAuth state parameter for security
+
+See the [Users Service README](../users/README.md#oauth-configuration) for more details.
+
 #### Get User
 
 ```bash

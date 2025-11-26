@@ -4,18 +4,16 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
-	smqauth "github.com/absmach/supermq/auth"
 	"github.com/absmach/supermq/pkg/oauth2"
 	"github.com/absmach/supermq/users"
+	useroauth "github.com/absmach/supermq/users/oauth"
 	"github.com/go-chi/chi/v5"
-	goauth2 "golang.org/x/oauth2"
 )
 
 var (
@@ -43,18 +41,18 @@ type authURLResponse struct {
 // - GET /oauth/authorize/{provider} - Returns the authorization URL
 // - GET /oauth/callback/{provider} - Handles OAuth2 callback and sets cookies
 // - POST /oauth/cli/callback/{provider} - Handles CLI OAuth2 callback and returns JSON.
-func oauthHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, deviceStore DeviceCodeStore, providers ...oauth2.Provider) *chi.Mux {
+func oauthHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, oauthSvc useroauth.Service, providers ...oauth2.Provider) *chi.Mux {
 	for _, provider := range providers {
-		r.HandleFunc("/oauth/callback/"+provider.Name(), oauth2CallbackHandler(provider, svc, tokenClient, deviceStore))
+		r.HandleFunc("/oauth/callback/"+provider.Name(), oauth2CallbackHandler(provider, oauthSvc))
 		r.Get("/oauth/authorize/"+provider.Name(), oauth2AuthorizeHandler(provider))
-		r.Post("/oauth/cli/callback/"+provider.Name(), oauth2CLICallbackHandler(provider, svc, tokenClient))
+		r.Post("/oauth/cli/callback/"+provider.Name(), oauth2CLICallbackHandler(provider, oauthSvc))
 	}
 
 	return r
 }
 
 // oauth2CallbackHandler is a http.HandlerFunc that handles OAuth2 callbacks.
-func oauth2CallbackHandler(oauth oauth2.Provider, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, deviceStore DeviceCodeStore) http.HandlerFunc {
+func oauth2CallbackHandler(oauth oauth2.Provider, oauthSvc useroauth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !oauth.IsEnabled() {
 			redirectWithError(w, r, oauth.ErrorURL(), "oauth provider is disabled")
@@ -64,8 +62,8 @@ func oauth2CallbackHandler(oauth oauth2.Provider, svc users.Service, tokenClient
 		state := r.FormValue("state")
 
 		// Check if this is a device flow callback (state contains device: prefix)
-		if strings.HasPrefix(state, "device:") {
-			handleDeviceFlowCallback(w, r, oauth, svc, tokenClient, deviceStore)
+		if useroauth.IsDeviceFlowState(state) {
+			handleDeviceFlowCallback(w, r, oauth, oauthSvc)
 			return
 		}
 
@@ -80,13 +78,7 @@ func oauth2CallbackHandler(oauth oauth2.Provider, svc users.Service, tokenClient
 			return
 		}
 
-		token, err := oauth.Exchange(r.Context(), code)
-		if err != nil {
-			redirectWithError(w, r, oauth.ErrorURL(), err.Error())
-			return
-		}
-
-		jwt, err := processOAuthUser(r.Context(), oauth, token.AccessToken, svc, tokenClient)
+		jwt, err := oauthSvc.ProcessWebCallback(r.Context(), oauth, code, "")
 		if err != nil {
 			redirectWithError(w, r, oauth.ErrorURL(), err.Error())
 			return
@@ -125,7 +117,7 @@ func oauth2AuthorizeHandler(oauth oauth2.Provider) http.HandlerFunc {
 }
 
 // oauth2CLICallbackHandler handles OAuth2 callbacks for CLI and returns JSON tokens.
-func oauth2CLICallbackHandler(oauth oauth2.Provider, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient) http.HandlerFunc {
+func oauth2CLICallbackHandler(oauth oauth2.Provider, oauthSvc useroauth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -155,13 +147,7 @@ func oauth2CLICallbackHandler(oauth oauth2.Provider, svc users.Service, tokenCli
 			return
 		}
 
-		token, err := exchangeCode(r.Context(), oauth, req.Code, req.RedirectURL)
-		if err != nil {
-			respondWithJSON(w, http.StatusUnauthorized, newErrorResponse(err.Error()))
-			return
-		}
-
-		jwt, err := processOAuthUser(r.Context(), oauth, token.AccessToken, svc, tokenClient)
+		jwt, err := oauthSvc.ProcessWebCallback(r.Context(), oauth, req.Code, req.RedirectURL)
 		if err != nil {
 			status := http.StatusInternalServerError
 			if err.Error() == "unauthorized" {
@@ -174,45 +160,6 @@ func oauth2CLICallbackHandler(oauth oauth2.Provider, svc users.Service, tokenCli
 		jwt.AccessType = ""
 		respondWithJSON(w, http.StatusOK, jwt)
 	}
-}
-
-// exchangeCode exchanges an authorization code for an access token.
-// If redirectURL is provided, it uses ExchangeWithRedirect, otherwise uses Exchange.
-func exchangeCode(ctx context.Context, provider oauth2.Provider, code, redirectURL string) (goauth2.Token, error) {
-	if redirectURL != "" {
-		return provider.ExchangeWithRedirect(ctx, code, redirectURL)
-	}
-	return provider.Exchange(ctx, code)
-}
-
-// processOAuthUser retrieves user info from the OAuth provider, creates or updates the user,
-// adds user policies, and issues a JWT token.
-func processOAuthUser(ctx context.Context, provider oauth2.Provider, accessToken string, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient) (*grpcTokenV1.Token, error) {
-	user, err := provider.UserInfo(accessToken)
-	if err != nil {
-		return nil, err
-	}
-
-	user.AuthProvider = provider.Name()
-	if user.AuthProvider == "" {
-		user.AuthProvider = "oauth"
-	}
-
-	user, err = svc.OAuthCallback(ctx, user)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := svc.OAuthAddUserPolicy(ctx, user); err != nil {
-		return nil, err
-	}
-
-	return tokenClient.Issue(ctx, &grpcTokenV1.IssueReq{
-		UserId:   user.ID,
-		Type:     uint32(smqauth.AccessKey),
-		UserRole: uint32(smqauth.UserRole),
-		Verified: !user.VerifiedAt.IsZero(),
-	})
 }
 
 // respondWithJSON writes a JSON response with the given status code and data.
@@ -248,13 +195,13 @@ func setTokenCookies(w http.ResponseWriter, jwt *grpcTokenV1.Token) {
 }
 
 // handleDeviceFlowCallback processes OAuth callback for device authorization flow.
-func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oauth2.Provider, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, deviceStore DeviceCodeStore) {
+func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oauth2.Provider, oauthSvc useroauth.Service) {
 	// Extract user code from state (format: "device:ABCD-EFGH")
 	state := r.FormValue("state")
-	userCode := strings.TrimPrefix(state, "device:")
+	userCode := useroauth.ExtractUserCodeFromState(state)
 
-	// Get device code by user code
-	deviceCode, err := deviceStore.GetByUserCode(userCode)
+	// Get device code by user code to validate it exists
+	_, err := oauthSvc.GetDeviceCodeByUserCode(r.Context(), userCode)
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprint(w, strings.Replace(errorHTML, "{{ERROR_MESSAGE}}", "The device code is invalid or has expired.", 1))
@@ -269,20 +216,10 @@ func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oaut
 		return
 	}
 
-	// Exchange OAuth code for token
-	token, err := oauth.Exchange(r.Context(), code)
-	if err != nil {
+	// Process the device callback
+	if err := oauthSvc.ProcessDeviceCallback(r.Context(), oauth, userCode, code); err != nil {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, strings.Replace(errorHTML, "{{ERROR_MESSAGE}}", fmt.Sprintf("Failed to exchange code: %s.", err.Error()), 1))
-		return
-	}
-
-	// Mark device code as approved with access token
-	deviceCode.Approved = true
-	deviceCode.AccessToken = token.AccessToken
-	if err := deviceStore.Update(deviceCode); err != nil {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, strings.Replace(errorHTML, "{{ERROR_MESSAGE}}", fmt.Sprintf("Failed to approve device: %s.", err.Error()), 1))
+		fmt.Fprint(w, strings.Replace(errorHTML, "{{ERROR_MESSAGE}}", fmt.Sprintf("Failed to process callback: %s.", err.Error()), 1))
 		return
 	}
 

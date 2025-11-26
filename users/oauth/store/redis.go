@@ -1,7 +1,7 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
-package api
+package store
 
 import (
 	"context"
@@ -38,13 +38,13 @@ func (s *redisDeviceCodeStore) Save(code DeviceCode) error {
 
 	// Store device code with expiry
 	deviceKey := deviceCodePrefix + code.DeviceCode
-	if err := s.client.Set(s.ctx, deviceKey, data, deviceCodeExpiry).Err(); err != nil {
+	if err := s.client.Set(s.ctx, deviceKey, data, DeviceCodeExpiry).Err(); err != nil {
 		return fmt.Errorf("failed to save device code: %w", err)
 	}
 
 	// Store user code to device code mapping with expiry
 	userKey := userCodePrefix + code.UserCode
-	if err := s.client.Set(s.ctx, userKey, code.DeviceCode, deviceCodeExpiry).Err(); err != nil {
+	if err := s.client.Set(s.ctx, userKey, code.DeviceCode, DeviceCodeExpiry).Err(); err != nil {
 		return fmt.Errorf("failed to save user code mapping: %w", err)
 	}
 
@@ -56,7 +56,7 @@ func (s *redisDeviceCodeStore) Get(deviceCode string) (DeviceCode, error) {
 	data, err := s.client.Get(s.ctx, deviceKey).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			return DeviceCode{}, fmt.Errorf("device code not found")
+			return DeviceCode{}, ErrDeviceCodeNotFound
 		}
 		return DeviceCode{}, fmt.Errorf("failed to get device code: %w", err)
 	}
@@ -75,7 +75,7 @@ func (s *redisDeviceCodeStore) GetByUserCode(userCode string) (DeviceCode, error
 	deviceCode, err := s.client.Get(s.ctx, userKey).Result()
 	if err != nil {
 		if err == redis.Nil {
-			return DeviceCode{}, fmt.Errorf("user code not found")
+			return DeviceCode{}, ErrUserCodeNotFound
 		}
 		return DeviceCode{}, fmt.Errorf("failed to get device code by user code: %w", err)
 	}
@@ -109,7 +109,7 @@ func (s *redisDeviceCodeStore) Update(code DeviceCode) error {
 
 	// If TTL is negative (key doesn't exist or no expiry), use default
 	if ttl < 0 {
-		ttl = deviceCodeExpiry
+		ttl = DeviceCodeExpiry
 	}
 
 	// Update the device code with remaining TTL

@@ -9,9 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/absmach/supermq/users/oauth/store"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	deviceCodePrefix = "oauth:device:code:"
+	userCodePrefix   = "oauth:device:user:"
 )
 
 const (
@@ -58,9 +64,9 @@ func TestRedisDeviceCodeStore_Save(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := DeviceCode{
+	code := store.DeviceCode{
 		DeviceCode:      "test-device-code",
 		UserCode:        "ABCD-EFGH",
 		VerificationURI: "http://localhost/verify",
@@ -71,7 +77,7 @@ func TestRedisDeviceCodeStore_Save(t *testing.T) {
 		State:           "device:ABCD-EFGH",
 	}
 
-	err := store.Save(code)
+	err := deviceStore.Save(code)
 	require.NoError(t, err)
 
 	// Verify device code was saved
@@ -90,7 +96,7 @@ func TestRedisDeviceCodeStore_Save(t *testing.T) {
 	ttl, err := client.TTL(ctx, deviceKey).Result()
 	require.NoError(t, err)
 	assert.Greater(t, ttl, time.Duration(0))
-	assert.LessOrEqual(t, ttl, deviceCodeExpiry)
+	assert.LessOrEqual(t, ttl, store.DeviceCodeExpiry)
 }
 
 func TestRedisDeviceCodeStore_Get(t *testing.T) {
@@ -98,9 +104,9 @@ func TestRedisDeviceCodeStore_Get(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	originalCode := DeviceCode{
+	originalCode := store.DeviceCode{
 		DeviceCode:      "test-device-code-2",
 		UserCode:        "XXXX-YYYY",
 		VerificationURI: "http://localhost/verify",
@@ -113,11 +119,11 @@ func TestRedisDeviceCodeStore_Get(t *testing.T) {
 		Approved:        false,
 	}
 
-	err := store.Save(originalCode)
+	err := deviceStore.Save(originalCode)
 	require.NoError(t, err)
 
 	// Retrieve the code
-	retrievedCode, err := store.Get(originalCode.DeviceCode)
+	retrievedCode, err := deviceStore.Get(originalCode.DeviceCode)
 	require.NoError(t, err)
 
 	assert.Equal(t, originalCode.DeviceCode, retrievedCode.DeviceCode)
@@ -132,9 +138,9 @@ func TestRedisDeviceCodeStore_GetNotFound(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	_, err := store.Get("non-existent-code")
+	_, err := deviceStore.Get("non-existent-code")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "device code not found")
 }
@@ -144,9 +150,9 @@ func TestRedisDeviceCodeStore_GetByUserCode(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	originalCode := DeviceCode{
+	originalCode := store.DeviceCode{
 		DeviceCode:      "test-device-code-3",
 		UserCode:        "ZZZZ-AAAA",
 		VerificationURI: "http://localhost/verify",
@@ -157,11 +163,11 @@ func TestRedisDeviceCodeStore_GetByUserCode(t *testing.T) {
 		State:           "device:ZZZZ-AAAA",
 	}
 
-	err := store.Save(originalCode)
+	err := deviceStore.Save(originalCode)
 	require.NoError(t, err)
 
 	// Retrieve by user code
-	retrievedCode, err := store.GetByUserCode(originalCode.UserCode)
+	retrievedCode, err := deviceStore.GetByUserCode(originalCode.UserCode)
 	require.NoError(t, err)
 
 	assert.Equal(t, originalCode.DeviceCode, retrievedCode.DeviceCode)
@@ -174,9 +180,9 @@ func TestRedisDeviceCodeStore_GetByUserCodeNotFound(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	_, err := store.GetByUserCode("non-existent-user-code")
+	_, err := deviceStore.GetByUserCode("non-existent-user-code")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "user code not found")
 }
@@ -186,9 +192,9 @@ func TestRedisDeviceCodeStore_Update(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	originalCode := DeviceCode{
+	originalCode := store.DeviceCode{
 		DeviceCode:      "test-device-code-4",
 		UserCode:        "BBBB-CCCC",
 		VerificationURI: "http://localhost/verify",
@@ -201,18 +207,18 @@ func TestRedisDeviceCodeStore_Update(t *testing.T) {
 		AccessToken:     "",
 	}
 
-	err := store.Save(originalCode)
+	err := deviceStore.Save(originalCode)
 	require.NoError(t, err)
 
 	// Update the code
 	originalCode.Approved = true
 	originalCode.AccessToken = "new-access-token"
 
-	err = store.Update(originalCode)
+	err = deviceStore.Update(originalCode)
 	require.NoError(t, err)
 
 	// Retrieve and verify update
-	retrievedCode, err := store.Get(originalCode.DeviceCode)
+	retrievedCode, err := deviceStore.Get(originalCode.DeviceCode)
 	require.NoError(t, err)
 
 	assert.True(t, retrievedCode.Approved)
@@ -224,13 +230,13 @@ func TestRedisDeviceCodeStore_UpdateNotFound(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := DeviceCode{
+	code := store.DeviceCode{
 		DeviceCode: "non-existent-code",
 	}
 
-	err := store.Update(code)
+	err := deviceStore.Update(code)
 	require.Error(t, err)
 }
 
@@ -239,9 +245,9 @@ func TestRedisDeviceCodeStore_Delete(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := DeviceCode{
+	code := store.DeviceCode{
 		DeviceCode:      "test-device-code-5",
 		UserCode:        "DDDD-EEEE",
 		VerificationURI: "http://localhost/verify",
@@ -252,19 +258,19 @@ func TestRedisDeviceCodeStore_Delete(t *testing.T) {
 		State:           "device:DDDD-EEEE",
 	}
 
-	err := store.Save(code)
+	err := deviceStore.Save(code)
 	require.NoError(t, err)
 
 	// Verify it exists
-	_, err = store.Get(code.DeviceCode)
+	_, err = deviceStore.Get(code.DeviceCode)
 	require.NoError(t, err)
 
 	// Delete it
-	err = store.Delete(code.DeviceCode)
+	err = deviceStore.Delete(code.DeviceCode)
 	require.NoError(t, err)
 
 	// Verify it's gone
-	_, err = store.Get(code.DeviceCode)
+	_, err = deviceStore.Get(code.DeviceCode)
 	require.Error(t, err)
 
 	// Verify user code mapping is also gone
@@ -284,9 +290,9 @@ func TestRedisDeviceCodeStore_DeleteNotFound(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	err := store.Delete("non-existent-code")
+	err := deviceStore.Delete("non-existent-code")
 	require.Error(t, err)
 }
 
@@ -295,9 +301,9 @@ func TestRedisDeviceCodeStore_Expiry(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := DeviceCode{
+	code := store.DeviceCode{
 		DeviceCode:      "test-device-code-6",
 		UserCode:        "FFFF-GGGG",
 		VerificationURI: "http://localhost/verify",
@@ -308,7 +314,7 @@ func TestRedisDeviceCodeStore_Expiry(t *testing.T) {
 		State:           "device:FFFF-GGGG",
 	}
 
-	err := store.Save(code)
+	err := deviceStore.Save(code)
 	require.NoError(t, err)
 
 	// Manually set a very short TTL for testing
@@ -323,11 +329,11 @@ func TestRedisDeviceCodeStore_Expiry(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Verify it's expired
-	_, err = store.Get(code.DeviceCode)
+	_, err = deviceStore.Get(code.DeviceCode)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "device code not found")
 
-	_, err = store.GetByUserCode(code.UserCode)
+	_, err = deviceStore.GetByUserCode(code.UserCode)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "user code not found")
 }
@@ -339,10 +345,10 @@ func TestRedisDeviceCodeStore_MultipleInstances(t *testing.T) {
 	ctx := context.Background()
 
 	// Create two store instances (simulating two service instances)
-	store1 := NewRedisDeviceCodeStore(ctx, client)
-	store2 := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore1 := store.NewRedisDeviceCodeStore(ctx, client)
+	deviceStore2 := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := DeviceCode{
+	code := store.DeviceCode{
 		DeviceCode:      "test-device-code-7",
 		UserCode:        "HHHH-IIII",
 		VerificationURI: "http://localhost/verify",
@@ -355,11 +361,11 @@ func TestRedisDeviceCodeStore_MultipleInstances(t *testing.T) {
 	}
 
 	// Save from instance 1
-	err := store1.Save(code)
+	err := deviceStore1.Save(code)
 	require.NoError(t, err)
 
 	// Retrieve from instance 2
-	retrievedCode, err := store2.Get(code.DeviceCode)
+	retrievedCode, err := deviceStore2.Get(code.DeviceCode)
 	require.NoError(t, err)
 	assert.Equal(t, code.DeviceCode, retrievedCode.DeviceCode)
 	assert.False(t, retrievedCode.Approved)
@@ -367,11 +373,11 @@ func TestRedisDeviceCodeStore_MultipleInstances(t *testing.T) {
 	// Update from instance 2
 	retrievedCode.Approved = true
 	retrievedCode.AccessToken = "shared-token"
-	err = store2.Update(retrievedCode)
+	err = deviceStore2.Update(retrievedCode)
 	require.NoError(t, err)
 
 	// Verify update from instance 1
-	verifiedCode, err := store1.Get(code.DeviceCode)
+	verifiedCode, err := deviceStore1.Get(code.DeviceCode)
 	require.NoError(t, err)
 	assert.True(t, verifiedCode.Approved)
 	assert.Equal(t, "shared-token", verifiedCode.AccessToken)
@@ -382,7 +388,7 @@ func TestRedisDeviceCodeStore_ConcurrentAccess(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
-	store := NewRedisDeviceCodeStore(ctx, client)
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
 	// Save multiple codes concurrently
 	numCodes := 10
@@ -390,7 +396,7 @@ func TestRedisDeviceCodeStore_ConcurrentAccess(t *testing.T) {
 
 	for i := 0; i < numCodes; i++ {
 		go func(idx int) {
-			code := DeviceCode{
+			code := store.DeviceCode{
 				DeviceCode:      fmt.Sprintf("concurrent-code-%d", idx),
 				UserCode:        fmt.Sprintf("CODE-%04d", idx),
 				VerificationURI: "http://localhost/verify",
@@ -400,7 +406,7 @@ func TestRedisDeviceCodeStore_ConcurrentAccess(t *testing.T) {
 				CreatedAt:       time.Now(),
 				State:           fmt.Sprintf("device:CODE-%04d", idx),
 			}
-			errChan <- store.Save(code)
+			errChan <- deviceStore.Save(code)
 		}(i)
 	}
 
@@ -412,7 +418,7 @@ func TestRedisDeviceCodeStore_ConcurrentAccess(t *testing.T) {
 
 	// Verify all codes can be retrieved
 	for i := 0; i < numCodes; i++ {
-		code, err := store.Get(fmt.Sprintf("concurrent-code-%d", i))
+		code, err := deviceStore.Get(fmt.Sprintf("concurrent-code-%d", i))
 		require.NoError(t, err)
 		assert.Equal(t, fmt.Sprintf("CODE-%04d", i), code.UserCode)
 	}

@@ -208,7 +208,7 @@ func TestCallbackServer(t *testing.T) {
 		server, err := newCallbackServer(resultChan)
 		require.NoError(t, err)
 		require.NotNil(t, server)
-		defer server.Shutdown()
+		defer server.Shutdown(nil)
 
 		callbackURL := fmt.Sprintf("http://127.0.0.1:%s%s?code=test-code&state=test-state", localServerPort, callbackPath)
 
@@ -234,7 +234,7 @@ func TestCallbackServer(t *testing.T) {
 		server, err := newCallbackServer(resultChan)
 		require.NoError(t, err)
 		require.NotNil(t, server)
-		defer server.Shutdown()
+		defer server.Shutdown(nil)
 
 		callbackURL := fmt.Sprintf("http://127.0.0.1:%s%s?error=access_denied", localServerPort, callbackPath)
 
@@ -259,7 +259,7 @@ func TestCallbackServer(t *testing.T) {
 		server, err := newCallbackServer(resultChan)
 		require.NoError(t, err)
 		require.NotNil(t, server)
-		defer server.Shutdown()
+		defer server.Shutdown(nil)
 
 		callbackURL := fmt.Sprintf("http://127.0.0.1:%s%s?state=test-state", localServerPort, callbackPath)
 

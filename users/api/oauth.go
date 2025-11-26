@@ -17,18 +17,24 @@ import (
 	goauth2 "golang.org/x/oauth2"
 )
 
+var (
+	errInvalidBody  = newErrorResponse("invalid request body")
+	errInvalidState = newErrorResponse("invalid state")
+	errEmptyCode    = newErrorResponse("empty code")
+)
+
 type errorResponse struct {
 	Error string `json:"error"`
-}
-
-type authURLResponse struct {
-	AuthorizationURL string `json:"authorization_url"`
-	State            string `json:"state"`
 }
 
 // newErrorResponse creates a JSON error response.
 func newErrorResponse(msg string) errorResponse {
 	return errorResponse{Error: msg}
+}
+
+type authURLResponse struct {
+	AuthorizationURL string `json:"authorization_url"`
+	State            string `json:"state"`
 }
 
 // oauthHandler registers OAuth2 routes for the given providers.
@@ -120,7 +126,6 @@ func oauth2CLICallbackHandler(oauth oauth2.Provider, svc users.Service, tokenCli
 			respondWithJSON(w, http.StatusNotFound, errResp)
 			return
 		}
-
 		var req struct {
 			Code        string `json:"code"`
 			State       string `json:"state"`
@@ -128,27 +133,23 @@ func oauth2CLICallbackHandler(oauth oauth2.Provider, svc users.Service, tokenCli
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			errResp := newErrorResponse("invalid request body")
-			respondWithJSON(w, http.StatusBadRequest, errResp)
+			respondWithJSON(w, http.StatusBadRequest, errInvalidBody)
 			return
 		}
 
 		if req.State != oauth.State() {
-			errResp := newErrorResponse("invalid state")
-			respondWithJSON(w, http.StatusBadRequest, errResp)
+			respondWithJSON(w, http.StatusBadRequest, errInvalidState)
 			return
 		}
 
 		if req.Code == "" {
-			errResp := newErrorResponse("empty code")
-			respondWithJSON(w, http.StatusBadRequest, errResp)
+			respondWithJSON(w, http.StatusBadRequest, errEmptyCode)
 			return
 		}
 
 		token, err := exchangeCode(r.Context(), oauth, req.Code, req.RedirectURL)
 		if err != nil {
-			errResp := newErrorResponse(err.Error())
-			respondWithJSON(w, http.StatusUnauthorized, errResp)
+			respondWithJSON(w, http.StatusUnauthorized, newErrorResponse(err.Error()))
 			return
 		}
 
@@ -158,8 +159,7 @@ func oauth2CLICallbackHandler(oauth oauth2.Provider, svc users.Service, tokenCli
 			if err.Error() == "unauthorized" {
 				status = http.StatusUnauthorized
 			}
-			errResp := newErrorResponse(err.Error())
-			respondWithJSON(w, status, errResp)
+			respondWithJSON(w, status, newErrorResponse(err.Error()))
 			return
 		}
 

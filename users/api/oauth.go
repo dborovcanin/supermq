@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
 	smqauth "github.com/absmach/supermq/auth"
@@ -42,9 +43,9 @@ type authURLResponse struct {
 // - GET /oauth/authorize/{provider} - Returns the authorization URL
 // - GET /oauth/callback/{provider} - Handles OAuth2 callback and sets cookies
 // - POST /oauth/cli/callback/{provider} - Handles CLI OAuth2 callback and returns JSON.
-func oauthHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, providers ...oauth2.Provider) *chi.Mux {
+func oauthHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, deviceStore DeviceCodeStore, providers ...oauth2.Provider) *chi.Mux {
 	for _, provider := range providers {
-		r.HandleFunc("/oauth/callback/"+provider.Name(), oauth2CallbackHandler(provider, svc, tokenClient))
+		r.HandleFunc("/oauth/callback/"+provider.Name(), oauth2CallbackHandler(provider, svc, tokenClient, deviceStore))
 		r.Get("/oauth/authorize/"+provider.Name(), oauth2AuthorizeHandler(provider))
 		r.Post("/oauth/cli/callback/"+provider.Name(), oauth2CLICallbackHandler(provider, svc, tokenClient))
 	}
@@ -53,7 +54,7 @@ func oauthHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenSe
 }
 
 // oauth2CallbackHandler is a http.HandlerFunc that handles OAuth2 callbacks.
-func oauth2CallbackHandler(oauth oauth2.Provider, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient) http.HandlerFunc {
+func oauth2CallbackHandler(oauth oauth2.Provider, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, deviceStore DeviceCodeStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !oauth.IsEnabled() {
 			redirectWithError(w, r, oauth.ErrorURL(), "oauth provider is disabled")
@@ -61,6 +62,13 @@ func oauth2CallbackHandler(oauth oauth2.Provider, svc users.Service, tokenClient
 		}
 
 		state := r.FormValue("state")
+
+		// Check if this is a device flow callback (state contains device: prefix)
+		if strings.HasPrefix(state, "device:") {
+			handleDeviceFlowCallback(w, r, oauth, svc, tokenClient, deviceStore)
+			return
+		}
+
 		if state != oauth.State() {
 			redirectWithError(w, r, oauth.ErrorURL(), "invalid state")
 			return
@@ -237,4 +245,124 @@ func setTokenCookies(w http.ResponseWriter, jwt *grpcTokenV1.Token) {
 		HttpOnly: true,
 		Secure:   true,
 	})
+}
+
+// handleDeviceFlowCallback processes OAuth callback for device authorization flow.
+func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oauth2.Provider, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, deviceStore DeviceCodeStore) {
+	// Extract user code from state (format: "device:ABCD-EFGH")
+	state := r.FormValue("state")
+	userCode := strings.TrimPrefix(state, "device:")
+
+	// Get device code by user code
+	deviceCode, err := deviceStore.GetByUserCode(userCode)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprint(w, `<html><body><h1>Invalid Code</h1><p>The device code is invalid or has expired.</p></body></html>`)
+		return
+	}
+
+	// Get OAuth authorization code
+	code := r.FormValue("code")
+	if code == "" {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprint(w, `<html><body><h1>Error</h1><p>No authorization code received.</p></body></html>`)
+		return
+	}
+
+	// Exchange OAuth code for token
+	token, err := oauth.Exchange(r.Context(), code)
+	if err != nil {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `<html><body><h1>Error</h1><p>Failed to exchange code: %s</p></body></html>`, err.Error())
+		return
+	}
+
+	// Mark device code as approved with access token
+	deviceCode.Approved = true
+	deviceCode.AccessToken = token.AccessToken
+	if err := deviceStore.Update(deviceCode); err != nil {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `<html><body><h1>Error</h1><p>Failed to approve device: %s</p></body></html>`, err.Error())
+		return
+	}
+
+	// Show success page
+	w.Header().Set("Content-Type", "text/html")
+	successHTML := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Approved - Magistrala</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #073764;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 48px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .checkmark {
+            width: 50px;
+            height: 50px;
+        }
+        .checkmark-path {
+            stroke: white;
+            stroke-width: 4;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        h1 {
+            color: #073764;
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+        p {
+            color: #4a5568;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 32px 24px; }
+            h1 { font-size: 28px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <svg class="checkmark" viewBox="0 0 52 52">
+                <path class="checkmark-path" d="M14 27l10 10 18-20"/>
+            </svg>
+        </div>
+        <h1>Device Approved!</h1>
+        <p>Your device has been successfully authorized.</p>
+        <p>You can now close this window and return to your device.</p>
+    </div>
+</body>
+</html>`
+	fmt.Fprint(w, successHTML)
 }

@@ -603,7 +603,8 @@ func handleUserOAuth(cmd *cobra.Command, provider string, args []string) {
 		return
 	}
 
-	if err := performOAuthLogin(cmd, provider); err != nil {
+	// Use device flow by default for better CLI experience
+	if err := performOAuthDeviceLogin(cmd, provider); err != nil {
 		logErrorCmd(*cmd, err)
 		return
 	}

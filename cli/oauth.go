@@ -429,10 +429,12 @@ func newCallbackServer(resultChan chan<- oauthCallbackResult) (*callbackServer, 
 	}, nil
 }
 
-func (cs *callbackServer) Shutdown() {
+func (cs *callbackServer) Shutdown(cmd *cobra.Command) {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	cs.server.Shutdown(ctx)
+	if err := cs.server.Shutdown(ctx); err != nil {
+		logErrorCmd(*cmd, err)
+	}
 }
 
 func performOAuthLogin(cmd *cobra.Command, provider string) error {
@@ -447,7 +449,7 @@ func performOAuthLoginWithBrowser(cmd *cobra.Command, provider string, browser b
 	if err != nil {
 		return err
 	}
-	defer server.Shutdown()
+	defer server.Shutdown(cmd)
 
 	callbackURL := fmt.Sprintf("http://127.0.0.1:%s%s", localServerPort, callbackPath)
 	authURL, state, err := sdk.OAuthAuthorizationURL(ctx, provider, callbackURL)

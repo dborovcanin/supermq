@@ -384,6 +384,23 @@ type SDK interface {
 	//  fmt.Println(token)
 	OAuthCallback(ctx context.Context, provider, code, state, redirectURL string) (Token, errors.SDKError)
 
+	// OAuthDeviceCode initiates the device authorization flow and returns device code information.
+	//
+	// example:
+	//  ctx := context.Background()
+	//  deviceCode, _ := sdk.OAuthDeviceCode(ctx, "google")
+	//  fmt.Println("Go to:", deviceCode.VerificationURI)
+	//  fmt.Println("Enter code:", deviceCode.UserCode)
+	OAuthDeviceCode(ctx context.Context, provider string) (DeviceCode, errors.SDKError)
+
+	// OAuthDeviceToken polls for device authorization completion and returns tokens.
+	//
+	// example:
+	//  ctx := context.Background()
+	//  token, _ := sdk.OAuthDeviceToken(ctx, "google", deviceCode.DeviceCode)
+	//  fmt.Println(token)
+	OAuthDeviceToken(ctx context.Context, provider, deviceCode string) (Token, errors.SDKError)
+
 	// SeachUsers filters users and returns a page result.
 	//
 	// example:

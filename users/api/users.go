@@ -27,7 +27,7 @@ import (
 var passRegex = regexp.MustCompile("^.{8,}$")
 
 // usersHandler returns a HTTP handler for API endpoints.
-func usersHandler(svc users.Service, authn smqauthn.AuthNMiddleware, tokenClient grpcTokenV1.TokenServiceClient, selfRegister bool, r *chi.Mux, logger *slog.Logger, pr *regexp.Regexp, idp supermq.IDProvider, providers ...oauth2.Provider) *chi.Mux {
+func usersHandler(svc users.Service, authn smqauthn.AuthNMiddleware, tokenClient grpcTokenV1.TokenServiceClient, selfRegister bool, r *chi.Mux, logger *slog.Logger, pr *regexp.Regexp, idp supermq.IDProvider, deviceStore DeviceCodeStore, providers ...oauth2.Provider) *chi.Mux {
 	passRegex = pr
 
 	opts := []kithttp.ServerOption{
@@ -206,7 +206,7 @@ func usersHandler(svc users.Service, authn smqauthn.AuthNMiddleware, tokenClient
 	), "verify_email").ServeHTTP)
 
 	for _, provider := range providers {
-		r.HandleFunc("/oauth/callback/"+provider.Name(), oauth2CallbackHandler(provider, svc, tokenClient))
+		r.HandleFunc("/oauth/callback/"+provider.Name(), oauth2CallbackHandler(provider, svc, tokenClient, deviceStore))
 		r.Get("/oauth/authorize/"+provider.Name(), oauth2AuthorizeHandler(provider))
 		r.Post("/oauth/cli/callback/"+provider.Name(), oauth2CLICallbackHandler(provider, svc, tokenClient))
 	}

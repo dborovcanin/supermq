@@ -21,6 +21,15 @@ type Token struct {
 	AccessType   string `json:"access_type,omitempty"`
 }
 
+// DeviceCode contains device authorization flow information.
+type DeviceCode struct {
+	DeviceCode      string `json:"device_code"`
+	UserCode        string `json:"user_code"`
+	VerificationURI string `json:"verification_uri"`
+	ExpiresIn       int    `json:"expires_in"`
+	Interval        int    `json:"interval"`
+}
+
 type Login struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -109,4 +118,58 @@ func (sdk mgSDK) OAuthCallback(ctx context.Context, provider, code, state, redir
 	}
 
 	return t, nil
+}
+
+// OAuthDeviceCode initiates the device authorization flow.
+func (sdk mgSDK) OAuthDeviceCode(ctx context.Context, provider string) (DeviceCode, errors.SDKError) {
+	reqURL := fmt.Sprintf("%s/oauth/device/code/%s", sdk.usersURL, provider)
+
+	_, body, sdkErr := sdk.processRequest(ctx, http.MethodPost, reqURL, "", nil, nil, http.StatusOK)
+	if sdkErr != nil {
+		return DeviceCode{}, sdkErr
+	}
+
+	var deviceCode DeviceCode
+	if err := json.Unmarshal(body, &deviceCode); err != nil {
+		return DeviceCode{}, errors.NewSDKError(err)
+	}
+
+	return deviceCode, nil
+}
+
+// OAuthDeviceToken polls for device authorization completion.
+func (sdk mgSDK) OAuthDeviceToken(ctx context.Context, provider, deviceCode string) (Token, errors.SDKError) {
+	reqURL := fmt.Sprintf("%s/oauth/device/token/%s", sdk.usersURL, provider)
+
+	data, err := json.Marshal(map[string]string{
+		"device_code": deviceCode,
+	})
+	if err != nil {
+		return Token{}, errors.NewSDKError(err)
+	}
+
+	// Accept both 200 (success) and 202 (pending) as valid responses
+	_, body, sdkErr := sdk.processRequest(ctx, http.MethodPost, reqURL, "", data, nil, http.StatusOK, http.StatusAccepted)
+	if sdkErr != nil {
+		return Token{}, sdkErr
+	}
+
+	// Try to unmarshal as a token first
+	t := Token{}
+	if err := json.Unmarshal(body, &t); err == nil && t.AccessToken != "" {
+		// Successfully got a token
+		return t, nil
+	}
+
+	// If no token, check if it's an error response (pending/slow down)
+	var errResp struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &errResp); err == nil && errResp.Error != "" {
+		// Return an error that preserves the message for CLI to check
+		return Token{}, errors.NewSDKError(fmt.Errorf("%s", errResp.Error))
+	}
+
+	// Shouldn't reach here, but handle gracefully
+	return Token{}, errors.NewSDKError(fmt.Errorf("unexpected response"))
 }

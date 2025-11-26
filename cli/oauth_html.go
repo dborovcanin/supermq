@@ -17,7 +17,7 @@ const successHTML = `<!DOCTYPE html>
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: rgb(1, 69, 96);
+            background: #073764;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -70,7 +70,7 @@ const successHTML = `<!DOCTYPE html>
             width: 60px;
             height: 60px;
             margin: 0 auto 24px;
-            background: rgb(1, 69, 96);
+            background: #073764;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -106,7 +106,7 @@ const successHTML = `<!DOCTYPE html>
             }
         }
         h1 {
-            color: rgb(1, 69, 96);
+            color: #073764;
             font-size: 32px;
             font-weight: 600;
             margin-bottom: 16px;
@@ -215,7 +215,7 @@ const successHTML = `<!DOCTYPE html>
             <img src="https://cloud.magistrala.absmach.eu/_next/static/media/Magistrala_logo_landscape_white.59ea595a.svg"
                  alt="Magistrala Logo"
                  class="logo"
-                 style="filter: brightness(0) saturate(100%) invert(15%) sepia(84%) saturate(2449%) hue-rotate(173deg) brightness(94%) contrast(101%);">
+                 style="filter: brightness(0) saturate(100%) invert(18%) sepia(58%) saturate(1976%) hue-rotate(189deg) brightness(96%) contrast(103%);">
         </div>
 
         <div class="success-icon">
@@ -249,7 +249,7 @@ const errorHTML = `<!DOCTYPE html>
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: rgb(1, 69, 96);
+            background: #073764;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -337,7 +337,7 @@ const errorHTML = `<!DOCTYPE html>
             transform: translateX(-50%) rotate(-45deg);
         }
         h1 {
-            color: rgb(1, 69, 96);
+            color: #073764;
             font-size: 32px;
             font-weight: 600;
             margin-bottom: 16px;
@@ -469,7 +469,7 @@ const errorHTML = `<!DOCTYPE html>
             <img src="https://cloud.magistrala.absmach.eu/_next/static/media/Magistrala_logo_landscape_white.59ea595a.svg"
                  alt="Magistrala Logo"
                  class="logo"
-                 style="filter: brightness(0) saturate(100%) invert(15%) sepia(84%) saturate(2449%) hue-rotate(173deg) brightness(94%) contrast(101%);">
+                 style="filter: brightness(0) saturate(100%) invert(18%) sepia(58%) saturate(1976%) hue-rotate(189deg) brightness(96%) contrast(103%);">
         </div>
 
         <div class="error-icon">

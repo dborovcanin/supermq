@@ -13,6 +13,8 @@ import (
 	"time"
 
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
+	useroauth "github.com/absmach/supermq/users/oauth"
+	"github.com/absmach/supermq/users/oauth/store"
 	"github.com/absmach/supermq/users"
 	"github.com/absmach/supermq/users/mocks"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +23,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func TestGenerateUserCode(t *testing.T) {
+// func TestGenerateUserCode(t *testing.T) {
 	code, err := generateUserCode()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, code)
@@ -29,7 +31,7 @@ func TestGenerateUserCode(t *testing.T) {
 	assert.Len(t, code, 9) // XXXX-XXXX format
 }
 
-func TestGenerateDeviceCode(t *testing.T) {
+// func TestGenerateDeviceCode(t *testing.T) {
 	code, err := generateDeviceCode()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, code)
@@ -37,9 +39,9 @@ func TestGenerateDeviceCode(t *testing.T) {
 }
 
 func TestInMemoryDeviceCodeStore(t *testing.T) {
-	store := NewInMemoryDeviceCodeStore()
+	store := store.NewInMemoryDeviceCodeStore()
 
-	code := DeviceCode{
+	code := store.DeviceCode{
 		DeviceCode:      "device123",
 		UserCode:        "ABCD-EFGH",
 		VerificationURI: "http://example.com/verify",
@@ -95,7 +97,7 @@ func TestInMemoryDeviceCodeStore(t *testing.T) {
 	})
 
 	t.Run("Update non-existent", func(t *testing.T) {
-		err := store.Update(DeviceCode{DeviceCode: "nonexistent"})
+		err := store.Update(store.DeviceCode{DeviceCode: "nonexistent"})
 		assert.Error(t, err)
 	})
 }
@@ -105,7 +107,7 @@ func TestDeviceCodeHandler(t *testing.T) {
 	provider.On("Name").Return("google")
 	provider.On("IsEnabled").Return(true)
 
-	store := NewInMemoryDeviceCodeStore()
+	store := store.NewInMemoryDeviceCodeStore()
 
 	tests := []struct {
 		name           string
@@ -167,10 +169,10 @@ func TestDeviceCodeHandler(t *testing.T) {
 func TestDeviceTokenHandler(t *testing.T) {
 	svc := new(mocks.Service)
 	tokenClient := new(MockTokenServiceClient)
-	store := NewInMemoryDeviceCodeStore()
+	store := store.NewInMemoryDeviceCodeStore()
 
 	// Save a device code
-	deviceCode := DeviceCode{
+	deviceCode := store.DeviceCode{
 		DeviceCode:      "device123",
 		UserCode:        "ABCD-EFGH",
 		VerificationURI: "http://example.com/verify",
@@ -242,7 +244,7 @@ func TestDeviceTokenHandler(t *testing.T) {
 			provider.On("Name").Return("google")
 			provider.On("IsEnabled").Return(tc.enabled)
 
-			handler := deviceTokenHandler(provider, store, svc, tokenClient)
+			handler := deviceTokenHandler(provider, oauthSvc, store, svc, tokenClient)
 
 			reqBody, _ := json.Marshal(map[string]string{
 				"device_code": tc.deviceCode,
@@ -261,10 +263,10 @@ func TestDeviceTokenHandler(t *testing.T) {
 func TestDeviceVerifyHandler(t *testing.T) {
 	svc := new(mocks.Service)
 	tokenClient := new(MockTokenServiceClient)
-	store := NewInMemoryDeviceCodeStore()
+	store := store.NewInMemoryDeviceCodeStore()
 
 	// Save a device code
-	deviceCode := DeviceCode{
+	deviceCode := store.DeviceCode{
 		DeviceCode:      "device123",
 		UserCode:        "ABCD-EFGH",
 		VerificationURI: "http://example.com/verify",
@@ -424,19 +426,27 @@ type MockTokenServiceClient struct {
 }
 
 func (m *MockTokenServiceClient) Issue(ctx context.Context, req *grpcTokenV1.IssueReq, opts ...grpc.CallOption) (*grpcTokenV1.Token, error) {
+	useroauth "github.com/absmach/supermq/users/oauth"
+	"github.com/absmach/supermq/users/oauth/store"
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*grpcTokenV1.Token), args.Error(1)
+	useroauth "github.com/absmach/supermq/users/oauth"
+	"github.com/absmach/supermq/users/oauth/store"
 }
 
 func (m *MockTokenServiceClient) Refresh(ctx context.Context, req *grpcTokenV1.RefreshReq, opts ...grpc.CallOption) (*grpcTokenV1.Token, error) {
+	useroauth "github.com/absmach/supermq/users/oauth"
+	"github.com/absmach/supermq/users/oauth/store"
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*grpcTokenV1.Token), args.Error(1)
+	useroauth "github.com/absmach/supermq/users/oauth"
+	"github.com/absmach/supermq/users/oauth/store"
 }
 
 // Add these to users/mocks package

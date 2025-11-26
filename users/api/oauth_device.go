@@ -4,26 +4,16 @@
 package api
 
 import (
-	"crypto/rand"
-	"encoding/base32"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"strings"
-	"sync"
-	"time"
 
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
 	"github.com/absmach/supermq/pkg/oauth2"
 	"github.com/absmach/supermq/users"
+	useroauth "github.com/absmach/supermq/users/oauth"
 	"github.com/go-chi/chi/v5"
-)
-
-const (
-	deviceCodeLength      = 8  // Length of user code (e.g., "ABCD-EFGH")
-	deviceCodeExpiry      = 10 * time.Minute
-	deviceCodePollTimeout = 5 * time.Second
-	codeCheckInterval     = 3 * time.Second
 )
 
 var (
@@ -33,180 +23,26 @@ var (
 	errAccessDenied      = newErrorResponse("access denied")
 )
 
-// DeviceCode represents an OAuth2 device authorization code.
-type DeviceCode struct {
-	DeviceCode      string    `json:"device_code"`
-	UserCode        string    `json:"user_code"`
-	VerificationURI string    `json:"verification_uri"`
-	ExpiresIn       int       `json:"expires_in"`
-	Interval        int       `json:"interval"`
-	Provider        string    `json:"provider,omitempty"`
-	CreatedAt       time.Time `json:"created_at,omitempty"`
-	State           string    `json:"state,omitempty"`
-	AccessToken     string    `json:"access_token,omitempty"`
-	Approved        bool      `json:"approved,omitempty"`
-	Denied          bool      `json:"denied,omitempty"`
-	LastPoll        time.Time `json:"last_poll,omitempty"`
-}
-
-// DeviceCodeStore manages device authorization codes.
-type DeviceCodeStore interface {
-	Save(code DeviceCode) error
-	Get(deviceCode string) (DeviceCode, error)
-	GetByUserCode(userCode string) (DeviceCode, error)
-	Update(code DeviceCode) error
-	Delete(deviceCode string) error
-}
-
-// inMemoryDeviceCodeStore is an in-memory implementation of DeviceCodeStore.
-type inMemoryDeviceCodeStore struct {
-	mu          sync.RWMutex
-	codes       map[string]DeviceCode
-	userCodes   map[string]string // maps user code to device code
-	cleanupDone chan struct{}
-}
-
-// NewInMemoryDeviceCodeStore creates a new in-memory device code store.
-func NewInMemoryDeviceCodeStore() DeviceCodeStore {
-	store := &inMemoryDeviceCodeStore{
-		codes:       make(map[string]DeviceCode),
-		userCodes:   make(map[string]string),
-		cleanupDone: make(chan struct{}),
-	}
-	go store.cleanup()
-	return store
-}
-
-func (s *inMemoryDeviceCodeStore) Save(code DeviceCode) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.codes[code.DeviceCode] = code
-	s.userCodes[code.UserCode] = code.DeviceCode
-	return nil
-}
-
-func (s *inMemoryDeviceCodeStore) Get(deviceCode string) (DeviceCode, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	code, ok := s.codes[deviceCode]
-	if !ok {
-		return DeviceCode{}, fmt.Errorf("device code not found")
-	}
-	return code, nil
-}
-
-func (s *inMemoryDeviceCodeStore) GetByUserCode(userCode string) (DeviceCode, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	deviceCode, ok := s.userCodes[userCode]
-	if !ok {
-		return DeviceCode{}, fmt.Errorf("user code not found")
-	}
-	code, ok := s.codes[deviceCode]
-	if !ok {
-		return DeviceCode{}, fmt.Errorf("device code not found")
-	}
-	return code, nil
-}
-
-func (s *inMemoryDeviceCodeStore) Update(code DeviceCode) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, ok := s.codes[code.DeviceCode]; !ok {
-		return fmt.Errorf("device code not found")
-	}
-	s.codes[code.DeviceCode] = code
-	return nil
-}
-
-func (s *inMemoryDeviceCodeStore) Delete(deviceCode string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if code, ok := s.codes[deviceCode]; ok {
-		delete(s.userCodes, code.UserCode)
-	}
-	delete(s.codes, deviceCode)
-	return nil
-}
-
-func (s *inMemoryDeviceCodeStore) cleanup() {
-	ticker := time.NewTicker(1 * time.Minute)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			s.mu.Lock()
-			now := time.Now()
-			for deviceCode, code := range s.codes {
-				if now.Sub(code.CreatedAt) > deviceCodeExpiry {
-					delete(s.codes, deviceCode)
-					delete(s.userCodes, code.UserCode)
-				}
-			}
-			s.mu.Unlock()
-		case <-s.cleanupDone:
-			return
-		}
-	}
-}
-
-// generateUserCode generates a human-friendly code like "ABCD-EFGH".
-func generateUserCode() (string, error) {
-	b := make([]byte, deviceCodeLength)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	code := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(b)
-	code = strings.ToUpper(code[:deviceCodeLength])
-	// Format as XXXX-XXXX
-	if len(code) >= 8 {
-		code = code[:4] + "-" + code[4:8]
-	}
-	return code, nil
-}
-
-// generateDeviceCode generates a random device code.
-func generateDeviceCode() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(b), nil
-}
-
 // oauthDeviceHandler registers device flow routes for OAuth2 providers.
-func oauthDeviceHandler(r *chi.Mux, store DeviceCodeStore, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, providers ...oauth2.Provider) *chi.Mux {
+func oauthDeviceHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, oauthSvc useroauth.Service, providers ...oauth2.Provider) *chi.Mux {
 	for _, provider := range providers {
-		r.Post("/oauth/device/code/"+provider.Name(), deviceCodeHandler(provider, store))
-		r.Post("/oauth/device/token/"+provider.Name(), deviceTokenHandler(provider, store, svc, tokenClient))
+		r.Post("/oauth/device/code/"+provider.Name(), deviceCodeHandler(provider, oauthSvc))
+		r.Post("/oauth/device/token/"+provider.Name(), deviceTokenHandler(provider, oauthSvc))
 	}
 	// Register verify endpoints once (not per provider)
 	r.Get("/oauth/device/verify", deviceVerifyPageHandler())
-	r.Post("/oauth/device/verify", deviceVerifyHandler(store, svc, tokenClient, providers...))
+	r.Post("/oauth/device/verify", deviceVerifyHandler(oauthSvc, providers...))
 	return r
 }
 
 // deviceCodeHandler initiates the device authorization flow.
-func deviceCodeHandler(provider oauth2.Provider, store DeviceCodeStore) http.HandlerFunc {
+func deviceCodeHandler(provider oauth2.Provider, oauthSvc useroauth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		if !provider.IsEnabled() {
 			errResp := newErrorResponse("oauth provider is disabled")
 			respondWithJSON(w, http.StatusNotFound, errResp)
-			return
-		}
-
-		userCode, err := generateUserCode()
-		if err != nil {
-			respondWithJSON(w, http.StatusInternalServerError, newErrorResponse("failed to generate user code"))
-			return
-		}
-
-		deviceCode, err := generateDeviceCode()
-		if err != nil {
-			respondWithJSON(w, http.StatusInternalServerError, newErrorResponse("failed to generate device code"))
 			return
 		}
 
@@ -217,19 +53,9 @@ func deviceCodeHandler(provider oauth2.Provider, store DeviceCodeStore) http.Han
 		}
 		verificationURI := fmt.Sprintf("%s://%s/oauth/device/verify", scheme, r.Host)
 
-		code := DeviceCode{
-			DeviceCode:      deviceCode,
-			UserCode:        userCode,
-			VerificationURI: verificationURI,
-			ExpiresIn:       int(deviceCodeExpiry.Seconds()),
-			Interval:        int(codeCheckInterval.Seconds()),
-			Provider:        provider.Name(),
-			CreatedAt:       time.Now(),
-			State:           provider.State(),
-		}
-
-		if err := store.Save(code); err != nil {
-			respondWithJSON(w, http.StatusInternalServerError, newErrorResponse("failed to save device code"))
+		code, err := oauthSvc.CreateDeviceCode(r.Context(), provider, verificationURI)
+		if err != nil {
+			respondWithJSON(w, http.StatusInternalServerError, newErrorResponse(err.Error()))
 			return
 		}
 
@@ -238,7 +64,7 @@ func deviceCodeHandler(provider oauth2.Provider, store DeviceCodeStore) http.Han
 }
 
 // deviceTokenHandler polls for device authorization completion.
-func deviceTokenHandler(provider oauth2.Provider, store DeviceCodeStore, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient) http.HandlerFunc {
+func deviceTokenHandler(provider oauth2.Provider, oauthSvc useroauth.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -257,51 +83,26 @@ func deviceTokenHandler(provider oauth2.Provider, store DeviceCodeStore, svc use
 			return
 		}
 
-		code, err := store.Get(req.DeviceCode)
+		jwt, err := oauthSvc.PollDeviceToken(r.Context(), provider, req.DeviceCode)
 		if err != nil {
-			respondWithJSON(w, http.StatusNotFound, newErrorResponse("invalid device code"))
+			// Map OAuth service errors to appropriate HTTP responses
+			switch {
+			case errors.Is(err, useroauth.ErrDeviceCodeNotFound):
+				respondWithJSON(w, http.StatusNotFound, newErrorResponse("invalid device code"))
+			case errors.Is(err, useroauth.ErrDeviceCodeExpired):
+				respondWithJSON(w, http.StatusBadRequest, errDeviceCodeExpired)
+			case errors.Is(err, useroauth.ErrSlowDown):
+				respondWithJSON(w, http.StatusBadRequest, errSlowDown)
+			case errors.Is(err, useroauth.ErrAccessDenied):
+				respondWithJSON(w, http.StatusUnauthorized, errAccessDenied)
+			case errors.Is(err, useroauth.ErrDeviceCodePending):
+				respondWithJSON(w, http.StatusAccepted, errDeviceCodePending)
+			default:
+				respondWithJSON(w, http.StatusInternalServerError, newErrorResponse(err.Error()))
+			}
 			return
 		}
 
-		// Check expiration
-		if time.Since(code.CreatedAt) > deviceCodeExpiry {
-			store.Delete(req.DeviceCode)
-			respondWithJSON(w, http.StatusBadRequest, errDeviceCodeExpired)
-			return
-		}
-
-		// Check polling rate
-		if time.Since(code.LastPoll) < codeCheckInterval {
-			respondWithJSON(w, http.StatusBadRequest, errSlowDown)
-			return
-		}
-
-		// Update last poll time
-		code.LastPoll = time.Now()
-		store.Update(code)
-
-		// Check if denied
-		if code.Denied {
-			store.Delete(req.DeviceCode)
-			respondWithJSON(w, http.StatusUnauthorized, errAccessDenied)
-			return
-		}
-
-		// Check if approved
-		if !code.Approved || code.AccessToken == "" {
-			respondWithJSON(w, http.StatusAccepted, errDeviceCodePending)
-			return
-		}
-
-		// Process the OAuth user and issue tokens
-		jwt, err := processOAuthUser(r.Context(), provider, code.AccessToken, svc, tokenClient)
-		if err != nil {
-			store.Delete(req.DeviceCode)
-			respondWithJSON(w, http.StatusInternalServerError, newErrorResponse(err.Error()))
-			return
-		}
-
-		store.Delete(req.DeviceCode)
 		jwt.AccessType = ""
 		respondWithJSON(w, http.StatusOK, jwt)
 	}
@@ -488,7 +289,7 @@ func deviceVerifyPageHandler() http.HandlerFunc {
 }
 
 // deviceVerifyHandler handles user verification of device codes.
-func deviceVerifyHandler(store DeviceCodeStore, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, providers ...oauth2.Provider) http.HandlerFunc {
+func deviceVerifyHandler(oauthSvc useroauth.Service, providers ...oauth2.Provider) http.HandlerFunc {
 	providerMap := make(map[string]oauth2.Provider)
 	for _, p := range providers {
 		providerMap[p.Name()] = p
@@ -508,9 +309,13 @@ func deviceVerifyHandler(store DeviceCodeStore, svc users.Service, tokenClient g
 			return
 		}
 
-		code, err := store.GetByUserCode(req.UserCode)
+		code, err := oauthSvc.GetDeviceCodeByUserCode(r.Context(), req.UserCode)
 		if err != nil {
-			respondWithJSON(w, http.StatusNotFound, newErrorResponse("invalid user code"))
+			if errors.Is(err, useroauth.ErrUserCodeNotFound) {
+				respondWithJSON(w, http.StatusNotFound, newErrorResponse("invalid user code"))
+			} else {
+				respondWithJSON(w, http.StatusInternalServerError, newErrorResponse(err.Error()))
+			}
 			return
 		}
 
@@ -525,31 +330,23 @@ func deviceVerifyHandler(store DeviceCodeStore, svc users.Service, tokenClient g
 			return
 		}
 
-		// Check expiration
-		if time.Since(code.CreatedAt) > deviceCodeExpiry {
-			store.Delete(code.DeviceCode)
-			respondWithJSON(w, http.StatusBadRequest, errDeviceCodeExpired)
-			return
-		}
-
 		if !req.Approve {
-			code.Denied = true
-			store.Update(code)
+			// User denied - pass empty code and approve=false
+			if err := oauthSvc.VerifyDevice(r.Context(), provider, req.UserCode, "", false); err != nil {
+				respondWithJSON(w, http.StatusInternalServerError, newErrorResponse(err.Error()))
+				return
+			}
 			respondWithJSON(w, http.StatusOK, map[string]string{"status": "denied"})
 			return
 		}
 
-		// Exchange authorization code for access token
-		token, err := provider.Exchange(r.Context(), req.Code)
-		if err != nil {
-			respondWithJSON(w, http.StatusUnauthorized, newErrorResponse(err.Error()))
-			return
-		}
-
-		code.Approved = true
-		code.AccessToken = token.AccessToken
-		if err := store.Update(code); err != nil {
-			respondWithJSON(w, http.StatusInternalServerError, newErrorResponse("failed to update device code"))
+		// User approved - verify with the OAuth code
+		if err := oauthSvc.VerifyDevice(r.Context(), provider, req.UserCode, req.Code, true); err != nil {
+			if errors.Is(err, useroauth.ErrDeviceCodeExpired) {
+				respondWithJSON(w, http.StatusBadRequest, errDeviceCodeExpired)
+			} else {
+				respondWithJSON(w, http.StatusUnauthorized, newErrorResponse(err.Error()))
+			}
 			return
 		}
 

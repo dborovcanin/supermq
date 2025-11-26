@@ -24,6 +24,7 @@ import (
 	usersapi "github.com/absmach/supermq/users/api"
 	"github.com/absmach/supermq/users/mocks"
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	goauth2 "golang.org/x/oauth2"
@@ -114,7 +115,8 @@ func TestOAuthAuthorizeEndpoint(t *testing.T) {
 			provider.On("State").Return("test-state")
 
 			mux := chi.NewRouter()
-			usersapi.MakeHandler(svc, am, token, true, mux, logger, "", passRegex, idp, provider)
+			redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+			usersapi.MakeHandler(svc, am, token, true, mux, logger, "", passRegex, idp, redisClient, provider)
 
 			ts := httptest.NewServer(mux)
 			defer ts.Close()
@@ -440,7 +442,8 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			tc.mockSetup(provider, svc, tokenClient)
 
 			mux := chi.NewRouter()
-			usersapi.MakeHandler(svc, am, tokenClient, true, mux, logger, "", passRegex, idp, provider)
+			redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+			usersapi.MakeHandler(svc, am, tokenClient, true, mux, logger, "", passRegex, idp, redisClient, provider)
 
 			ts := httptest.NewServer(mux)
 			defer ts.Close()

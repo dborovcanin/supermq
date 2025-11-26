@@ -17,7 +17,6 @@ import (
 	apiutil "github.com/absmach/supermq/api/http/util"
 	smqauthn "github.com/absmach/supermq/pkg/authn"
 	"github.com/absmach/supermq/pkg/errors"
-	"github.com/absmach/supermq/pkg/oauth2"
 	"github.com/absmach/supermq/users"
 	"github.com/go-chi/chi/v5"
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -27,7 +26,7 @@ import (
 var passRegex = regexp.MustCompile("^.{8,}$")
 
 // usersHandler returns a HTTP handler for API endpoints.
-func usersHandler(svc users.Service, authn smqauthn.AuthNMiddleware, tokenClient grpcTokenV1.TokenServiceClient, selfRegister bool, r *chi.Mux, logger *slog.Logger, pr *regexp.Regexp, idp supermq.IDProvider, deviceStore DeviceCodeStore, providers ...oauth2.Provider) *chi.Mux {
+func usersHandler(svc users.Service, authn smqauthn.AuthNMiddleware, tokenClient grpcTokenV1.TokenServiceClient, selfRegister bool, r *chi.Mux, logger *slog.Logger, pr *regexp.Regexp, idp supermq.IDProvider) *chi.Mux {
 	passRegex = pr
 
 	opts := []kithttp.ServerOption{
@@ -204,12 +203,6 @@ func usersHandler(svc users.Service, authn smqauthn.AuthNMiddleware, tokenClient
 		api.EncodeResponse,
 		opts...,
 	), "verify_email").ServeHTTP)
-
-	for _, provider := range providers {
-		r.HandleFunc("/oauth/callback/"+provider.Name(), oauth2CallbackHandler(provider, svc, tokenClient, deviceStore))
-		r.Get("/oauth/authorize/"+provider.Name(), oauth2AuthorizeHandler(provider))
-		r.Post("/oauth/cli/callback/"+provider.Name(), oauth2CLICallbackHandler(provider, svc, tokenClient))
-	}
 
 	return r
 }

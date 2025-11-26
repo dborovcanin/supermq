@@ -40,13 +40,13 @@ type DeviceCode struct {
 	VerificationURI string    `json:"verification_uri"`
 	ExpiresIn       int       `json:"expires_in"`
 	Interval        int       `json:"interval"`
-	Provider        string    `json:"-"`
-	CreatedAt       time.Time `json:"-"`
-	State           string    `json:"-"`
-	AccessToken     string    `json:"-"`
-	Approved        bool      `json:"-"`
-	Denied          bool      `json:"-"`
-	LastPoll        time.Time `json:"-"`
+	Provider        string    `json:"provider,omitempty"`
+	CreatedAt       time.Time `json:"created_at,omitempty"`
+	State           string    `json:"state,omitempty"`
+	AccessToken     string    `json:"access_token,omitempty"`
+	Approved        bool      `json:"approved,omitempty"`
+	Denied          bool      `json:"denied,omitempty"`
+	LastPoll        time.Time `json:"last_poll,omitempty"`
 }
 
 // DeviceCodeStore manages device authorization codes.

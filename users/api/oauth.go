@@ -257,7 +257,7 @@ func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oaut
 	deviceCode, err := deviceStore.GetByUserCode(userCode)
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `<html><body><h1>Invalid Code</h1><p>The device code is invalid or has expired.</p></body></html>`)
+		fmt.Fprint(w, strings.Replace(errorHTML, "{{ERROR_MESSAGE}}", "The device code is invalid or has expired.", 1))
 		return
 	}
 
@@ -265,7 +265,7 @@ func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oaut
 	code := r.FormValue("code")
 	if code == "" {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprint(w, `<html><body><h1>Error</h1><p>No authorization code received.</p></body></html>`)
+		fmt.Fprint(w, strings.Replace(errorHTML, "{{ERROR_MESSAGE}}", "No authorization code received.", 1))
 		return
 	}
 
@@ -273,7 +273,7 @@ func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oaut
 	token, err := oauth.Exchange(r.Context(), code)
 	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `<html><body><h1>Error</h1><p>Failed to exchange code: %s</p></body></html>`, err.Error())
+		fmt.Fprint(w, strings.Replace(errorHTML, "{{ERROR_MESSAGE}}", fmt.Sprintf("Failed to exchange code: %s.", err.Error()), 1))
 		return
 	}
 
@@ -282,87 +282,11 @@ func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oaut
 	deviceCode.AccessToken = token.AccessToken
 	if err := deviceStore.Update(deviceCode); err != nil {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `<html><body><h1>Error</h1><p>Failed to approve device: %s</p></body></html>`, err.Error())
+		fmt.Fprint(w, strings.Replace(errorHTML, "{{ERROR_MESSAGE}}", fmt.Sprintf("Failed to approve device: %s.", err.Error()), 1))
 		return
 	}
 
 	// Show success page
 	w.Header().Set("Content-Type", "text/html")
-	successHTML := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Device Approved - Magistrala</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #073764;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 48px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-        }
-        .success-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 24px;
-            background: #10b981;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .checkmark {
-            width: 50px;
-            height: 50px;
-        }
-        .checkmark-path {
-            stroke: white;
-            stroke-width: 4;
-            fill: none;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-        h1 {
-            color: #073764;
-            font-size: 32px;
-            margin-bottom: 16px;
-        }
-        p {
-            color: #4a5568;
-            font-size: 18px;
-            line-height: 1.6;
-        }
-        @media (max-width: 600px) {
-            .container { padding: 32px 24px; }
-            h1 { font-size: 28px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="success-icon">
-            <svg class="checkmark" viewBox="0 0 52 52">
-                <path class="checkmark-path" d="M14 27l10 10 18-20"/>
-            </svg>
-        </div>
-        <h1>Device Approved!</h1>
-        <p>Your device has been successfully authorized.</p>
-        <p>You can now close this window and return to your device.</p>
-    </div>
-</body>
-</html>`
 	fmt.Fprint(w, successHTML)
 }

@@ -64,7 +64,7 @@
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.30.3/swagger-ui-standalone-preset.js"></script>
     <script>
         // Available API specifications
-        const APIs = ["auth.yaml","channels.yaml","clients.yaml","domains.yaml","groups.yaml","http.yaml","journal.yaml","twins.yaml","users.yaml"];
+        const APIs = ["auth.yaml","channels.yaml","clients.yaml","domains.yaml","groups.yaml","http.yaml","journal.yaml","users.yaml"];
 
         // Get the service from URL query parameter, default to first service
         function getServiceFromURL() {
@@ -89,6 +89,9 @@
                 const btn = document.createElement('a');
                 btn.className = 'service-btn' + (api === currentService ? ' active' : '');
                 const serviceName = api.replace('.yaml', '').replace(/^\w/, c => c.toUpperCase());
+                if (serviceName == "http") {
+                    serviceName = "HTTP"
+                }
                 btn.textContent = serviceName;
                 btn.href = '?service=' + api;
                 btn.onclick = (e) => {

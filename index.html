@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SuperMQ API Documentation</title>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.30.3/swagger-ui.css">
     <style>
         body {
             margin: 0;
@@ -60,8 +60,8 @@
     </div>
     <div id="swagger-ui"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.30.3/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.30.3/swagger-ui-standalone-preset.js"></script>
     <script>
         // Available API specifications
         const APIs = ["auth.yaml","channels.yaml","clients.yaml","domains.yaml","groups.yaml","http.yaml","journal.yaml","twins.yaml","users.yaml"];
@@ -88,7 +88,8 @@
             APIs.forEach(api => {
                 const btn = document.createElement('a');
                 btn.className = 'service-btn' + (api === currentService ? ' active' : '');
-                btn.textContent = api.charAt(0).toUpperCase() + api.slice(0, -5);
+                const serviceName = api.replace('.yaml', '').replace(/^\w/, c => c.toUpperCase());
+                btn.textContent = serviceName;
                 btn.href = '?service=' + api;
                 btn.onclick = (e) => {
                     e.preventDefault();

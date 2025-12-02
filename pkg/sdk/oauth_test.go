@@ -17,6 +17,7 @@ import (
 	authnmocks "github.com/absmach/supermq/pkg/authn/mocks"
 	"github.com/absmach/supermq/pkg/errors"
 	svcerr "github.com/absmach/supermq/pkg/errors/service"
+	"github.com/absmach/supermq/pkg/oauth2"
 	oauth2mocks "github.com/absmach/supermq/pkg/oauth2/mocks"
 	sdk "github.com/absmach/supermq/pkg/sdk"
 	"github.com/absmach/supermq/pkg/uuid"
@@ -54,7 +55,8 @@ func setupOAuthServer() (*httptest.Server, *umocks.Service, *oauth2mocks.Provide
 	am := smqauthn.NewAuthNMiddleware(authn, smqauthn.WithDomainCheck(false), smqauthn.WithAllowUnverifiedUser(true))
 	token := new(authmocks.TokenServiceClient)
 	redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	httpapi.MakeHandler(usvc, am, token, true, mux, logger, "", passRegex, idp, redisClient, provider)
+	p := []oauth2.Provider{provider}
+	httpapi.MakeHandler(usvc, am, token, true, mux, logger, "", passRegex, idp, redisClient, p, p)
 
 	return httptest.NewServer(mux), usvc, provider, token
 }

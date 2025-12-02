@@ -1,7 +1,7 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
-package api
+package http
 
 import (
 	"encoding/json"
@@ -11,8 +11,6 @@ import (
 
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
 	"github.com/absmach/supermq/pkg/oauth2"
-	"github.com/absmach/supermq/users"
-	useroauth "github.com/absmach/supermq/users/oauth"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -36,12 +34,12 @@ type authURLResponse struct {
 	State            string `json:"state"`
 }
 
-// oauthHandler registers OAuth2 routes for the given providers.
+// Handler registers OAuth2 routes for the given providers.
 // It sets up three endpoints for each provider:
 // - GET /oauth/authorize/{provider} - Returns the authorization URL
 // - GET /oauth/callback/{provider} - Handles OAuth2 callback and sets cookies
 // - POST /oauth/cli/callback/{provider} - Handles CLI OAuth2 callback and returns JSON.
-func oauthHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, oauthSvc useroauth.Service, providers ...oauth2.Provider) *chi.Mux {
+func Handler(r *chi.Mux, tokenClient grpcTokenV1.TokenServiceClient, oauthSvc oauth2.Service, providers ...oauth2.Provider) *chi.Mux {
 	for _, provider := range providers {
 		r.HandleFunc("/oauth/callback/"+provider.Name(), oauth2CallbackHandler(provider, oauthSvc))
 		r.Get("/oauth/authorize/"+provider.Name(), oauth2AuthorizeHandler(provider))
@@ -52,7 +50,7 @@ func oauthHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenSe
 }
 
 // oauth2CallbackHandler is a http.HandlerFunc that handles OAuth2 callbacks.
-func oauth2CallbackHandler(oauth oauth2.Provider, oauthSvc useroauth.Service) http.HandlerFunc {
+func oauth2CallbackHandler(oauth oauth2.Provider, oauthSvc oauth2.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !oauth.IsEnabled() {
 			redirectWithError(w, r, oauth.ErrorURL(), "oauth provider is disabled")
@@ -62,7 +60,7 @@ func oauth2CallbackHandler(oauth oauth2.Provider, oauthSvc useroauth.Service) ht
 		state := r.FormValue("state")
 
 		// Check if this is a device flow callback (state contains device: prefix)
-		if useroauth.IsDeviceFlowState(state) {
+		if oauth2.IsDeviceFlowState(state) {
 			handleDeviceFlowCallback(w, r, oauth, oauthSvc)
 			return
 		}
@@ -117,7 +115,7 @@ func oauth2AuthorizeHandler(oauth oauth2.Provider) http.HandlerFunc {
 }
 
 // oauth2CLICallbackHandler handles OAuth2 callbacks for CLI and returns JSON tokens.
-func oauth2CLICallbackHandler(oauth oauth2.Provider, oauthSvc useroauth.Service) http.HandlerFunc {
+func oauth2CLICallbackHandler(oauth oauth2.Provider, oauthSvc oauth2.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -197,10 +195,10 @@ func setTokenCookies(w http.ResponseWriter, jwt *grpcTokenV1.Token) {
 }
 
 // handleDeviceFlowCallback processes OAuth callback for device authorization flow.
-func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oauth2.Provider, oauthSvc useroauth.Service) {
+func handleDeviceFlowCallback(w http.ResponseWriter, r *http.Request, oauth oauth2.Provider, oauthSvc oauth2.Service) {
 	// Extract user code from state (format: "device:ABCD-EFGH")
 	state := r.FormValue("state")
-	userCode := useroauth.ExtractUserCodeFromState(state)
+	userCode := oauth2.ExtractUserCodeFromState(state)
 
 	// Get device code by user code to validate it exists
 	_, err := oauthSvc.GetDeviceCodeByUserCode(r.Context(), userCode)

@@ -1,7 +1,7 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
-package api
+package http_test
 
 import (
 	"context"
@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/absmach/supermq/users/oauth/store"
+	"github.com/absmach/supermq/pkg/oauth2"
+	"github.com/absmach/supermq/pkg/oauth2/store"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +67,7 @@ func TestRedisDeviceCodeStore_Save(t *testing.T) {
 	ctx := context.Background()
 	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := store.DeviceCode{
+	code := oauth2.DeviceCode{
 		DeviceCode:      "test-device-code",
 		UserCode:        "ABCD-EFGH",
 		VerificationURI: "http://localhost/verify",
@@ -96,7 +97,7 @@ func TestRedisDeviceCodeStore_Save(t *testing.T) {
 	ttl, err := client.TTL(ctx, deviceKey).Result()
 	require.NoError(t, err)
 	assert.Greater(t, ttl, time.Duration(0))
-	assert.LessOrEqual(t, ttl, store.DeviceCodeExpiry)
+	assert.LessOrEqual(t, ttl, oauth2.DeviceCodeExpiry)
 }
 
 func TestRedisDeviceCodeStore_Get(t *testing.T) {
@@ -106,7 +107,7 @@ func TestRedisDeviceCodeStore_Get(t *testing.T) {
 	ctx := context.Background()
 	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	originalCode := store.DeviceCode{
+	originalCode := oauth2.DeviceCode{
 		DeviceCode:      "test-device-code-2",
 		UserCode:        "XXXX-YYYY",
 		VerificationURI: "http://localhost/verify",
@@ -152,7 +153,7 @@ func TestRedisDeviceCodeStore_GetByUserCode(t *testing.T) {
 	ctx := context.Background()
 	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	originalCode := store.DeviceCode{
+	originalCode := oauth2.DeviceCode{
 		DeviceCode:      "test-device-code-3",
 		UserCode:        "ZZZZ-AAAA",
 		VerificationURI: "http://localhost/verify",
@@ -194,7 +195,7 @@ func TestRedisDeviceCodeStore_Update(t *testing.T) {
 	ctx := context.Background()
 	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	originalCode := store.DeviceCode{
+	originalCode := oauth2.DeviceCode{
 		DeviceCode:      "test-device-code-4",
 		UserCode:        "BBBB-CCCC",
 		VerificationURI: "http://localhost/verify",
@@ -232,7 +233,7 @@ func TestRedisDeviceCodeStore_UpdateNotFound(t *testing.T) {
 	ctx := context.Background()
 	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := store.DeviceCode{
+	code := oauth2.DeviceCode{
 		DeviceCode: "non-existent-code",
 	}
 
@@ -247,7 +248,7 @@ func TestRedisDeviceCodeStore_Delete(t *testing.T) {
 	ctx := context.Background()
 	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := store.DeviceCode{
+	code := oauth2.DeviceCode{
 		DeviceCode:      "test-device-code-5",
 		UserCode:        "DDDD-EEEE",
 		VerificationURI: "http://localhost/verify",
@@ -303,7 +304,7 @@ func TestRedisDeviceCodeStore_Expiry(t *testing.T) {
 	ctx := context.Background()
 	deviceStore := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := store.DeviceCode{
+	code := oauth2.DeviceCode{
 		DeviceCode:      "test-device-code-6",
 		UserCode:        "FFFF-GGGG",
 		VerificationURI: "http://localhost/verify",
@@ -348,7 +349,7 @@ func TestRedisDeviceCodeStore_MultipleInstances(t *testing.T) {
 	deviceStore1 := store.NewRedisDeviceCodeStore(ctx, client)
 	deviceStore2 := store.NewRedisDeviceCodeStore(ctx, client)
 
-	code := store.DeviceCode{
+	code := oauth2.DeviceCode{
 		DeviceCode:      "test-device-code-7",
 		UserCode:        "HHHH-IIII",
 		VerificationURI: "http://localhost/verify",
@@ -396,7 +397,7 @@ func TestRedisDeviceCodeStore_ConcurrentAccess(t *testing.T) {
 
 	for i := 0; i < numCodes; i++ {
 		go func(idx int) {
-			code := store.DeviceCode{
+			code := oauth2.DeviceCode{
 				DeviceCode:      fmt.Sprintf("concurrent-code-%d", idx),
 				UserCode:        fmt.Sprintf("CODE-%04d", idx),
 				VerificationURI: "http://localhost/verify",

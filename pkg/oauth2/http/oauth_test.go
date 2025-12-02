@@ -1,9 +1,10 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
-package api_test
+package http_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,14 +16,12 @@ import (
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
 	authmocks "github.com/absmach/supermq/auth/mocks"
 	"github.com/absmach/supermq/internal/testsutil"
-	smqlog "github.com/absmach/supermq/logger"
-	smqauthn "github.com/absmach/supermq/pkg/authn"
-	authnmocks "github.com/absmach/supermq/pkg/authn/mocks"
+	"github.com/absmach/supermq/pkg/oauth2"
+	oauthhttp "github.com/absmach/supermq/pkg/oauth2/http"
 	oauth2mocks "github.com/absmach/supermq/pkg/oauth2/mocks"
-	"github.com/absmach/supermq/pkg/uuid"
+	"github.com/absmach/supermq/pkg/oauth2/store"
 	"github.com/absmach/supermq/users"
-	usersapi "github.com/absmach/supermq/users/api"
-	"github.com/absmach/supermq/users/mocks"
+	usermocks "github.com/absmach/supermq/users/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
@@ -31,11 +30,7 @@ import (
 )
 
 func TestOAuthAuthorizeEndpoint(t *testing.T) {
-	svc := new(mocks.Service)
-	logger := smqlog.NewMock()
-	idp := uuid.NewMock()
-	authn := new(authnmocks.Authentication)
-	am := smqauthn.NewAuthNMiddleware(authn)
+	svc := new(usermocks.Service)
 	token := new(authmocks.TokenServiceClient)
 
 	cases := []struct {
@@ -116,7 +111,7 @@ func TestOAuthAuthorizeEndpoint(t *testing.T) {
 
 			mux := chi.NewRouter()
 			redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-			usersapi.MakeHandler(svc, am, token, true, mux, logger, "", passRegex, idp, redisClient, provider)
+			makeHandler(svc, token, mux, redisClient, provider)
 
 			ts := httptest.NewServer(mux)
 			defer ts.Close()
@@ -142,11 +137,7 @@ func TestOAuthAuthorizeEndpoint(t *testing.T) {
 }
 
 func TestOAuthCLICallbackEndpoint(t *testing.T) {
-	svc := new(mocks.Service)
-	logger := smqlog.NewMock()
-	idp := uuid.NewMock()
-	authn := new(authnmocks.Authentication)
-	am := smqauthn.NewAuthNMiddleware(authn)
+	svc := new(usermocks.Service)
 
 	validUserID := testsutil.GenerateUUID(t)
 	validUser := users.User{
@@ -164,7 +155,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 		providerName    string
 		providerEnabled bool
 		requestBody     string
-		mockSetup       func(*oauth2mocks.Provider, *mocks.Service, *authmocks.TokenServiceClient)
+		mockSetup       func(*oauth2mocks.Provider, *usermocks.Service, *authmocks.TokenServiceClient)
 		expectedStatus  int
 		checkResponse   func(t *testing.T, res *http.Response)
 	}{
@@ -174,7 +165,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"test-code","state":"test-state","redirect_url":"http://localhost:9090/callback"}`,
-			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
 				provider.On("ExchangeWithRedirect", mock.Anything, "test-code", "http://localhost:9090/callback").
 					Return(goauth2.Token{AccessToken: "access-token"}, nil)
 				provider.On("UserInfo", "access-token").Return(validUser, nil)
@@ -207,7 +198,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"test-code","state":"test-state"}`,
-			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
 				provider.On("Exchange", mock.Anything, "test-code").
 					Return(goauth2.Token{AccessToken: "access-token"}, nil)
 				provider.On("UserInfo", "access-token").Return(validUser, nil)
@@ -239,8 +230,9 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: false,
 			requestBody:     `{"code":"test-code","state":"test-state"}`,
-			mockSetup:       func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {},
-			expectedStatus:  http.StatusNotFound,
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			},
+			expectedStatus: http.StatusNotFound,
 			checkResponse: func(t *testing.T, res *http.Response) {
 				body, err := io.ReadAll(res.Body)
 				assert.NoError(t, err)
@@ -258,8 +250,9 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `invalid json`,
-			mockSetup:       func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {},
-			expectedStatus:  http.StatusBadRequest,
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			},
+			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, res *http.Response) {
 				body, err := io.ReadAll(res.Body)
 				assert.NoError(t, err)
@@ -276,8 +269,9 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"test-code","state":"wrong-state"}`,
-			mockSetup:       func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {},
-			expectedStatus:  http.StatusBadRequest,
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			},
+			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, res *http.Response) {
 				body, err := io.ReadAll(res.Body)
 				assert.NoError(t, err)
@@ -294,8 +288,9 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"","state":"test-state"}`,
-			mockSetup:       func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {},
-			expectedStatus:  http.StatusBadRequest,
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			},
+			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, res *http.Response) {
 				body, err := io.ReadAll(res.Body)
 				assert.NoError(t, err)
@@ -312,7 +307,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"test-code","state":"test-state"}`,
-			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
 				provider.On("Exchange", mock.Anything, "test-code").
 					Return(goauth2.Token{}, fmt.Errorf("exchange failed"))
 			},
@@ -333,7 +328,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"test-code","state":"test-state"}`,
-			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
 				provider.On("Exchange", mock.Anything, "test-code").
 					Return(goauth2.Token{AccessToken: "access-token"}, nil)
 				provider.On("UserInfo", "access-token").Return(users.User{}, fmt.Errorf("user info failed"))
@@ -355,7 +350,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"test-code","state":"test-state"}`,
-			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
 				provider.On("Exchange", mock.Anything, "test-code").
 					Return(goauth2.Token{AccessToken: "access-token"}, nil)
 				provider.On("UserInfo", "access-token").Return(validUser, nil)
@@ -379,7 +374,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"test-code","state":"test-state"}`,
-			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
 				provider.On("Exchange", mock.Anything, "test-code").
 					Return(goauth2.Token{AccessToken: "access-token"}, nil)
 				provider.On("UserInfo", "access-token").Return(validUser, nil)
@@ -406,7 +401,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			providerName:    "google",
 			providerEnabled: true,
 			requestBody:     `{"code":"test-code","state":"test-state"}`,
-			mockSetup: func(provider *oauth2mocks.Provider, svc *mocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
 				provider.On("Exchange", mock.Anything, "test-code").
 					Return(goauth2.Token{AccessToken: "access-token"}, nil)
 				provider.On("UserInfo", "access-token").Return(validUser, nil)
@@ -443,7 +438,7 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 
 			mux := chi.NewRouter()
 			redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-			usersapi.MakeHandler(svc, am, tokenClient, true, mux, logger, "", passRegex, idp, redisClient, provider)
+			makeHandler(svc, tokenClient, mux, redisClient, provider)
 
 			ts := httptest.NewServer(mux)
 			defer ts.Close()
@@ -467,4 +462,16 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 			tokenClient.ExpectedCalls = nil
 		})
 	}
+}
+
+func makeHandler(svc users.Service, tokensvc grpcTokenV1.TokenServiceClient, mux *chi.Mux, cacheClient *redis.Client, providers ...oauth2.Provider) http.Handler {
+	ctx := context.Background()
+
+	deviceStore := store.NewRedisDeviceCodeStore(ctx, cacheClient)
+	oauthSvc := oauth2.NewOAuthService(deviceStore, svc, tokensvc)
+
+	mux = oauthhttp.Handler(mux, tokensvc, oauthSvc, providers...)
+	mux = oauthhttp.DeviceHandler(mux, tokensvc, oauthSvc, providers...)
+
+	return mux
 }

@@ -1,4 +1,7 @@
-package api
+// Copyright (c) Abstract Machines
+// SPDX-License-Identifier: Apache-2.0
+
+package http
 
 const successHTML = `<!DOCTYPE html>
 <html lang="en">

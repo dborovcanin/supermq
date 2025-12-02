@@ -1,7 +1,7 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
-package api
+package http
 
 import (
 	"encoding/json"
@@ -10,9 +10,7 @@ import (
 	"net/http"
 
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
-	"github.com/absmach/supermq/pkg/oauth2"
-	"github.com/absmach/supermq/users"
-	useroauth "github.com/absmach/supermq/users/oauth"
+	oauth2 "github.com/absmach/supermq/pkg/oauth2"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -23,20 +21,20 @@ var (
 	errAccessDenied      = newErrorResponse("access denied")
 )
 
-// oauthDeviceHandler registers device flow routes for OAuth2 providers.
-func oauthDeviceHandler(r *chi.Mux, svc users.Service, tokenClient grpcTokenV1.TokenServiceClient, oauthSvc useroauth.Service, providers ...oauth2.Provider) *chi.Mux {
+// DeviceHandler registers device flow routes for OAuth2 providers.
+func DeviceHandler(r *chi.Mux, tokenClient grpcTokenV1.TokenServiceClient, oauthSvc oauth2.Service, providers ...oauth2.Provider) *chi.Mux {
 	for _, provider := range providers {
-		r.Post("/oauth/device/code/"+provider.Name(), deviceCodeHandler(provider, oauthSvc))
-		r.Post("/oauth/device/token/"+provider.Name(), deviceTokenHandler(provider, oauthSvc))
+		r.Post("/oauth/device/code/"+provider.Name(), DeviceCodeHandler(provider, oauthSvc))
+		r.Post("/oauth/device/token/"+provider.Name(), DeviceTokenHandler(provider, oauthSvc))
 	}
 	// Register verify endpoints once (not per provider)
-	r.Get("/oauth/device/verify", deviceVerifyPageHandler())
-	r.Post("/oauth/device/verify", deviceVerifyHandler(oauthSvc, providers...))
+	r.Get("/oauth/device/verify", DeviceVerifyPageHandler())
+	r.Post("/oauth/device/verify", DeviceVerifyHandler(oauthSvc, providers...))
 	return r
 }
 
-// deviceCodeHandler initiates the device authorization flow.
-func deviceCodeHandler(provider oauth2.Provider, oauthSvc useroauth.Service) http.HandlerFunc {
+// DeviceCodeHandler initiates the device authorization flow.
+func DeviceCodeHandler(provider oauth2.Provider, oauthSvc oauth2.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -63,8 +61,8 @@ func deviceCodeHandler(provider oauth2.Provider, oauthSvc useroauth.Service) htt
 	}
 }
 
-// deviceTokenHandler polls for device authorization completion.
-func deviceTokenHandler(provider oauth2.Provider, oauthSvc useroauth.Service) http.HandlerFunc {
+// DeviceTokenHandler polls for device authorization completion.
+func DeviceTokenHandler(provider oauth2.Provider, oauthSvc oauth2.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -87,15 +85,15 @@ func deviceTokenHandler(provider oauth2.Provider, oauthSvc useroauth.Service) ht
 		if err != nil {
 			// Map OAuth service errors to appropriate HTTP responses
 			switch {
-			case errors.Is(err, useroauth.ErrDeviceCodeNotFound):
+			case errors.Is(err, oauth2.ErrDeviceCodeNotFound):
 				respondWithJSON(w, http.StatusNotFound, newErrorResponse("invalid device code"))
-			case errors.Is(err, useroauth.ErrDeviceCodeExpired):
+			case errors.Is(err, oauth2.ErrDeviceCodeExpired):
 				respondWithJSON(w, http.StatusBadRequest, errDeviceCodeExpired)
-			case errors.Is(err, useroauth.ErrSlowDown):
+			case errors.Is(err, oauth2.ErrSlowDown):
 				respondWithJSON(w, http.StatusBadRequest, errSlowDown)
-			case errors.Is(err, useroauth.ErrAccessDenied):
+			case errors.Is(err, oauth2.ErrAccessDenied):
 				respondWithJSON(w, http.StatusUnauthorized, errAccessDenied)
-			case errors.Is(err, useroauth.ErrDeviceCodePending):
+			case errors.Is(err, oauth2.ErrDeviceCodePending):
 				respondWithJSON(w, http.StatusAccepted, errDeviceCodePending)
 			default:
 				respondWithJSON(w, http.StatusInternalServerError, newErrorResponse(err.Error()))
@@ -108,16 +106,16 @@ func deviceTokenHandler(provider oauth2.Provider, oauthSvc useroauth.Service) ht
 	}
 }
 
-// deviceVerifyPageHandler serves the HTML page for device verification.
-func deviceVerifyPageHandler() http.HandlerFunc {
+// DeviceVerifyPageHandler serves the HTML page for device verification.
+func DeviceVerifyPageHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprint(w, deviceVerifyHTML)
 	}
 }
 
-// deviceVerifyHandler handles user verification of device codes.
-func deviceVerifyHandler(oauthSvc useroauth.Service, providers ...oauth2.Provider) http.HandlerFunc {
+// DeviceVerifyHandler handles user verification of device codes.
+func DeviceVerifyHandler(oauthSvc oauth2.Service, providers ...oauth2.Provider) http.HandlerFunc {
 	providerMap := make(map[string]oauth2.Provider)
 	for _, p := range providers {
 		providerMap[p.Name()] = p
@@ -139,7 +137,7 @@ func deviceVerifyHandler(oauthSvc useroauth.Service, providers ...oauth2.Provide
 
 		code, err := oauthSvc.GetDeviceCodeByUserCode(r.Context(), req.UserCode)
 		if err != nil {
-			if errors.Is(err, useroauth.ErrUserCodeNotFound) {
+			if errors.Is(err, oauth2.ErrUserCodeNotFound) {
 				respondWithJSON(w, http.StatusNotFound, newErrorResponse("invalid user code"))
 			} else {
 				respondWithJSON(w, http.StatusInternalServerError, newErrorResponse(err.Error()))
@@ -170,7 +168,7 @@ func deviceVerifyHandler(oauthSvc useroauth.Service, providers ...oauth2.Provide
 
 		// User approved - verify with the OAuth code
 		if err := oauthSvc.VerifyDevice(r.Context(), provider, req.UserCode, req.Code, true); err != nil {
-			if errors.Is(err, useroauth.ErrDeviceCodeExpired) {
+			if errors.Is(err, oauth2.ErrDeviceCodeExpired) {
 				respondWithJSON(w, http.StatusBadRequest, errDeviceCodeExpired)
 			} else {
 				respondWithJSON(w, http.StatusUnauthorized, newErrorResponse(err.Error()))

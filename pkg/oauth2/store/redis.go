@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/absmach/supermq/pkg/oauth2"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -23,14 +24,14 @@ type redisDeviceCodeStore struct {
 }
 
 // NewRedisDeviceCodeStore creates a new Redis-based device code store.
-func NewRedisDeviceCodeStore(ctx context.Context, client *redis.Client) DeviceCodeStore {
+func NewRedisDeviceCodeStore(ctx context.Context, client *redis.Client) oauth2.DeviceCodeStore {
 	return &redisDeviceCodeStore{
 		client: client,
 		ctx:    ctx,
 	}
 }
 
-func (s *redisDeviceCodeStore) Save(code DeviceCode) error {
+func (s *redisDeviceCodeStore) Save(code oauth2.DeviceCode) error {
 	data, err := json.Marshal(code)
 	if err != nil {
 		return fmt.Errorf("failed to marshal device code: %w", err)
@@ -38,53 +39,53 @@ func (s *redisDeviceCodeStore) Save(code DeviceCode) error {
 
 	// Store device code with expiry
 	deviceKey := deviceCodePrefix + code.DeviceCode
-	if err := s.client.Set(s.ctx, deviceKey, data, DeviceCodeExpiry).Err(); err != nil {
+	if err := s.client.Set(s.ctx, deviceKey, data, oauth2.DeviceCodeExpiry).Err(); err != nil {
 		return fmt.Errorf("failed to save device code: %w", err)
 	}
 
 	// Store user code to device code mapping with expiry
 	userKey := userCodePrefix + code.UserCode
-	if err := s.client.Set(s.ctx, userKey, code.DeviceCode, DeviceCodeExpiry).Err(); err != nil {
+	if err := s.client.Set(s.ctx, userKey, code.DeviceCode, oauth2.DeviceCodeExpiry).Err(); err != nil {
 		return fmt.Errorf("failed to save user code mapping: %w", err)
 	}
 
 	return nil
 }
 
-func (s *redisDeviceCodeStore) Get(deviceCode string) (DeviceCode, error) {
+func (s *redisDeviceCodeStore) Get(deviceCode string) (oauth2.DeviceCode, error) {
 	deviceKey := deviceCodePrefix + deviceCode
 	data, err := s.client.Get(s.ctx, deviceKey).Bytes()
 	if err != nil {
 		if err == redis.Nil {
-			return DeviceCode{}, ErrDeviceCodeNotFound
+			return oauth2.DeviceCode{}, oauth2.ErrDeviceCodeNotFound
 		}
-		return DeviceCode{}, fmt.Errorf("failed to get device code: %w", err)
+		return oauth2.DeviceCode{}, fmt.Errorf("failed to get device code: %w", err)
 	}
 
-	var code DeviceCode
+	var code oauth2.DeviceCode
 	if err := json.Unmarshal(data, &code); err != nil {
-		return DeviceCode{}, fmt.Errorf("failed to unmarshal device code: %w", err)
+		return oauth2.DeviceCode{}, fmt.Errorf("failed to unmarshal device code: %w", err)
 	}
 
 	return code, nil
 }
 
-func (s *redisDeviceCodeStore) GetByUserCode(userCode string) (DeviceCode, error) {
+func (s *redisDeviceCodeStore) GetByUserCode(userCode string) (oauth2.DeviceCode, error) {
 	// First, get the device code from user code mapping
 	userKey := userCodePrefix + userCode
 	deviceCode, err := s.client.Get(s.ctx, userKey).Result()
 	if err != nil {
 		if err == redis.Nil {
-			return DeviceCode{}, ErrUserCodeNotFound
+			return oauth2.DeviceCode{}, oauth2.ErrUserCodeNotFound
 		}
-		return DeviceCode{}, fmt.Errorf("failed to get device code by user code: %w", err)
+		return oauth2.DeviceCode{}, fmt.Errorf("failed to get device code by user code: %w", err)
 	}
 
 	// Then, get the actual device code data
 	return s.Get(deviceCode)
 }
 
-func (s *redisDeviceCodeStore) Update(code DeviceCode) error {
+func (s *redisDeviceCodeStore) Update(code oauth2.DeviceCode) error {
 	// Get the existing code to check if it exists
 	existing, err := s.Get(code.DeviceCode)
 	if err != nil {
@@ -109,7 +110,7 @@ func (s *redisDeviceCodeStore) Update(code DeviceCode) error {
 
 	// If TTL is negative (key doesn't exist or no expiry), use default
 	if ttl < 0 {
-		ttl = DeviceCodeExpiry
+		ttl = oauth2.DeviceCodeExpiry
 	}
 
 	// Update the device code with remaining TTL

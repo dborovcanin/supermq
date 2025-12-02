@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	errInvalidBody  = newErrorResponse("invalid request body")
-	errInvalidState = newErrorResponse("invalid state")
-	errEmptyCode    = newErrorResponse("empty code")
+	errInvalidBody      = newErrorResponse("invalid request body")
+	errInvalidState     = newErrorResponse("invalid state")
+	errEmptyCode        = newErrorResponse("empty code")
+	errProviderDisabled = newErrorResponse("oauth provider is disabled")
 )
 
 type errorResponse struct {
@@ -53,7 +54,7 @@ func Handler(r *chi.Mux, tokenClient grpcTokenV1.TokenServiceClient, oauthSvc oa
 func oauth2CallbackHandler(oauth oauth2.Provider, oauthSvc oauth2.Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !oauth.IsEnabled() {
-			redirectWithError(w, r, oauth.ErrorURL(), "oauth provider is disabled")
+			redirectWithError(w, r, oauth.ErrorURL(), errProviderDisabled.Error)
 			return
 		}
 
@@ -66,13 +67,13 @@ func oauth2CallbackHandler(oauth oauth2.Provider, oauthSvc oauth2.Service) http.
 		}
 
 		if state != oauth.State() {
-			redirectWithError(w, r, oauth.ErrorURL(), "invalid state")
+			redirectWithError(w, r, oauth.ErrorURL(), errInvalidState.Error)
 			return
 		}
 
 		code := r.FormValue("code")
 		if code == "" {
-			redirectWithError(w, r, oauth.ErrorURL(), "empty code")
+			redirectWithError(w, r, oauth.ErrorURL(), errEmptyCode.Error)
 			return
 		}
 
@@ -93,8 +94,7 @@ func oauth2AuthorizeHandler(oauth oauth2.Provider) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 
 		if !oauth.IsEnabled() {
-			errResp := newErrorResponse("oauth provider is disabled")
-			respondWithJSON(w, http.StatusNotFound, errResp)
+			respondWithJSON(w, http.StatusNotFound, errProviderDisabled)
 			return
 		}
 
@@ -120,8 +120,7 @@ func oauth2CLICallbackHandler(oauth oauth2.Provider, oauthSvc oauth2.Service) ht
 		w.Header().Set("Content-Type", "application/json")
 
 		if !oauth.IsEnabled() {
-			errResp := newErrorResponse("oauth provider is disabled")
-			respondWithJSON(w, http.StatusNotFound, errResp)
+			respondWithJSON(w, http.StatusNotFound, errProviderDisabled)
 			return
 		}
 		var req struct {

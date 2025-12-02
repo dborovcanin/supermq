@@ -21,8 +21,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// These functions are not exported, so we can't test them directly.
-// They are tested indirectly through the CreateDeviceCode functionality.
+const errProviderDisabled = "oauth provider is disabled"
 
 type errorResponse struct {
 	Error string `json:"error"`
@@ -141,7 +140,7 @@ func TestDeviceCodeHandler(t *testing.T) {
 				var resp errorResponse
 				err := json.NewDecoder(rec.Body).Decode(&resp)
 				assert.NoError(t, err)
-				assert.Equal(t, "oauth provider is disabled", resp.Error)
+				assert.Equal(t, errProviderDisabled, resp.Error)
 			},
 		},
 	}
@@ -222,7 +221,7 @@ func TestDeviceTokenHandler(t *testing.T) {
 				var resp errorResponse
 				err := json.NewDecoder(rec.Body).Decode(&resp)
 				assert.NoError(t, err)
-				assert.Equal(t, "oauth provider is disabled", resp.Error)
+				assert.Equal(t, errProviderDisabled, resp.Error)
 			},
 		},
 	}
@@ -317,7 +316,7 @@ func TestDeviceVerifyHandler(t *testing.T) {
 				var resp errorResponse
 				err := json.NewDecoder(rec.Body).Decode(&resp)
 				assert.NoError(t, err)
-				assert.Equal(t, "oauth provider is disabled", resp.Error)
+				assert.Equal(t, errProviderDisabled, resp.Error)
 			},
 		},
 	}

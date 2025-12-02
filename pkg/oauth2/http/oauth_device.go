@@ -39,7 +39,7 @@ func DeviceCodeHandler(provider oauth2.Provider, oauthSvc oauth2.Service) http.H
 		w.Header().Set("Content-Type", "application/json")
 
 		if !provider.IsEnabled() {
-			errResp := newErrorResponse("oauth provider is disabled")
+			errResp := errProviderDisabled
 			respondWithJSON(w, http.StatusNotFound, errResp)
 			return
 		}
@@ -67,8 +67,7 @@ func DeviceTokenHandler(provider oauth2.Provider, oauthSvc oauth2.Service) http.
 		w.Header().Set("Content-Type", "application/json")
 
 		if !provider.IsEnabled() {
-			errResp := newErrorResponse("oauth provider is disabled")
-			respondWithJSON(w, http.StatusNotFound, errResp)
+			respondWithJSON(w, http.StatusNotFound, errProviderDisabled)
 			return
 		}
 
@@ -152,7 +151,7 @@ func DeviceVerifyHandler(oauthSvc oauth2.Service, providers ...oauth2.Provider) 
 		}
 
 		if !provider.IsEnabled() {
-			respondWithJSON(w, http.StatusNotFound, newErrorResponse("oauth provider is disabled"))
+			respondWithJSON(w, http.StatusNotFound, errProviderDisabled)
 			return
 		}
 

@@ -140,4 +140,8 @@ packages:
   github.com/absmach/supermq/notifications:
     interfaces:
       Notifier:
+  github.com/absmach/supermq/oauth:
+    interfaces:
+      Service:
+      DeviceCodeStore:
 

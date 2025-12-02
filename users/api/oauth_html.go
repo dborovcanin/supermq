@@ -488,3 +488,176 @@ const errorHTML = `<!DOCTYPE html>
     </div>
 </body>
 </html>`
+
+const deviceVerifyHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Verification - Magistrala</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #073764;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 48px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #073764;
+            font-size: 32px;
+            margin-bottom: 24px;
+        }
+        p {
+            color: #4a5568;
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .code-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 24px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+        .code-input:focus {
+            outline: none;
+            border-color: #073764;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            background: #073764;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #05294a;
+        }
+        button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+        .message {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 8px;
+            display: none;
+        }
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+            display: block;
+        }
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            display: block;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 32px 24px; }
+            h1 { font-size: 28px; }
+            .code-input { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Device Verification</h1>
+        <p>Enter the code displayed on your device</p>
+        <form id="verifyForm">
+            <input
+                type="text"
+                id="userCode"
+                class="code-input"
+                placeholder="XXXX-XXXX"
+                maxlength="9"
+                pattern="[A-Za-z0-9]{4}-[A-Za-z0-9]{4}"
+                required
+            />
+            <button type="submit" id="submitBtn">Verify Device</button>
+        </form>
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('verifyForm');
+        const input = document.getElementById('userCode');
+        const submitBtn = document.getElementById('submitBtn');
+        const message = document.getElementById('message');
+
+        // Auto-format input
+        input.addEventListener('input', (e) => {
+            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (value.length > 4) {
+                value = value.slice(0, 4) + '-' + value.slice(4, 8);
+            }
+            e.target.value = value;
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userCode = input.value.trim();
+            if (!userCode || userCode.length < 9) {
+                showMessage('Please enter a valid code', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Verifying...';
+
+            try {
+                // Get authorization URL for the provider (Google as default)
+                // Build the callback URL dynamically from current location
+                const callbackURL = window.location.protocol + '//' + window.location.host + '/oauth/callback/google';
+                const encodedCallback = encodeURIComponent(callbackURL);
+
+                const authResponse = await fetch('/oauth/authorize/google?redirect_uri=' + encodedCallback);
+                if (!authResponse.ok) throw new Error('Failed to get authorization URL');
+
+                const authData = await authResponse.json();
+
+                // Build OAuth URL with device state
+                const deviceState = 'device:' + userCode;
+                const authURL = authData.authorization_url.replace(/state=[^&]+/, 'state=' + encodeURIComponent(deviceState));
+
+                // Redirect to OAuth provider
+                window.location.href = authURL;
+
+            } catch (error) {
+                showMessage('Verification failed: ' + error.message, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Verify Device';
+            }
+        });
+
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = 'message ' + type;
+        }
+    </script>
+</body>
+</html>`

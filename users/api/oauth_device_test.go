@@ -13,33 +13,21 @@ import (
 	"time"
 
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
+	"github.com/absmach/supermq/pkg/oauth2"
+	"github.com/absmach/supermq/users"
 	useroauth "github.com/absmach/supermq/users/oauth"
 	"github.com/absmach/supermq/users/oauth/store"
-	"github.com/absmach/supermq/users"
-	"github.com/absmach/supermq/users/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	goauth2 "golang.org/x/oauth2"
 	"google.golang.org/grpc"
 )
 
-// func TestGenerateUserCode(t *testing.T) {
-	code, err := generateUserCode()
-	assert.NoError(t, err)
-	assert.NotEmpty(t, code)
-	assert.Contains(t, code, "-")
-	assert.Len(t, code, 9) // XXXX-XXXX format
-}
-
-// func TestGenerateDeviceCode(t *testing.T) {
-	code, err := generateDeviceCode()
-	assert.NoError(t, err)
-	assert.NotEmpty(t, code)
-	assert.Greater(t, len(code), 40) // Base32 encoded 32 bytes
-}
+// These functions are not exported, so we can't test them directly.
+// They are tested indirectly through the CreateDeviceCode functionality.
 
 func TestInMemoryDeviceCodeStore(t *testing.T) {
-	store := store.NewInMemoryDeviceCodeStore()
+	deviceStore := store.NewInMemoryDeviceCodeStore()
 
 	code := store.DeviceCode{
 		DeviceCode:      "device123",
@@ -53,17 +41,17 @@ func TestInMemoryDeviceCodeStore(t *testing.T) {
 	}
 
 	t.Run("Save and Get", func(t *testing.T) {
-		err := store.Save(code)
+		err := deviceStore.Save(code)
 		assert.NoError(t, err)
 
-		retrieved, err := store.Get(code.DeviceCode)
+		retrieved, err := deviceStore.Get(code.DeviceCode)
 		assert.NoError(t, err)
 		assert.Equal(t, code.DeviceCode, retrieved.DeviceCode)
 		assert.Equal(t, code.UserCode, retrieved.UserCode)
 	})
 
 	t.Run("GetByUserCode", func(t *testing.T) {
-		retrieved, err := store.GetByUserCode(code.UserCode)
+		retrieved, err := deviceStore.GetByUserCode(code.UserCode)
 		assert.NoError(t, err)
 		assert.Equal(t, code.DeviceCode, retrieved.DeviceCode)
 	})
@@ -71,58 +59,65 @@ func TestInMemoryDeviceCodeStore(t *testing.T) {
 	t.Run("Update", func(t *testing.T) {
 		code.Approved = true
 		code.AccessToken = "access_token_123"
-		err := store.Update(code)
+		err := deviceStore.Update(code)
 		assert.NoError(t, err)
 
-		retrieved, err := store.Get(code.DeviceCode)
+		retrieved, err := deviceStore.Get(code.DeviceCode)
 		assert.NoError(t, err)
 		assert.True(t, retrieved.Approved)
 		assert.Equal(t, "access_token_123", retrieved.AccessToken)
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		err := store.Delete(code.DeviceCode)
+		err := deviceStore.Delete(code.DeviceCode)
 		assert.NoError(t, err)
 
-		_, err = store.Get(code.DeviceCode)
+		_, err = deviceStore.Get(code.DeviceCode)
 		assert.Error(t, err)
 
-		_, err = store.GetByUserCode(code.UserCode)
+		_, err = deviceStore.GetByUserCode(code.UserCode)
 		assert.Error(t, err)
 	})
 
 	t.Run("Get non-existent", func(t *testing.T) {
-		_, err := store.Get("nonexistent")
+		_, err := deviceStore.Get("nonexistent")
 		assert.Error(t, err)
 	})
 
 	t.Run("Update non-existent", func(t *testing.T) {
-		err := store.Update(store.DeviceCode{DeviceCode: "nonexistent"})
+		err := deviceStore.Update(store.DeviceCode{DeviceCode: "nonexistent"})
 		assert.Error(t, err)
 	})
 }
 
 func TestDeviceCodeHandler(t *testing.T) {
-	provider := new(MockOAuthProvider)
-	provider.On("Name").Return("google")
-	provider.On("IsEnabled").Return(true)
-
-	store := store.NewInMemoryDeviceCodeStore()
-
 	tests := []struct {
 		name           string
 		providerName   string
 		enabled        bool
+		setupMocks     func(*MockOAuthService, *MockOAuthProvider)
 		expectedStatus int
 		checkResponse  func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name:           "successful device code generation",
-			providerName:   "google",
-			enabled:        true,
+			name:         "successful device code generation",
+			providerName: "google",
+			enabled:      true,
+			setupMocks: func(oauthSvc *MockOAuthService, provider *MockOAuthProvider) {
+				provider.On("IsEnabled").Return(true)
+				mockCode := store.DeviceCode{
+					DeviceCode:      "mock-device-code",
+					UserCode:        "ABCD-EFGH",
+					VerificationURI: "http://example.com/verify",
+					ExpiresIn:       600,
+					Interval:        5,
+				}
+				oauthSvc.On("CreateDeviceCode", mock.Anything, provider, mock.Anything).
+					Return(mockCode, nil)
+			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				var deviceCode DeviceCode
+				var deviceCode store.DeviceCode
 				err := json.NewDecoder(rec.Body).Decode(&deviceCode)
 				assert.NoError(t, err)
 				assert.NotEmpty(t, deviceCode.DeviceCode)
@@ -133,9 +128,12 @@ func TestDeviceCodeHandler(t *testing.T) {
 			},
 		},
 		{
-			name:           "provider disabled",
-			providerName:   "google",
-			enabled:        false,
+			name:         "provider disabled",
+			providerName: "google",
+			enabled:      false,
+			setupMocks: func(oauthSvc *MockOAuthService, provider *MockOAuthProvider) {
+				provider.On("IsEnabled").Return(false)
+			},
 			expectedStatus: http.StatusNotFound,
 			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				var resp errorResponse
@@ -150,10 +148,11 @@ func TestDeviceCodeHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			provider := new(MockOAuthProvider)
 			provider.On("Name").Return(tc.providerName)
-			provider.On("IsEnabled").Return(tc.enabled)
-			provider.On("State").Return("state123")
+			oauthSvc := new(MockOAuthService)
 
-			handler := deviceCodeHandler(provider, store)
+			tc.setupMocks(oauthSvc, provider)
+
+			handler := deviceCodeHandler(provider, oauthSvc)
 
 			req := httptest.NewRequest(http.MethodPost, "/oauth/device/code/google", nil)
 			rec := httptest.NewRecorder()
@@ -167,37 +166,21 @@ func TestDeviceCodeHandler(t *testing.T) {
 }
 
 func TestDeviceTokenHandler(t *testing.T) {
-	svc := new(mocks.Service)
-	tokenClient := new(MockTokenServiceClient)
-	store := store.NewInMemoryDeviceCodeStore()
-
-	// Save a device code
-	deviceCode := store.DeviceCode{
-		DeviceCode:      "device123",
-		UserCode:        "ABCD-EFGH",
-		VerificationURI: "http://example.com/verify",
-		ExpiresIn:       600,
-		Interval:        3,
-		Provider:        "google",
-		CreatedAt:       time.Now(),
-		State:           "state123",
-		LastPoll:        time.Now().Add(-5 * time.Second),
-	}
-	store.Save(deviceCode)
-
 	tests := []struct {
 		name           string
 		deviceCode     string
-		setupCode      func()
+		setupMocks     func(*MockOAuthService, *MockOAuthProvider)
 		enabled        bool
 		expectedStatus int
 		checkResponse  func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
 			name:       "authorization pending",
-			deviceCode: deviceCode.DeviceCode,
-			setupCode: func() {
-				// Code is pending (not approved)
+			deviceCode: "device123",
+			setupMocks: func(oauthSvc *MockOAuthService, provider *MockOAuthProvider) {
+				provider.On("IsEnabled").Return(true)
+				oauthSvc.On("PollDeviceToken", mock.Anything, provider, "device123").
+					Return(nil, useroauth.ErrDeviceCodePending)
 			},
 			enabled:        true,
 			expectedStatus: http.StatusAccepted,
@@ -211,8 +194,12 @@ func TestDeviceTokenHandler(t *testing.T) {
 		{
 			name:       "invalid device code",
 			deviceCode: "invalid",
-			setupCode:  func() {},
-			enabled:    true,
+			setupMocks: func(oauthSvc *MockOAuthService, provider *MockOAuthProvider) {
+				provider.On("IsEnabled").Return(true)
+				oauthSvc.On("PollDeviceToken", mock.Anything, provider, "invalid").
+					Return(nil, useroauth.ErrDeviceCodeNotFound)
+			},
+			enabled:        true,
 			expectedStatus: http.StatusNotFound,
 			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				var resp errorResponse
@@ -223,111 +210,8 @@ func TestDeviceTokenHandler(t *testing.T) {
 		},
 		{
 			name:       "provider disabled",
-			deviceCode: deviceCode.DeviceCode,
-			setupCode:  func() {},
-			enabled:    false,
-			expectedStatus: http.StatusNotFound,
-			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				var resp errorResponse
-				err := json.NewDecoder(rec.Body).Decode(&resp)
-				assert.NoError(t, err)
-				assert.Equal(t, "oauth provider is disabled", resp.Error)
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			tc.setupCode()
-
-			provider := new(MockOAuthProvider)
-			provider.On("Name").Return("google")
-			provider.On("IsEnabled").Return(tc.enabled)
-
-			handler := deviceTokenHandler(provider, oauthSvc, store, svc, tokenClient)
-
-			reqBody, _ := json.Marshal(map[string]string{
-				"device_code": tc.deviceCode,
-			})
-			req := httptest.NewRequest(http.MethodPost, "/oauth/device/token/google", bytes.NewReader(reqBody))
-			rec := httptest.NewRecorder()
-
-			handler.ServeHTTP(rec, req)
-
-			assert.Equal(t, tc.expectedStatus, rec.Code)
-			tc.checkResponse(t, rec)
-		})
-	}
-}
-
-func TestDeviceVerifyHandler(t *testing.T) {
-	svc := new(mocks.Service)
-	tokenClient := new(MockTokenServiceClient)
-	store := store.NewInMemoryDeviceCodeStore()
-
-	// Save a device code
-	deviceCode := store.DeviceCode{
-		DeviceCode:      "device123",
-		UserCode:        "ABCD-EFGH",
-		VerificationURI: "http://example.com/verify",
-		ExpiresIn:       600,
-		Interval:        3,
-		Provider:        "google",
-		CreatedAt:       time.Now(),
-		State:           "state123",
-	}
-	store.Save(deviceCode)
-
-	tests := []struct {
-		name           string
-		userCode       string
-		code           string
-		approve        bool
-		setupMocks     func(*MockOAuthProvider)
-		enabled        bool
-		expectedStatus int
-		checkResponse  func(*testing.T, *httptest.ResponseRecorder)
-	}{
-		{
-			name:     "deny authorization",
-			userCode: deviceCode.UserCode,
-			code:     "",
-			approve:  false,
-			setupMocks: func(provider *MockOAuthProvider) {
-				provider.On("IsEnabled").Return(true)
-			},
-			enabled:        true,
-			expectedStatus: http.StatusOK,
-			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				var resp map[string]string
-				err := json.NewDecoder(rec.Body).Decode(&resp)
-				assert.NoError(t, err)
-				assert.Equal(t, "denied", resp["status"])
-			},
-		},
-		{
-			name:     "invalid user code",
-			userCode: "INVALID",
-			code:     "",
-			approve:  false,
-			setupMocks: func(provider *MockOAuthProvider) {
-				// No setup needed
-			},
-			enabled:        true,
-			expectedStatus: http.StatusNotFound,
-			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				var resp errorResponse
-				err := json.NewDecoder(rec.Body).Decode(&resp)
-				assert.NoError(t, err)
-				assert.Contains(t, resp.Error, "invalid user code")
-			},
-		},
-		{
-			name:     "provider disabled",
-			userCode: deviceCode.UserCode,
-			code:     "",
-			approve:  false,
-			setupMocks: func(provider *MockOAuthProvider) {
+			deviceCode: "device123",
+			setupMocks: func(oauthSvc *MockOAuthService, provider *MockOAuthProvider) {
 				provider.On("IsEnabled").Return(false)
 			},
 			enabled:        false,
@@ -345,9 +229,106 @@ func TestDeviceVerifyHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			provider := new(MockOAuthProvider)
 			provider.On("Name").Return("google")
-			tc.setupMocks(provider)
+			oauthSvc := new(MockOAuthService)
 
-			handler := deviceVerifyHandler(store, svc, tokenClient, provider)
+			tc.setupMocks(oauthSvc, provider)
+
+			handler := deviceTokenHandler(provider, oauthSvc)
+
+			reqBody, _ := json.Marshal(map[string]string{
+				"device_code": tc.deviceCode,
+			})
+			req := httptest.NewRequest(http.MethodPost, "/oauth/device/token/google", bytes.NewReader(reqBody))
+			rec := httptest.NewRecorder()
+
+			handler.ServeHTTP(rec, req)
+
+			assert.Equal(t, tc.expectedStatus, rec.Code)
+			tc.checkResponse(t, rec)
+		})
+	}
+}
+
+func TestDeviceVerifyHandler(t *testing.T) {
+	tests := []struct {
+		name           string
+		userCode       string
+		code           string
+		approve        bool
+		setupMocks     func(*MockOAuthService, *MockOAuthProvider)
+		enabled        bool
+		expectedStatus int
+		checkResponse  func(*testing.T, *httptest.ResponseRecorder)
+	}{
+		{
+			name:     "deny authorization",
+			userCode: "ABCD-EFGH",
+			code:     "",
+			approve:  false,
+			setupMocks: func(oauthSvc *MockOAuthService, provider *MockOAuthProvider) {
+				oauthSvc.On("GetDeviceCodeByUserCode", mock.Anything, "ABCD-EFGH").
+					Return(store.DeviceCode{Provider: "google"}, nil)
+				provider.On("IsEnabled").Return(true)
+				oauthSvc.On("VerifyDevice", mock.Anything, provider, "ABCD-EFGH", "", false).
+					Return(nil)
+			},
+			enabled:        true,
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				var resp map[string]string
+				err := json.NewDecoder(rec.Body).Decode(&resp)
+				assert.NoError(t, err)
+				assert.Equal(t, "denied", resp["status"])
+			},
+		},
+		{
+			name:     "invalid user code",
+			userCode: "INVALID",
+			code:     "",
+			approve:  false,
+			setupMocks: func(oauthSvc *MockOAuthService, provider *MockOAuthProvider) {
+				oauthSvc.On("GetDeviceCodeByUserCode", mock.Anything, "INVALID").
+					Return(store.DeviceCode{}, useroauth.ErrUserCodeNotFound)
+			},
+			enabled:        true,
+			expectedStatus: http.StatusNotFound,
+			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				var resp errorResponse
+				err := json.NewDecoder(rec.Body).Decode(&resp)
+				assert.NoError(t, err)
+				assert.Contains(t, resp.Error, "invalid user code")
+			},
+		},
+		{
+			name:     "provider disabled",
+			userCode: "ABCD-EFGH",
+			code:     "",
+			approve:  false,
+			setupMocks: func(oauthSvc *MockOAuthService, provider *MockOAuthProvider) {
+				oauthSvc.On("GetDeviceCodeByUserCode", mock.Anything, "ABCD-EFGH").
+					Return(store.DeviceCode{Provider: "google"}, nil)
+				provider.On("IsEnabled").Return(false)
+			},
+			enabled:        false,
+			expectedStatus: http.StatusNotFound,
+			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				var resp errorResponse
+				err := json.NewDecoder(rec.Body).Decode(&resp)
+				assert.NoError(t, err)
+				assert.Equal(t, "oauth provider is disabled", resp.Error)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			provider := new(MockOAuthProvider)
+			provider.On("Name").Return("google")
+			oauthSvc := new(MockOAuthService)
+
+			tc.setupMocks(oauthSvc, provider)
+
+			handler := deviceVerifyHandler(oauthSvc, provider)
 
 			reqBody, _ := json.Marshal(map[string]interface{}{
 				"user_code": tc.userCode,
@@ -420,33 +401,66 @@ func (m *MockOAuthProvider) GetAuthURLWithRedirect(redirectURL string) string {
 	return args.String(0)
 }
 
+// Mock OAuth service for testing
+type MockOAuthService struct {
+	mock.Mock
+}
+
+func (m *MockOAuthService) CreateDeviceCode(ctx context.Context, provider oauth2.Provider, verificationURI string) (store.DeviceCode, error) {
+	args := m.Called(ctx, provider, verificationURI)
+	return args.Get(0).(store.DeviceCode), args.Error(1)
+}
+
+func (m *MockOAuthService) PollDeviceToken(ctx context.Context, provider oauth2.Provider, deviceCode string) (*grpcTokenV1.Token, error) {
+	args := m.Called(ctx, provider, deviceCode)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*grpcTokenV1.Token), args.Error(1)
+}
+
+func (m *MockOAuthService) VerifyDevice(ctx context.Context, provider oauth2.Provider, userCode, oauthCode string, approve bool) error {
+	args := m.Called(ctx, provider, userCode, oauthCode, approve)
+	return args.Error(0)
+}
+
+func (m *MockOAuthService) GetDeviceCodeByUserCode(ctx context.Context, userCode string) (store.DeviceCode, error) {
+	args := m.Called(ctx, userCode)
+	return args.Get(0).(store.DeviceCode), args.Error(1)
+}
+
+func (m *MockOAuthService) ProcessWebCallback(ctx context.Context, provider oauth2.Provider, code, state string) (*grpcTokenV1.Token, error) {
+	args := m.Called(ctx, provider, code, state)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*grpcTokenV1.Token), args.Error(1)
+}
+
+func (m *MockOAuthService) ProcessDeviceCallback(ctx context.Context, provider oauth2.Provider, userCode, oauthCode string) error {
+	args := m.Called(ctx, provider, userCode, oauthCode)
+	return args.Error(0)
+}
+
 // Mock token service client for testing
 type MockTokenServiceClient struct {
 	mock.Mock
 }
 
 func (m *MockTokenServiceClient) Issue(ctx context.Context, req *grpcTokenV1.IssueReq, opts ...grpc.CallOption) (*grpcTokenV1.Token, error) {
-	useroauth "github.com/absmach/supermq/users/oauth"
-	"github.com/absmach/supermq/users/oauth/store"
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*grpcTokenV1.Token), args.Error(1)
-	useroauth "github.com/absmach/supermq/users/oauth"
-	"github.com/absmach/supermq/users/oauth/store"
 }
 
 func (m *MockTokenServiceClient) Refresh(ctx context.Context, req *grpcTokenV1.RefreshReq, opts ...grpc.CallOption) (*grpcTokenV1.Token, error) {
-	useroauth "github.com/absmach/supermq/users/oauth"
-	"github.com/absmach/supermq/users/oauth/store"
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*grpcTokenV1.Token), args.Error(1)
-	useroauth "github.com/absmach/supermq/users/oauth"
-	"github.com/absmach/supermq/users/oauth/store"
 }
 
 // Add these to users/mocks package

@@ -5,13 +5,11 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/absmach/supermq/pkg/sdk"
 	smqsdk "github.com/absmach/supermq/pkg/sdk"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -273,10 +271,10 @@ func TestDeviceCodeGeneration(t *testing.T) {
 		}))
 		defer server.Close()
 
-		sdkConf := sdk.Config{
+		sdkConf := smqsdk.Config{
 			UsersURL: server.URL,
 		}
-		testSDK := sdk.NewSDK(sdkConf)
+		testSDK := smqsdk.NewSDK(sdkConf)
 
 		deviceCode, err := testSDK.OAuthDeviceCode(context.Background(), "google")
 		require.NoError(t, err)
@@ -303,10 +301,10 @@ func TestDeviceFlowTimeout(t *testing.T) {
 		}))
 		defer server.Close()
 
-		sdkConf := sdk.Config{
+		sdkConf := smqsdk.Config{
 			UsersURL: server.URL,
 		}
-		sdk = sdk.NewSDK(sdkConf)
+		sdk = smqsdk.NewSDK(sdkConf)
 
 		ctx := context.Background()
 		_, err := pollForAuthorization(ctx, "google", "device123", 1)

@@ -12,20 +12,19 @@ import (
 	smqauth "github.com/absmach/supermq/auth"
 	"github.com/absmach/supermq/pkg/oauth2"
 	"github.com/absmach/supermq/users"
-	"github.com/absmach/supermq/users/oauth/store"
 )
 
 var _ Service = (*oauthService)(nil)
 
 // oauthService implements the OAuth Service interface.
 type oauthService struct {
-	deviceStore store.DeviceCodeStore
+	deviceStore oauth2.DeviceCodeStore
 	userService users.Service
 	tokenClient grpcTokenV1.TokenServiceClient
 }
 
 // NewOAuthService creates a new OAuth service instance.
-func NewOAuthService(deviceStore store.DeviceCodeStore, userService users.Service, tokenClient grpcTokenV1.TokenServiceClient) Service {
+func NewOAuthService(deviceStore oauth2.DeviceCodeStore, userService users.Service, tokenClient grpcTokenV1.TokenServiceClient) Service {
 	return &oauthService{
 		deviceStore: deviceStore,
 		userService: userService,
@@ -34,26 +33,26 @@ func NewOAuthService(deviceStore store.DeviceCodeStore, userService users.Servic
 }
 
 // CreateDeviceCode initiates the device authorization flow.
-func (s *oauthService) CreateDeviceCode(ctx context.Context, provider oauth2.Provider, verificationURI string) (store.DeviceCode, error) {
+func (s *oauthService) CreateDeviceCode(ctx context.Context, provider oauth2.Provider, verificationURI string) (oauth2.DeviceCode, error) {
 	if !provider.IsEnabled() {
-		return store.DeviceCode{}, ErrInvalidProvider
+		return oauth2.DeviceCode{}, ErrInvalidProvider
 	}
 
 	userCode, err := generateUserCode()
 	if err != nil {
-		return store.DeviceCode{}, fmt.Errorf("failed to generate user code: %w", err)
+		return oauth2.DeviceCode{}, fmt.Errorf("failed to generate user code: %w", err)
 	}
 
 	deviceCode, err := generateDeviceCode()
 	if err != nil {
-		return store.DeviceCode{}, fmt.Errorf("failed to generate device code: %w", err)
+		return oauth2.DeviceCode{}, fmt.Errorf("failed to generate device code: %w", err)
 	}
 
-	code := store.DeviceCode{
+	code := oauth2.DeviceCode{
 		DeviceCode:      deviceCode,
 		UserCode:        userCode,
 		VerificationURI: verificationURI,
-		ExpiresIn:       int(store.DeviceCodeExpiry.Seconds()),
+		ExpiresIn:       int(oauth2.DeviceCodeExpiry.Seconds()),
 		Interval:        int(CodeCheckInterval.Seconds()),
 		Provider:        provider.Name(),
 		CreatedAt:       time.Now(),
@@ -61,7 +60,7 @@ func (s *oauthService) CreateDeviceCode(ctx context.Context, provider oauth2.Pro
 	}
 
 	if err := s.deviceStore.Save(code); err != nil {
-		return store.DeviceCode{}, fmt.Errorf("failed to save device code: %w", err)
+		return oauth2.DeviceCode{}, fmt.Errorf("failed to save device code: %w", err)
 	}
 
 	return code, nil
@@ -79,7 +78,7 @@ func (s *oauthService) PollDeviceToken(ctx context.Context, provider oauth2.Prov
 	}
 
 	// Check expiration
-	if time.Since(code.CreatedAt) > store.DeviceCodeExpiry {
+	if time.Since(code.CreatedAt) > oauth2.DeviceCodeExpiry {
 		s.deviceStore.Delete(deviceCode)
 		return nil, ErrDeviceCodeExpired
 	}
@@ -128,7 +127,7 @@ func (s *oauthService) VerifyDevice(ctx context.Context, provider oauth2.Provide
 	}
 
 	// Check expiration
-	if time.Since(code.CreatedAt) > store.DeviceCodeExpiry {
+	if time.Since(code.CreatedAt) > oauth2.DeviceCodeExpiry {
 		s.deviceStore.Delete(code.DeviceCode)
 		return ErrDeviceCodeExpired
 	}
@@ -155,7 +154,7 @@ func (s *oauthService) VerifyDevice(ctx context.Context, provider oauth2.Provide
 }
 
 // GetDeviceCodeByUserCode retrieves a device code by its user code.
-func (s *oauthService) GetDeviceCodeByUserCode(ctx context.Context, userCode string) (store.DeviceCode, error) {
+func (s *oauthService) GetDeviceCodeByUserCode(ctx context.Context, userCode string) (oauth2.DeviceCode, error) {
 	return s.deviceStore.GetByUserCode(userCode)
 }
 

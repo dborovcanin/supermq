@@ -24,6 +24,7 @@ import (
 	httpapi "github.com/absmach/supermq/users/api"
 	umocks "github.com/absmach/supermq/users/mocks"
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	goauth2 "golang.org/x/oauth2"
@@ -52,7 +53,8 @@ func setupOAuthServer() (*httptest.Server, *umocks.Service, *oauth2mocks.Provide
 	authn := new(authnmocks.Authentication)
 	am := smqauthn.NewAuthNMiddleware(authn, smqauthn.WithDomainCheck(false), smqauthn.WithAllowUnverifiedUser(true))
 	token := new(authmocks.TokenServiceClient)
-	httpapi.MakeHandler(usvc, am, token, true, mux, logger, "", passRegex, idp, provider)
+	redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	httpapi.MakeHandler(usvc, am, token, true, mux, logger, "", passRegex, idp, redisClient, provider)
 
 	return httptest.NewServer(mux), usvc, provider, token
 }
@@ -106,14 +108,14 @@ func TestOAuthAuthorizationURL(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			provider.On("IsEnabled").Return(tc.providerEnabled).Once()
+			provider.On("IsEnabled").Return(tc.providerEnabled)
 			if tc.providerEnabled {
 				if tc.redirectURL != "" {
-					provider.On("GetAuthURLWithRedirect", tc.redirectURL).Return(tc.getAuthURL).Once()
+					provider.On("GetAuthURLWithRedirect", tc.redirectURL).Return(tc.getAuthURL)
 				} else {
-					provider.On("GetAuthURL").Return(tc.getAuthURL).Once()
+					provider.On("GetAuthURL").Return(tc.getAuthURL)
 				}
-				provider.On("State").Return(tc.state).Once()
+				provider.On("State").Return(tc.state)
 			}
 
 			authURL, state, err := mgsdk.OAuthAuthorizationURL(context.Background(), tc.providerName, tc.redirectURL)
@@ -127,6 +129,9 @@ func TestOAuthAuthorizationURL(t *testing.T) {
 				assert.Empty(t, authURL)
 				assert.Empty(t, state)
 			}
+
+			// Reset mocks
+			provider.ExpectedCalls = nil
 		})
 	}
 }
@@ -168,8 +173,8 @@ func TestOAuthCallback(t *testing.T) {
 			redirectURL:     testCallbackURL,
 			providerEnabled: true,
 			mockSetup: func() {
-				provider.On("IsEnabled").Return(true).Once()
-				provider.On("State").Return(testState).Once()
+				provider.On("IsEnabled").Return(true)
+				provider.On("State").Return(testState)
 				provider.On("ExchangeWithRedirect", mock.Anything, testCode, testCallbackURL).
 					Return(goauth2.Token{AccessToken: testAccessToken}, nil).Once()
 				provider.On("UserInfo", testAccessToken).Return(validUser, nil).Once()
@@ -198,8 +203,8 @@ func TestOAuthCallback(t *testing.T) {
 			redirectURL:     "",
 			providerEnabled: true,
 			mockSetup: func() {
-				provider.On("IsEnabled").Return(true).Once()
-				provider.On("State").Return(testState).Once()
+				provider.On("IsEnabled").Return(true)
+				provider.On("State").Return(testState)
 				provider.On("Exchange", mock.Anything, testCode).
 					Return(goauth2.Token{AccessToken: testAccessToken}, nil).Once()
 				provider.On("UserInfo", testAccessToken).Return(validUser, nil).Once()
@@ -228,7 +233,7 @@ func TestOAuthCallback(t *testing.T) {
 			redirectURL:     "",
 			providerEnabled: false,
 			mockSetup: func() {
-				provider.On("IsEnabled").Return(false).Once()
+				provider.On("IsEnabled").Return(false)
 			},
 			expectedToken: sdk.Token{},
 			err:           errors.NewSDKErrorWithStatus(errors.Wrap(svcerr.ErrNotFound, errors.New("oauth provider is disabled")), http.StatusNotFound),
@@ -241,8 +246,8 @@ func TestOAuthCallback(t *testing.T) {
 			redirectURL:     "",
 			providerEnabled: true,
 			mockSetup: func() {
-				provider.On("IsEnabled").Return(true).Once()
-				provider.On("State").Return(testState).Once()
+				provider.On("IsEnabled").Return(true)
+				provider.On("State").Return(testState)
 			},
 			expectedToken: sdk.Token{},
 			err:           errors.NewSDKErrorWithStatus(errors.Wrap(errors.ErrMalformedEntity, errors.New("invalid state")), http.StatusBadRequest),
@@ -255,8 +260,8 @@ func TestOAuthCallback(t *testing.T) {
 			redirectURL:     "",
 			providerEnabled: true,
 			mockSetup: func() {
-				provider.On("IsEnabled").Return(true).Once()
-				provider.On("State").Return(testState).Once()
+				provider.On("IsEnabled").Return(true)
+				provider.On("State").Return(testState)
 				provider.On("Exchange", mock.Anything, testCode).
 					Return(goauth2.Token{}, fmt.Errorf("exchange failed")).Once()
 			},
@@ -308,10 +313,10 @@ func TestOAuthIntegration(t *testing.T) {
 	redirectURL := testCallbackURL
 
 	// Setup mocks for authorization URL
-	provider.On("IsEnabled").Return(true).Once()
+	provider.On("IsEnabled").Return(true)
 	provider.On("GetAuthURLWithRedirect", redirectURL).
-		Return(testAuthURLBase + "?redirect_uri=" + redirectURL).Once()
-	provider.On("State").Return(testState).Once()
+		Return(testAuthURLBase + "?redirect_uri=" + redirectURL)
+	provider.On("State").Return(testState)
 
 	// Step 1: Get authorization URL
 	authURL, state, err := mgsdk.OAuthAuthorizationURL(context.Background(), googleProvider, redirectURL)
@@ -321,8 +326,6 @@ func TestOAuthIntegration(t *testing.T) {
 	assert.Contains(t, authURL, redirectURL)
 
 	// Setup mocks for callback
-	provider.On("IsEnabled").Return(true).Once()
-	provider.On("State").Return(testState).Once()
 	provider.On("ExchangeWithRedirect", mock.Anything, testCode, redirectURL).
 		Return(goauth2.Token{AccessToken: testAccessToken}, nil).Once()
 	provider.On("UserInfo", testAccessToken).Return(validUser, nil).Once()

@@ -116,6 +116,7 @@ packages:
   github.com/absmach/supermq/pkg/oauth2:
     interfaces:
       Provider:
+      DeviceCodeStore:
   github.com/absmach/supermq/pkg/policies:
     interfaces:
       Evaluator:
@@ -137,11 +138,9 @@ packages:
       Hasher:
       Repository:
       Service:
+  github.com/absmach/supermq/users/oauth:
+    interfaces:
+      Service:
   github.com/absmach/supermq/notifications:
     interfaces:
       Notifier:
-  github.com/absmach/supermq/oauth:
-    interfaces:
-      Service:
-      DeviceCodeStore:
-

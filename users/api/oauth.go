@@ -150,10 +150,12 @@ func oauth2CLICallbackHandler(oauth oauth2.Provider, oauthSvc useroauth.Service)
 		jwt, err := oauthSvc.ProcessWebCallback(r.Context(), oauth, req.Code, req.RedirectURL)
 		if err != nil {
 			status := http.StatusInternalServerError
-			if err.Error() == "unauthorized" {
+			// Exchange errors and unauthorized errors should return 401
+			errMsg := err.Error()
+			if errMsg == "unauthorized" || strings.Contains(errMsg, "failed to exchange code") {
 				status = http.StatusUnauthorized
 			}
-			respondWithJSON(w, status, newErrorResponse(err.Error()))
+			respondWithJSON(w, status, newErrorResponse(errMsg))
 			return
 		}
 

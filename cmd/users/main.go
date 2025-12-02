@@ -61,16 +61,18 @@ import (
 )
 
 const (
-	svcName          = "users"
-	envPrefixDB      = "SMQ_USERS_DB_"
-	envPrefixHTTP    = "SMQ_USERS_HTTP_"
-	envPrefixGRPC    = "SMQ_USERS_GRPC_"
-	envPrefixAuth    = "SMQ_AUTH_GRPC_"
-	envPrefixDomains = "SMQ_DOMAINS_GRPC_"
-	envPrefixGoogle  = "SMQ_GOOGLE_"
-	defDB            = "users"
-	defSvcHTTPPort   = "9002"
-	defSvcGRPCPort   = "7002"
+	svcName               = "users"
+	envPrefixDB           = "SMQ_USERS_DB_"
+	envPrefixHTTP         = "SMQ_USERS_HTTP_"
+	envPrefixGRPC         = "SMQ_USERS_GRPC_"
+	envPrefixAuth         = "SMQ_AUTH_GRPC_"
+	envPrefixDomains      = "SMQ_DOMAINS_GRPC_"
+	envPrefixGoogle       = "SMQ_GOOGLE_"
+	envPrefixGoogleDevice = "SMQ_GOOGLE_DEVICE_"
+	envPrefixGoogleUser   = "SMQ_GOOGLE_USER_"
+	defDB                 = "users"
+	defSvcHTTPPort        = "9002"
+	defSvcGRPCPort        = "7002"
 )
 
 type config struct {
@@ -274,17 +276,59 @@ func main() {
 		return
 	}
 
-	oauthConfig := oauth2.Config{}
-	if err := env.ParseWithOptions(&oauthConfig, env.Options{Prefix: envPrefixGoogle}); err != nil {
-		logger.Error(fmt.Sprintf("failed to load %s Google configuration : %s", svcName, err.Error()))
+	// Try to load separate device and user OAuth configs first
+	deviceOauthConfig := oauth2.DeviceConfig{}
+	if err := env.ParseWithOptions(&deviceOauthConfig, env.Options{Prefix: envPrefixGoogleDevice}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s Google device configuration : %s", svcName, err.Error()))
 		exitCode = 1
 		return
 	}
-	oauthProvider := googleoauth.NewProvider(oauthConfig, cfg.OAuthUIRedirectURL, cfg.OAuthUIErrorURL)
+
+	userOauthConfig := oauth2.UserConfig{}
+	if err := env.ParseWithOptions(&userOauthConfig, env.Options{Prefix: envPrefixGoogleUser}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load %s Google user configuration : %s", svcName, err.Error()))
+		exitCode = 1
+		return
+	}
+
+	// Fallback to legacy config if new configs are not set
+	if deviceOauthConfig.ClientID == "" {
+		legacyConfig := oauth2.Config{}
+		if err := env.ParseWithOptions(&legacyConfig, env.Options{Prefix: envPrefixGoogle}); err != nil {
+			logger.Error(fmt.Sprintf("failed to load %s Google configuration : %s", svcName, err.Error()))
+			exitCode = 1
+			return
+		}
+		deviceOauthConfig = oauth2.DeviceConfig{
+			ClientID:     legacyConfig.ClientID,
+			ClientSecret: legacyConfig.ClientSecret,
+			State:        legacyConfig.State,
+			RedirectURL:  legacyConfig.RedirectURL,
+		}
+	}
+
+	if userOauthConfig.ClientID == "" {
+		legacyConfig := oauth2.Config{}
+		if err := env.ParseWithOptions(&legacyConfig, env.Options{Prefix: envPrefixGoogle}); err != nil {
+			logger.Error(fmt.Sprintf("failed to load %s Google configuration : %s", svcName, err.Error()))
+			exitCode = 1
+			return
+		}
+		userOauthConfig = oauth2.UserConfig{
+			ClientID:     legacyConfig.ClientID,
+			ClientSecret: legacyConfig.ClientSecret,
+			State:        legacyConfig.State,
+			RedirectURL:  legacyConfig.RedirectURL,
+		}
+	}
+
+	deviceProvider := []oauth2.Provider{googleoauth.NewProvider(deviceOauthConfig.ToConfig(), cfg.OAuthUIRedirectURL, cfg.OAuthUIErrorURL)}
+	userProvider := []oauth2.Provider{googleoauth.NewProvider(userOauthConfig.ToConfig(), cfg.OAuthUIRedirectURL, cfg.OAuthUIErrorURL)}
 
 	mux := chi.NewRouter()
 	idp := uuid.New()
-	httpSrv := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(csvc, authnMiddleware, tokenClient, cfg.SelfRegister, mux, logger, cfg.InstanceID, cfg.PassRegex, idp, cacheClient, oauthProvider), logger)
+	handler := httpapi.MakeHandler(csvc, authnMiddleware, tokenClient, cfg.SelfRegister, mux, logger, cfg.InstanceID, cfg.PassRegex, idp, cacheClient, deviceProvider, userProvider)
+	httpSrv := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, handler, logger)
 
 	if cfg.SendTelemetry {
 		chc := chclient.New(svcName, supermq.Version, logger, cancel)

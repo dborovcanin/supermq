@@ -464,6 +464,299 @@ func TestOAuthCLICallbackEndpoint(t *testing.T) {
 	}
 }
 
+func TestOAuthCallbackEndpoint(t *testing.T) {
+	svc := new(usermocks.Service)
+
+	validUserID := testsutil.GenerateUUID(t)
+	validUser := users.User{
+		ID:    validUserID,
+		Email: "test@example.com",
+		Credentials: users.Credentials{
+			Username: "testuser",
+		},
+		Status: users.EnabledStatus,
+	}
+
+	cases := []struct {
+		name            string
+		provider        string
+		providerName    string
+		providerEnabled bool
+		queryParams     map[string]string
+		mockSetup       func(*oauth2mocks.Provider, *usermocks.Service, *authmocks.TokenServiceClient)
+		expectedStatus  int
+		checkResponse   func(t *testing.T, res *http.Response)
+	}{
+		{
+			name:            "successful OAuth web callback",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			queryParams: map[string]string{
+				"state": "test-state",
+				"code":  "test-code",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(validUser, nil)
+				svc.On("OAuthCallback", mock.Anything, mock.MatchedBy(func(u users.User) bool {
+					return u.Email == validUser.Email && u.AuthProvider == "google"
+				})).Return(validUser, nil)
+				svc.On("OAuthAddUserPolicy", mock.Anything, validUser).Return(nil)
+				refreshToken := "jwt-refresh-token"
+				tokenClient.On("Issue", mock.Anything, mock.Anything).
+					Return(&grpcTokenV1.Token{
+						AccessToken:  "jwt-access-token",
+						RefreshToken: &refreshToken,
+					}, nil)
+			},
+			expectedStatus: http.StatusFound,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				// Check that it redirects to the redirect URL
+				assert.Contains(t, res.Header.Get("Location"), "http://localhost/ui")
+				// Check cookies are set
+				cookies := res.Cookies()
+				assert.NotEmpty(t, cookies)
+				foundAccessToken := false
+				foundRefreshToken := false
+				for _, cookie := range cookies {
+					if cookie.Name == "access_token" {
+						foundAccessToken = true
+						assert.Equal(t, "jwt-access-token", cookie.Value)
+					}
+					if cookie.Name == "refresh_token" {
+						foundRefreshToken = true
+						assert.Equal(t, "jwt-refresh-token", cookie.Value)
+					}
+				}
+				assert.True(t, foundAccessToken, "access_token cookie not found")
+				assert.True(t, foundRefreshToken, "refresh_token cookie not found")
+			},
+		},
+		{
+			name:            "provider disabled",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: false,
+			queryParams: map[string]string{
+				"state": "test-state",
+				"code":  "test-code",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			},
+			expectedStatus: http.StatusSeeOther,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				location := res.Header.Get("Location")
+				assert.Contains(t, location, "error=")
+				assert.Contains(t, location, "oauth")
+			},
+		},
+		{
+			name:            "invalid state",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			queryParams: map[string]string{
+				"state": "wrong-state",
+				"code":  "test-code",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			},
+			expectedStatus: http.StatusSeeOther,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				location := res.Header.Get("Location")
+				assert.Contains(t, location, "error=")
+				assert.Contains(t, location, "state")
+			},
+		},
+		{
+			name:            "empty code",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			queryParams: map[string]string{
+				"state": "test-state",
+				"code":  "",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+			},
+			expectedStatus: http.StatusSeeOther,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				location := res.Header.Get("Location")
+				assert.Contains(t, location, "error=")
+				assert.Contains(t, location, "code")
+			},
+		},
+		{
+			name:            "exchange token error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			queryParams: map[string]string{
+				"state": "test-state",
+				"code":  "test-code",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{}, fmt.Errorf("exchange failed"))
+			},
+			expectedStatus: http.StatusSeeOther,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				assert.Contains(t, res.Header.Get("Location"), "error=")
+			},
+		},
+		{
+			name:            "user info retrieval error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			queryParams: map[string]string{
+				"state": "test-state",
+				"code":  "test-code",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(users.User{}, fmt.Errorf("user info failed"))
+			},
+			expectedStatus: http.StatusSeeOther,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				assert.Contains(t, res.Header.Get("Location"), "error=")
+			},
+		},
+		{
+			name:            "OAuth callback service error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			queryParams: map[string]string{
+				"state": "test-state",
+				"code":  "test-code",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(validUser, nil)
+				svc.On("OAuthCallback", mock.Anything, mock.Anything).
+					Return(users.User{}, fmt.Errorf("service error"))
+			},
+			expectedStatus: http.StatusSeeOther,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				assert.Contains(t, res.Header.Get("Location"), "error=")
+			},
+		},
+		{
+			name:            "add user policy error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			queryParams: map[string]string{
+				"state": "test-state",
+				"code":  "test-code",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(validUser, nil)
+				svc.On("OAuthCallback", mock.Anything, mock.MatchedBy(func(u users.User) bool {
+					return u.Email == validUser.Email
+				})).Return(validUser, nil)
+				svc.On("OAuthAddUserPolicy", mock.Anything, validUser).
+					Return(fmt.Errorf("policy error"))
+			},
+			expectedStatus: http.StatusSeeOther,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				assert.Contains(t, res.Header.Get("Location"), "error=")
+			},
+		},
+		{
+			name:            "token issuance error",
+			provider:        "google",
+			providerName:    "google",
+			providerEnabled: true,
+			queryParams: map[string]string{
+				"state": "test-state",
+				"code":  "test-code",
+			},
+			mockSetup: func(provider *oauth2mocks.Provider, svc *usermocks.Service, tokenClient *authmocks.TokenServiceClient) {
+				provider.On("Exchange", mock.Anything, "test-code").
+					Return(goauth2.Token{AccessToken: "access-token"}, nil)
+				provider.On("UserInfo", "access-token").Return(validUser, nil)
+				svc.On("OAuthCallback", mock.Anything, mock.MatchedBy(func(u users.User) bool {
+					return u.Email == validUser.Email
+				})).Return(validUser, nil)
+				svc.On("OAuthAddUserPolicy", mock.Anything, validUser).Return(nil)
+				tokenClient.On("Issue", mock.Anything, mock.Anything).
+					Return(nil, fmt.Errorf("token issuance failed"))
+			},
+			expectedStatus: http.StatusSeeOther,
+			checkResponse: func(t *testing.T, res *http.Response) {
+				assert.Contains(t, res.Header.Get("Location"), "error=")
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			provider := new(oauth2mocks.Provider)
+			provider.On("Name").Return(tc.providerName)
+			provider.On("IsEnabled").Return(tc.providerEnabled)
+			provider.On("State").Return("test-state")
+			provider.On("ErrorURL").Return("http://localhost/error")
+			provider.On("RedirectURL").Return("http://localhost/ui")
+
+			tokenClient := new(authmocks.TokenServiceClient)
+
+			tc.mockSetup(provider, svc, tokenClient)
+
+			mux := chi.NewRouter()
+			redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+			makeHandler(svc, tokenClient, mux, redisClient, provider)
+
+			ts := httptest.NewServer(mux)
+			defer ts.Close()
+
+			// Build query string
+			url := fmt.Sprintf("%s/oauth/callback/%s", ts.URL, tc.provider)
+			if len(tc.queryParams) > 0 {
+				url += "?"
+				first := true
+				for k, v := range tc.queryParams {
+					if !first {
+						url += "&"
+					}
+					url += fmt.Sprintf("%s=%s", k, v)
+					first = false
+				}
+			}
+
+			req, err := http.NewRequest(http.MethodGet, url, nil)
+			assert.NoError(t, err)
+
+			// Don't follow redirects to check the redirect URL
+			client := &http.Client{
+				CheckRedirect: func(req *http.Request, via []*http.Request) error {
+					return http.ErrUseLastResponse
+				},
+			}
+
+			res, err := client.Do(req)
+			assert.NoError(t, err)
+			defer res.Body.Close()
+
+			assert.Equal(t, tc.expectedStatus, res.StatusCode)
+			if tc.checkResponse != nil {
+				tc.checkResponse(t, res)
+			}
+
+			// Reset mocks for next test
+			svc.ExpectedCalls = nil
+			tokenClient.ExpectedCalls = nil
+		})
+	}
+}
+
 func makeHandler(svc users.Service, tokensvc grpcTokenV1.TokenServiceClient, mux *chi.Mux, cacheClient *redis.Client, providers ...oauth2.Provider) http.Handler {
 	ctx := context.Background()
 

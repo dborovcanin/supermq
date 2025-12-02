@@ -12,11 +12,49 @@ import (
 )
 
 // Config is the configuration for the OAuth2 provider.
+// This is kept for backward compatibility but deprecated in favor of
+// DeviceConfig and UserConfig.
 type Config struct {
 	ClientID     string `env:"CLIENT_ID"       envDefault:""`
 	ClientSecret string `env:"CLIENT_SECRET"   envDefault:""`
 	State        string `env:"STATE"           envDefault:""`
 	RedirectURL  string `env:"REDIRECT_URL"    envDefault:""`
+}
+
+// DeviceConfig is the configuration for the OAuth2 device flow (CLI).
+type DeviceConfig struct {
+	ClientID     string `env:"DEVICE_CLIENT_ID"       envDefault:""`
+	ClientSecret string `env:"DEVICE_CLIENT_SECRET"   envDefault:""`
+	State        string `env:"DEVICE_STATE"           envDefault:""`
+	RedirectURL  string `env:"DEVICE_REDIRECT_URL"    envDefault:""`
+}
+
+// UserConfig is the configuration for the OAuth2 user flow (web).
+type UserConfig struct {
+	ClientID     string `env:"USER_CLIENT_ID"       envDefault:""`
+	ClientSecret string `env:"USER_CLIENT_SECRET"   envDefault:""`
+	State        string `env:"USER_STATE"           envDefault:""`
+	RedirectURL  string `env:"USER_REDIRECT_URL"    envDefault:""`
+}
+
+// ToConfig converts DeviceConfig to Config.
+func (dc DeviceConfig) ToConfig() Config {
+	return Config{
+		ClientID:     dc.ClientID,
+		ClientSecret: dc.ClientSecret,
+		State:        dc.State,
+		RedirectURL:  dc.RedirectURL,
+	}
+}
+
+// ToConfig converts UserConfig to Config.
+func (uc UserConfig) ToConfig() Config {
+	return Config{
+		ClientID:     uc.ClientID,
+		ClientSecret: uc.ClientSecret,
+		State:        uc.State,
+		RedirectURL:  uc.RedirectURL,
+	}
 }
 
 // Provider is an interface that provides the OAuth2 flow for a specific provider

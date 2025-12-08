@@ -3,52 +3,57 @@
 
 package errors
 
+import "github.com/absmach/supermq/pkg/errors/codes"
+
+// Root-level errors used across the application.
+// These are kept for backward compatibility. New code should prefer
+// using errors with codes from the service or repository packages.
 var (
 	// ErrMalformedEntity indicates a malformed entity specification.
-	ErrMalformedEntity = New("malformed entity specification")
+	ErrMalformedEntity = NewWithCode(codes.MalformedEntity, "malformed entity specification")
 
 	// ErrUnsupportedContentType indicates invalid content type.
-	ErrUnsupportedContentType = New("invalid content type")
+	ErrUnsupportedContentType = NewWithCode(codes.ValidationFailed, "invalid content type")
 
 	// ErrUnidentified indicates unidentified error.
-	ErrUnidentified = New("unidentified error")
+	ErrUnidentified = NewWithCode(codes.InternalError, "unidentified error")
 
 	// ErrEmptyPath indicates empty file path.
-	ErrEmptyPath = New("empty file path")
+	ErrEmptyPath = NewWithCode(codes.ValidationFailed, "empty file path")
 
 	// ErrStatusAlreadyAssigned indicated that the client or group has already been assigned the status.
-	ErrStatusAlreadyAssigned = New("status already assigned")
+	ErrStatusAlreadyAssigned = NewWithCode(codes.Conflict, "status already assigned")
 
 	// ErrRollbackTx indicates failed to rollback transaction.
-	ErrRollbackTx = New("failed to rollback transaction")
+	ErrRollbackTx = NewWithCode(codes.RollbackFailed, "failed to rollback transaction")
 
 	// ErrAuthentication indicates failure occurred while authenticating the entity.
-	ErrAuthentication = New("failed to perform authentication over the entity")
+	ErrAuthentication = NewWithCode(codes.Unauthenticated, "failed to perform authentication over the entity")
 
 	// ErrAuthorization indicates failure occurred while authorizing the entity.
-	ErrAuthorization = New("failed to perform authorization over the entity")
+	ErrAuthorization = NewWithCode(codes.Unauthorized, "failed to perform authorization over the entity")
 
 	// ErrMissingDomainMember indicates member is not part of a domain.
-	ErrMissingDomainMember = New("member id is not member of domain")
+	ErrMissingDomainMember = NewWithCode(codes.NotFound, "member id is not member of domain")
 
 	// ErrMissingMember indicates member is not found.
-	ErrMissingMember = New("member id is not found")
+	ErrMissingMember = NewWithCode(codes.NotFound, "member id is not found")
 
 	// ErrEmailAlreadyExists indicates that the email id already exists.
-	ErrEmailAlreadyExists = New("email id already exists")
+	ErrEmailAlreadyExists = NewWithCode(codes.Conflict, "email id already exists")
 
 	// ErrUsernameNotAvailable indicates that the username is not available.
-	ErrUsernameNotAvailable = New("username not available")
+	ErrUsernameNotAvailable = NewWithCode(codes.Conflict, "username not available")
 
 	// ErrDomainRouteNotAvailable indicates that the domain route is not available.
-	ErrDomainRouteNotAvailable = New("domain route not available")
+	ErrDomainRouteNotAvailable = NewWithCode(codes.Conflict, "domain route not available")
 
 	// ErrChannelRouteNotAvailable indicates that the channel route is not available.
-	ErrChannelRouteNotAvailable = New("channel route not available")
+	ErrChannelRouteNotAvailable = NewWithCode(codes.Conflict, "channel route not available")
 
 	// ErrTryAgain indicates to try the operation again.
-	ErrTryAgain = New("Something went wrong, please try again")
+	ErrTryAgain = NewWithCode(codes.InternalError, "Something went wrong, please try again")
 
 	// ErrRouteNotAvailable indicates that the username is not available.
-	ErrRouteNotAvailable = New("route not available")
+	ErrRouteNotAvailable = NewWithCode(codes.Conflict, "route not available")
 )

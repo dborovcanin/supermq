@@ -1,108 +1,80 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
+// Package service contains service-layer error definitions.
 package service
 
-import "github.com/absmach/supermq/pkg/errors"
+import (
+	"github.com/absmach/supermq/pkg/errors"
+	"github.com/absmach/supermq/pkg/errors/codes"
+)
 
-// Wrapper for Service errors.
+// Service layer errors.
+// These errors are returned by service layer operations and carry
+// error codes for consistent API responses.
 var (
-	// ErrAuthentication indicates failure occurred while authenticating the entity.
-	ErrAuthentication = errors.New("failed to perform authentication over the entity")
+	// Authentication errors
+	ErrAuthentication = errors.NewWithCode(codes.Unauthenticated, "failed to perform authentication over the entity")
+	ErrLogin          = errors.NewWithCode(codes.InvalidCredentials, "invalid credentials")
 
-	// ErrAuthorization indicates failure occurred while authorizing the entity.
-	ErrAuthorization = errors.New("failed to perform authorization over the entity")
+	// Authorization errors
+	ErrAuthorization       = errors.NewWithCode(codes.Unauthorized, "failed to perform authorization over the entity")
+	ErrDomainAuthorization = errors.NewWithCode(codes.Unauthorized, "failed to perform authorization over the domain")
+	ErrUnauthorizedPAT     = errors.NewWithCode(codes.Unauthorized, "failed to authorize PAT")
+	ErrSuperAdminAction    = errors.NewWithCode(codes.Unauthorized, "not authorized to perform admin action")
 
-	// ErrDomainAuthorization indicates failure occurred while authorizing the domain.
-	ErrDomainAuthorization = errors.New("failed to perform authorization over the domain")
+	// Entity validation errors
+	ErrMalformedEntity = errors.NewWithCode(codes.MalformedEntity, "malformed entity specification")
+	ErrInvalidStatus   = errors.NewWithCode(codes.InvalidStatus, "invalid status")
+	ErrInvalidRole     = errors.NewWithCode(codes.ValidationFailed, "invalid client role")
+	ErrInvalidPolicy   = errors.NewWithCode(codes.InvalidPolicy, "invalid policy")
 
-	// ErrLogin indicates wrong login credentials.
-	ErrLogin = errors.New("invalid credentials")
+	// Entity state errors
+	ErrNotFound = errors.NewWithCode(codes.NotFound, "entity not found")
+	ErrConflict = errors.NewWithCode(codes.Conflict, "entity already exists")
 
-	// ErrMalformedEntity indicates a malformed entity specification.
-	ErrMalformedEntity = errors.New("malformed entity specification")
+	// Entity operation errors
+	ErrCreateEntity = errors.NewWithCode(codes.CreateFailed, "failed to create entity")
+	ErrViewEntity   = errors.NewWithCode(codes.ViewFailed, "failed to retrieve entity")
+	ErrUpdateEntity = errors.NewWithCode(codes.UpdateFailed, "failed to update entity")
+	ErrRemoveEntity = errors.NewWithCode(codes.DeleteFailed, "failed to remove entity")
 
-	// ErrNotFound indicates a non-existent entity request.
-	ErrNotFound = errors.New("entity not found")
+	// Client-specific errors
+	ErrEnableClient  = errors.NewWithCode(codes.ClientEnableFailed, "failed to enable client")
+	ErrDisableClient = errors.NewWithCode(codes.ClientDisableFailed, "failed to disable client")
 
-	// ErrConflict indicates that entity already exists.
-	ErrConflict = errors.New("entity already exists")
+	// User-specific errors
+	ErrEnableUser  = errors.NewWithCode(codes.UserEnableFailed, "failed to enable user")
+	ErrDisableUser = errors.NewWithCode(codes.UserDisableFailed, "failed to disable user")
 
-	// ErrCreateEntity indicates error in creating entity or entities.
-	ErrCreateEntity = errors.New("failed to create entity")
+	// Policy errors
+	ErrAddPolicies    = errors.NewWithCode(codes.AddPoliciesFailed, "failed to add policies")
+	ErrDeletePolicies = errors.NewWithCode(codes.DeletePoliciesFailed, "failed to remove policies")
 
-	// ErrRemoveEntity indicates error in removing entity.
-	ErrRemoveEntity = errors.New("failed to remove entity")
+	// Search errors
+	ErrSearch = errors.NewWithCode(codes.ViewFailed, "failed to search clients")
 
-	// ErrViewEntity indicates error in viewing entity or entities.
-	ErrViewEntity = errors.New("view entity failed")
+	// Invitation errors
+	ErrInvitationAlreadyRejected = errors.NewWithCode(codes.InvitationAlreadyRejected, "invitation already rejected")
+	ErrInvitationAlreadyAccepted = errors.NewWithCode(codes.InvitationAlreadyAccepted, "invitation already accepted")
 
-	// ErrUpdateEntity indicates error in updating entity or entities.
-	ErrUpdateEntity = errors.New("update entity failed")
+	// Parent group errors
+	ErrParentGroupAuthorization = errors.NewWithCode(codes.Unauthorized, "failed to authorize parent group")
 
-	// ErrInvalidStatus indicates an invalid status.
-	ErrInvalidStatus = errors.New("invalid status")
+	// User validation errors
+	ErrMissingUsername = errors.NewWithCode(codes.ValidationFailed, "missing usernames")
 
-	// ErrInvalidRole indicates that an invalid role.
-	ErrInvalidRole = errors.New("invalid client role")
+	// Rollback errors
+	ErrRollbackRepo = errors.NewWithCode(codes.RollbackFailed, "failed to rollback repo")
 
-	// ErrInvalidPolicy indicates that an invalid policy.
-	ErrInvalidPolicy = errors.New("invalid policy")
+	// Member errors
+	ErrRetainOneMember = errors.NewWithCode(codes.ValidationFailed, "must retain at least one member")
 
-	// ErrEnableClient indicates error in enabling client.
-	ErrEnableClient = errors.New("failed to enable client")
+	// User verification errors
+	ErrUserAlreadyVerified     = errors.NewWithCode(codes.Conflict, "user already verified")
+	ErrInvalidUserVerification = errors.NewWithCode(codes.ValidationFailed, "invalid verification")
+	ErrUserVerificationExpired = errors.NewWithCode(codes.ValidationFailed, "verification expired, please generate new verification")
 
-	// ErrDisableClient indicates error in disabling client.
-	ErrDisableClient = errors.New("failed to disable client")
-
-	// ErrAddPolicies indicates error in adding policies.
-	ErrAddPolicies = errors.New("failed to add policies")
-
-	// ErrDeletePolicies indicates error in removing policies.
-	ErrDeletePolicies = errors.New("failed to remove policies")
-
-	// ErrSearch indicates error in searching clients.
-	ErrSearch = errors.New("failed to search clients")
-
-	// ErrInvitationAlreadyRejected indicates that the invitation is already rejected.
-	ErrInvitationAlreadyRejected = errors.New("invitation already rejected")
-
-	// ErrInvitationAlreadyAccepted indicates that the invitation is already accepted.
-	ErrInvitationAlreadyAccepted = errors.New("invitation already accepted")
-
-	// ErrParentGroupAuthorization indicates failure occurred while authorizing the parent group.
-	ErrParentGroupAuthorization = errors.New("failed to authorize parent group")
-
-	// ErrMissingUsername indicates that the user's names are missing.
-	ErrMissingUsername = errors.New("missing usernames")
-
-	// ErrEnableUser indicates error in enabling user.
-	ErrEnableUser = errors.New("failed to enable user")
-
-	// ErrDisableUser indicates error in disabling user.
-	ErrDisableUser = errors.New("failed to disable user")
-
-	// ErrRollbackRepo indicates a failure to rollback repository.
-	ErrRollbackRepo = errors.New("failed to rollback repo")
-
-	// ErrUnauthorizedPAT indicates failure occurred while authorizing PAT.
-	ErrUnauthorizedPAT = errors.New("failed to authorize PAT")
-
-	// ErrRetainOneMember indicates that at least one owner must be retained in the entity.
-	ErrRetainOneMember = errors.New("must retain at least one member")
-
-	// ErrSuperAdminAction indicates that the user is not a super admin.
-	ErrSuperAdminAction = errors.New("not authorized to perform admin action")
-
-	// ErrUserAlreadyVerified indicates user is already verified.
-	ErrUserAlreadyVerified = errors.New("user already verified")
-
-	// ErrInvalidUserVerification indicates user verification is invalid.
-	ErrInvalidUserVerification = errors.New("invalid verification")
-
-	// ErrUserVerificationExpired indicates user verification is expired.
-	ErrUserVerificationExpired = errors.New("verification expired, please generate new verification")
-
-	// ErrExternalAuthProviderCouldNotUpdate indicates that users authenticated via external provider cannot update their account details directly.
-	ErrExternalAuthProviderCouldNotUpdate = errors.New("account details can only be updated through your authentication provider's settings")
+	// External auth provider errors
+	ErrExternalAuthProviderCouldNotUpdate = errors.NewWithCode(codes.ValidationFailed, "account details can only be updated through your authentication provider's settings")
 )

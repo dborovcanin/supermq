@@ -8,11 +8,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/absmach/supermq/pkg/errors/codes"
 )
 
 type errorRes struct {
-	Err string `json:"error"`
-	Msg string `json:"message"`
+	Code    string         `json:"code,omitempty"`
+	Err     string         `json:"error"`
+	Msg     string         `json:"message"`
+	Details map[string]any `json:"details,omitempty"`
 }
 
 // Failed to read response body.
@@ -31,18 +35,85 @@ type sdkError struct {
 	statusCode int
 }
 
-func (ce *sdkError) Error() string {
-	if ce == nil {
+func (se *sdkError) Error() string {
+	if se == nil {
 		return ""
 	}
-	if ce.customError == nil {
-		return http.StatusText(ce.statusCode)
+	if se.customError == nil {
+		return http.StatusText(se.statusCode)
 	}
-	return fmt.Sprintf("Status: %s: %s", http.StatusText(ce.statusCode), ce.customError.Error())
+	return fmt.Sprintf("Status: %s: %s", http.StatusText(se.statusCode), se.customError.Error())
 }
 
-func (ce *sdkError) StatusCode() int {
-	return ce.statusCode
+func (se *sdkError) StatusCode() int {
+	if se == nil {
+		return 0
+	}
+	return se.statusCode
+}
+
+// Implement Error interface methods by delegating to customError
+func (se *sdkError) Msg() string {
+	if se == nil || se.customError == nil {
+		return ""
+	}
+	return se.customError.Msg()
+}
+
+func (se *sdkError) Err() Error {
+	if se == nil || se.customError == nil {
+		return nil
+	}
+	return se.customError.Err()
+}
+
+func (se *sdkError) Code() codes.Code {
+	if se == nil || se.customError == nil {
+		return codes.Code{}
+	}
+	return se.customError.Code()
+}
+
+func (se *sdkError) Context() *ErrorContext {
+	if se == nil || se.customError == nil {
+		return nil
+	}
+	return se.customError.Context()
+}
+
+func (se *sdkError) WithCode(code codes.Code) Error {
+	if se == nil {
+		return &sdkError{
+			customError: &customError{code: code},
+			statusCode:  0,
+		}
+	}
+	return &sdkError{
+		customError: se.customError.WithCode(code).(*customError),
+		statusCode:  se.statusCode,
+	}
+}
+
+func (se *sdkError) WithContext(key string, value any, safe bool) Error {
+	if se == nil {
+		newCtx := NewErrorContext()
+		newCtx.entries[key] = contextEntry{value: value, safe: safe}
+		return &sdkError{
+			customError: &customError{context: newCtx},
+			statusCode:  0,
+		}
+	}
+	return &sdkError{
+		customError: se.customError.WithContext(key, value, safe).(*customError),
+		statusCode:  se.statusCode,
+	}
+}
+
+func (se *sdkError) MarshalJSON() ([]byte, error) {
+	if se == nil || se.customError == nil {
+		return json.Marshal(legacyResponse{Error: "", Message: http.StatusText(se.statusCode)})
+	}
+	return se.customError.MarshalJSON()
 }
 
 // NewSDKError returns an SDK Error that formats as the given text.
@@ -55,8 +126,10 @@ func NewSDKError(err error) SDKError {
 		return &sdkError{
 			statusCode: 0,
 			customError: &customError{
-				msg: e.Msg(),
-				err: cast(e.Err()),
+				msg:     e.Msg(),
+				err:     cast(e.Err()),
+				code:    e.Code(),
+				context: e.Context(),
 			},
 		}
 	}
@@ -79,8 +152,10 @@ func NewSDKErrorWithStatus(err error, statusCode int) SDKError {
 		return &sdkError{
 			statusCode: statusCode,
 			customError: &customError{
-				msg: e.Msg(),
-				err: cast(e.Err()),
+				msg:     e.Msg(),
+				err:     cast(e.Err()),
+				code:    e.Code(),
+				context: e.Context(),
 			},
 		}
 	}
@@ -115,9 +190,25 @@ func CheckError(resp *http.Response, expectedStatusCodes ...int) SDKError {
 	if err := json.Unmarshal(body, &content); err != nil {
 		return NewSDKErrorWithStatus(err, resp.StatusCode)
 	}
+
+	// Build error from response
+	var resultErr Error
 	if content.Err == "" {
-		return NewSDKErrorWithStatus(New(content.Msg), resp.StatusCode)
+		resultErr = New(content.Msg)
+	} else {
+		resultErr = Wrap(New(content.Msg), New(content.Err)).(Error)
 	}
 
-	return NewSDKErrorWithStatus(Wrap(New(content.Msg), New(content.Err)), resp.StatusCode)
+	// If response had a code, attach it
+	if content.Code != "" {
+		// Create a custom code from the response
+		// This preserves the code from the server response
+		resultErr = resultErr.WithCode(codes.NewCode(
+			content.Code,
+			content.Msg,
+			resp.StatusCode,
+		))
+	}
+
+	return NewSDKErrorWithStatus(resultErr, resp.StatusCode)
 }

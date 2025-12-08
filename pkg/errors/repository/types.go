@@ -1,42 +1,42 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
+// Package repository contains repository-layer error definitions.
 package repository
 
-import "github.com/absmach/supermq/pkg/errors"
+import (
+	"github.com/absmach/supermq/pkg/errors"
+	"github.com/absmach/supermq/pkg/errors/codes"
+)
 
-// Wrapper for Repository errors.
+// Repository layer errors.
+// These errors are returned by repository layer operations and carry
+// error codes for consistent API responses. Note that the codes are
+// the same as service layer codes - the code identifies the type of
+// failure, not the layer it occurred in.
 var (
-	// ErrMalformedEntity indicates a malformed entity specification.
-	ErrMalformedEntity = errors.New("malformed entity specification")
+	// Entity validation errors
+	ErrMalformedEntity = errors.NewWithCode(codes.MalformedEntity, "malformed entity specification")
 
-	// ErrNotFound indicates a non-existent entity request.
-	ErrNotFound = errors.New("entity not found")
+	// Entity state errors
+	ErrNotFound = errors.NewWithCode(codes.NotFound, "entity not found")
+	ErrConflict = errors.NewWithCode(codes.Conflict, "entity already exists")
 
-	// ErrConflict indicates that entity already exists.
-	ErrConflict = errors.New("entity already exists")
+	// Entity operation errors
+	ErrCreateEntity = errors.NewWithCode(codes.CreateFailed, "failed to create entity in the db")
+	ErrViewEntity   = errors.NewWithCode(codes.ViewFailed, "failed to retrieve entity from db")
+	ErrUpdateEntity = errors.NewWithCode(codes.UpdateFailed, "failed to update entity in db")
+	ErrRemoveEntity = errors.NewWithCode(codes.DeleteFailed, "failed to remove entity from db")
 
-	// ErrCreateEntity indicates error in creating entity or entities.
-	ErrCreateEntity = errors.New("failed to create entity in the db")
+	// Database operation errors
+	ErrFailedOpDB = errors.NewWithCode(codes.DBOperationFailed, "operation on db element failed")
 
-	// ErrViewEntity indicates error in viewing entity or entities.
-	ErrViewEntity = errors.New("view entity failed")
+	// Group retrieval errors
+	ErrFailedToRetrieveAllGroups = errors.NewWithCode(codes.ViewFailed, "failed to retrieve all groups")
 
-	// ErrUpdateEntity indicates error in updating entity or entities.
-	ErrUpdateEntity = errors.New("update entity failed")
+	// Migration errors
+	ErrRoleMigration = errors.NewWithCode(codes.InternalError, "failed to apply role migration")
 
-	// ErrRemoveEntity indicates error in removing entity.
-	ErrRemoveEntity = errors.New("failed to remove entity")
-
-	// ErrFailedOpDB indicates a failure in a database operation.
-	ErrFailedOpDB = errors.New("operation on db element failed")
-
-	// ErrFailedToRetrieveAllGroups failed to retrieve groups.
-	ErrFailedToRetrieveAllGroups = errors.New("failed to retrieve all groups")
-
-	// ErrRoleMigration failed to apply role migrations.
-	ErrRoleMigration = errors.New("failed to apply role migration")
-
-	// ErrMissingNames indicates missing first and last names.
-	ErrMissingNames = errors.New("missing first or last name")
+	// Validation errors
+	ErrMissingNames = errors.NewWithCode(codes.ValidationFailed, "missing first or last name")
 )

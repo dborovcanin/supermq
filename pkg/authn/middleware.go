@@ -165,7 +165,8 @@ func (a *authnMiddleware) Middleware() func(http.Handler) http.Handler {
 }
 
 func encodeError(w http.ResponseWriter, err error, statusCode int) {
-	if errorVal, ok := err.(errors.Error); ok {
+	var errorVal *errors.Error
+	if errors.As(err, &errorVal) {
 		w.Header().Set("Content-Type", jsonContentType)
 		w.WriteHeader(statusCode)
 		if err := json.NewEncoder(w).Encode(errorVal); err != nil {

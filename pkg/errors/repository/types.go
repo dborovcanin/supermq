@@ -1,7 +1,8 @@
 // Copyright (c) Abstract Machines
 // SPDX-License-Identifier: Apache-2.0
 
-// Package repository contains repository-layer error definitions.
+// Package repository provides repository-layer error codes.
+// Import this package to access error codes appropriate for repository layer operations.
 package repository
 
 import (
@@ -9,34 +10,37 @@ import (
 	"github.com/absmach/supermq/pkg/errors/codes"
 )
 
-// Repository layer errors.
-// These errors are returned by repository layer operations and carry
-// error codes for consistent API responses. Note that the codes are
-// the same as service layer codes - the code identifies the type of
-// failure, not the layer it occurred in.
+// Repository layer error codes.
+// Use with errors.E(): errors.E(repoerr.NotFound).Wrap(err)
 var (
-	// Entity validation errors
-	ErrMalformedEntity = errors.NewWithCode(codes.MalformedEntity, "malformed entity specification")
+	// Validation errors
+	MalformedEntity = codes.MalformedEntity
 
 	// Entity state errors
-	ErrNotFound = errors.NewWithCode(codes.NotFound, "entity not found")
-	ErrConflict = errors.NewWithCode(codes.Conflict, "entity already exists")
+	NotFound = codes.NotFound
+	Conflict = codes.Conflict
 
 	// Entity operation errors
-	ErrCreateEntity = errors.NewWithCode(codes.CreateFailed, "failed to create entity in the db")
-	ErrViewEntity   = errors.NewWithCode(codes.ViewFailed, "failed to retrieve entity from db")
-	ErrUpdateEntity = errors.NewWithCode(codes.UpdateFailed, "failed to update entity in db")
-	ErrRemoveEntity = errors.NewWithCode(codes.DeleteFailed, "failed to remove entity from db")
+	CreateFailed = codes.CreateFailed
+	ViewFailed   = codes.ViewFailed
+	UpdateFailed = codes.UpdateFailed
+	DeleteFailed = codes.DeleteFailed
 
 	// Database operation errors
-	ErrFailedOpDB = errors.NewWithCode(codes.DBOperationFailed, "operation on db element failed")
+	DBOperationFailed = codes.DBOperationFailed
+)
 
-	// Group retrieval errors
-	ErrFailedToRetrieveAllGroups = errors.NewWithCode(codes.ViewFailed, "failed to retrieve all groups")
-
-	// Migration errors
-	ErrRoleMigration = errors.NewWithCode(codes.InternalError, "failed to apply role migration")
-
-	// Validation errors
-	ErrMissingNames = errors.NewWithCode(codes.ValidationFailed, "missing first or last name")
+// Legacy error values for backward compatibility.
+var (
+	ErrMalformedEntity           = errors.New("malformed entity specification")
+	ErrNotFound                  = errors.New("entity not found")
+	ErrConflict                  = errors.New("entity already exists")
+	ErrCreateEntity              = errors.New("failed to create entity in the db")
+	ErrViewEntity                = errors.New("view entity failed")
+	ErrUpdateEntity              = errors.New("update entity failed")
+	ErrRemoveEntity              = errors.New("failed to remove entity")
+	ErrFailedOpDB                = errors.New("operation on db element failed")
+	ErrFailedToRetrieveAllGroups = errors.New("failed to retrieve all groups")
+	ErrRoleMigration             = errors.New("failed to apply role migration")
+	ErrMissingNames              = errors.New("missing first or last name")
 )

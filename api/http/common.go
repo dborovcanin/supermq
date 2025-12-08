@@ -313,7 +313,8 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		err = errors.Wrap(wrapper, err)
 	}
 
-	if errorVal, ok := err.(errors.Error); ok {
+	var errorVal *errors.Error
+	if errors.As(err, &errorVal) {
 		if err := json.NewEncoder(w).Encode(errorVal); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}

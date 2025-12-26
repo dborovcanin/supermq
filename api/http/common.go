@@ -222,6 +222,9 @@ func EncodeError(_ context.Context, err error, w http.ResponseWriter) {
 		return
 	case *errors.InternalError:
 		w.WriteHeader(http.StatusInternalServerError)
+		if err := json.NewEncoder(w).Encode(retErr); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	default:
 		w.WriteHeader(http.StatusInternalServerError)

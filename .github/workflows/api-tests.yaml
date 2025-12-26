@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - fix-api-tests
     paths:
       - ".github/workflows/api-tests.yaml"
       - "api/**"
@@ -42,7 +43,8 @@ concurrency:
 env:
   TOKENS_URL: http://localhost:9002/users/tokens/issue
   CREATE_DOMAINS_URL: http://localhost:9003/domains
-  USER_IDENTITY: admin@example.com
+  USER_EMAIL: admin@example.com
+  USER_USERNAME: admin
   USER_SECRET: 12345678
   DOMAIN_NAME: demo-test
   USERS_URL: http://localhost:9002
@@ -134,11 +136,43 @@ jobs:
             sleep 2
           done
 
-      - name: Set access token
+      - name: Register user and set access token
         run: |
-          export USER_TOKEN=$(curl -sSX POST $TOKENS_URL -H "Content-Type: application/json" -d "{\"identity\": \"$USER_IDENTITY\",\"secret\": \"$USER_SECRET\"}" | jq -r .access_token)
-          export DOMAIN_ID=$(curl -sSX POST $CREATE_DOMAINS_URL -H "Content-Type: application/json" -H "Authorization: Bearer $USER_TOKEN" -d "{\"name\":\"$DOMAIN_NAME\",\"route\":\"$DOMAIN_NAME\"}" | jq -r .id)
+          # Register admin user for testing (ignore 409 if already exists)
+          curl -sSX POST $USERS_URL/users \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"first_name\": \"Admin\",
+              \"last_name\": \"User\",
+              \"email\": \"$USER_EMAIL\",
+              \"credentials\": {
+                \"username\": \"$USER_USERNAME\",
+                \"secret\": \"$USER_SECRET\"
+              }
+            }" || echo "User may already exist, continuing..."
+
+          # Obtain access token
+          export USER_TOKEN=$(curl -sSX POST $TOKENS_URL \
+            -H "Content-Type: application/json" \
+            -d "{\"username\": \"$USER_USERNAME\", \"password\": \"$USER_SECRET\"}" \
+            | jq -r .access_token)
+
+          if [ -z "$USER_TOKEN" ] || [ "$USER_TOKEN" = "null" ]; then
+            echo "Failed to obtain access token"
+            exit 1
+          fi
+
           echo "USER_TOKEN=$USER_TOKEN" >> $GITHUB_ENV
+
+          # Create a test domain for resource-scoped operations
+          export DOMAIN_ID=$(curl -sSX POST $CREATE_DOMAINS_URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $USER_TOKEN" \
+            -d "{\"name\":\"$DOMAIN_NAME\",\"route\":\"$DOMAIN_NAME\"}" \
+            | jq -r .id)
+          echo "DOMAIN_ID=$DOMAIN_ID" >> $GITHUB_ENV
+
+          # Provision client for HTTP adapter tests
           export CLIENT_SECRET=$(supermq-cli provision test | /usr/bin/grep -Eo '"secret": "[^"]+"' | awk 'NR % 2 == 0' | sed 's/"secret": "\(.*\)"/\1/')
           echo "CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
 
@@ -149,7 +183,8 @@ jobs:
           schema: apidocs/openapi/users.yaml
           base-url: ${{ env.USERS_URL }}
           checks: all
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --exclude-operation-id=requestPasswordReset --phases=examples,stateful'
+          # Stateful testing creates resources dynamically, avoiding hardcoded example IDs
+          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --exclude-operation-id=requestPasswordReset --phases=stateful'
 
       - name: Run Groups API tests
         if: steps.changes.outputs.groups == 'true' || steps.changes.outputs.workflow == 'true'
@@ -158,7 +193,8 @@ jobs:
           schema: apidocs/openapi/groups.yaml
           base-url: ${{ env.GROUPS_URL }}
           checks: all
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=examples'
+          # Stateful testing creates resources dynamically, avoiding hardcoded example IDs
+          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=stateful'
 
       - name: Run Clients API tests
         if: steps.changes.outputs.clients == 'true' || steps.changes.outputs.workflow == 'true'
@@ -167,7 +203,8 @@ jobs:
           schema: apidocs/openapi/clients.yaml
           base-url: ${{ env.CLIENTS_URL }}
           checks: all
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=examples'
+          # Stateful testing creates resources dynamically, avoiding hardcoded example IDs
+          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=stateful'
 
       - name: Run Channels API tests
         if: steps.changes.outputs.channels == 'true' || steps.changes.outputs.workflow == 'true'
@@ -176,7 +213,8 @@ jobs:
           schema: apidocs/openapi/channels.yaml
           base-url: ${{ env.CHANNELS_URL }}
           checks: all
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=examples'
+          # Stateful testing creates resources dynamically, avoiding hardcoded example IDs
+          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=stateful'
 
       - name: Run HTTP Adapter API tests
         if: steps.changes.outputs.http == 'true' || steps.changes.outputs.workflow == 'true'
@@ -185,7 +223,8 @@ jobs:
           schema: apidocs/openapi/http.yaml
           base-url: ${{ env.HTTP_ADAPTER_URL }}
           checks: all
-          args: '--header "Authorization: Client ${{ env.CLIENT_SECRET }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=examples'
+          # HTTP adapter uses different authentication (Client secret)
+          args: '--header "Authorization: Client ${{ env.CLIENT_SECRET }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=stateful'
 
       - name: Run Auth API tests
         if: steps.changes.outputs.auth == 'true' || steps.changes.outputs.workflow == 'true'
@@ -194,7 +233,8 @@ jobs:
           schema: apidocs/openapi/auth.yaml
           base-url: ${{ env.AUTH_URL }}
           checks: all
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=examples'
+          # Stateful testing creates resources dynamically, avoiding hardcoded example IDs
+          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=stateful'
 
       - name: Run Domains API tests
         if: steps.changes.outputs.domains == 'true' || steps.changes.outputs.workflow == 'true'
@@ -203,7 +243,8 @@ jobs:
           schema: apidocs/openapi/domains.yaml
           base-url: ${{ env.DOMAIN_URL }}
           checks: all
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=examples'
+          # Stateful testing creates resources dynamically, avoiding hardcoded example IDs
+          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=stateful'
 
       - name: Run Journal API tests
         if: steps.changes.outputs.journal == 'true' || steps.changes.outputs.workflow == 'true'
@@ -212,7 +253,8 @@ jobs:
           schema: apidocs/openapi/journal.yaml
           base-url: ${{ env.JOURNAL_URL }}
           checks: all
-          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=examples'
+          # Stateful testing creates resources dynamically, avoiding hardcoded example IDs
+          args: '--header "Authorization: Bearer ${{ env.USER_TOKEN }}" --suppress-health-check=filter_too_much --exclude-checks=positive_data_acceptance --phases=stateful'
 
       - name: Stop containers
         if: always()

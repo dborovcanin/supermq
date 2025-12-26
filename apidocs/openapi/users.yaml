@@ -516,9 +516,11 @@ paths:
         - $ref: "#/components/parameters/Referer"
       requestBody:
         $ref: "#/components/requestBodies/RequestPasswordReset"
+      security: []
       responses:
         "201":
           description: Users link for resetting password.
+          $ref: "#/components/responses/PasswordResetRequestRes"
         "400":
           description: Failed due to malformed JSON.
         "404":
@@ -1573,6 +1575,18 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+
+    PasswordResetRequestRes:
+      description: Password reset email sent successfully.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              msg:
+                type: string
+                example: "Email with reset link is sent"
+                description: Confirmation message.
 
   securitySchemes:
     bearerAuth:

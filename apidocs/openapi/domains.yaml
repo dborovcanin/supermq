@@ -897,9 +897,12 @@ components:
   schemas:
     DomainReqObj:
       type: object
+      additionalProperties: false
       properties:
         name:
           type: string
+          maxLength: 1024
+          pattern: "^[\\x20-\\x7E]+$"
           example: domainName
           description: Domain name.
         tags:
@@ -907,6 +910,8 @@ components:
           minItems: 0
           items:
             type: string
+            maxLength: 1024
+            pattern: "^[\\x20-\\x7E]*$"
           example: ["tag1", "tag2"]
           description: domain tags.
         metadata:
@@ -915,6 +920,8 @@ components:
           description: Arbitrary, object-encoded domain's data.
         route:
           type: string
+          maxLength: 1024
+          pattern: "^[\\x20-\\x7E]+$"
           example: domain_route
           description: Domain route.
       required:
@@ -1123,10 +1130,8 @@ components:
       description: Unique domain identified.
       in: path
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
     Status:
       name: status
       description: Domain status.
@@ -1142,6 +1147,8 @@ components:
       in: query
       schema:
         type: string
+        maxLength: 1024
+        pattern: "^[^\\x00]*$"
       required: false
       example: "domainName"
     ApiKeyId:
@@ -1149,8 +1156,7 @@ components:
       description: API Key ID.
       in: path
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
     Limit:
       name: limit
@@ -1200,35 +1206,27 @@ components:
       description: Unique user identifier.
       in: path
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
     user_id:
       name: user_id
       description: Unique user identifier.
       in: query
       schema:
-        type: string
-        format: uuid
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
     domain_id:
       name: domain_id
       description: Unique identifier for a domain.
       in: query
       schema:
-        type: string
-        format: uuid
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
     InvitedBy:
       name: invited_by
       description: Unique identifier for a user that invited the user.
       in: query
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: false
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
     State:
       name: state
       description: Invitation state.

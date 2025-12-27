@@ -6,6 +6,7 @@ package keys
 import (
 	"time"
 
+	api "github.com/absmach/supermq/api/http"
 	apiutil "github.com/absmach/supermq/api/http/util"
 	"github.com/absmach/supermq/auth"
 )
@@ -43,6 +44,9 @@ func (req keyReq) validate() error {
 
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	return nil
 }

@@ -55,6 +55,9 @@ func (req viewClientReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -66,6 +69,9 @@ type viewClientPermsReq struct {
 func (req viewClientPermsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 
 	return nil
@@ -107,6 +113,9 @@ func (req listMembersReq) validate() error {
 	if req.groupID == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.groupID); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -121,6 +130,9 @@ type updateClientReq struct {
 func (req updateClientReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 
 	if len(req.Name) > api.MaxNameSize {
@@ -139,6 +151,9 @@ func (req updateClientTagsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -151,6 +166,9 @@ type updateClientCredentialsReq struct {
 func (req updateClientCredentialsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 
 	if req.Secret == "" {
@@ -168,6 +186,9 @@ func (req changeClientStatusReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -181,8 +202,14 @@ func (req setClientParentGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	if req.ParentGroupID == "" {
 		return apiutil.ErrMissingParentGroupID
+	}
+	if err := api.ValidateUUID(req.ParentGroupID); err != nil {
+		return err
 	}
 	return nil
 }
@@ -195,6 +222,9 @@ func (req removeClientParentGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -205,6 +235,9 @@ type deleteClientReq struct {
 func (req deleteClientReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 
 	return nil

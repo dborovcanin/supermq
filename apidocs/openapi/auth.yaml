@@ -580,18 +580,15 @@ components:
       description: Personal Access Token ID.
       in: path
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
     DomainID:
       name: domainID
       description: Unique domain identifier.
       in: path
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
     Status:
       name: status
       description: Domain status.
@@ -622,8 +619,7 @@ components:
       description: API Key ID.
       in: path
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
     Limit:
       name: limit

@@ -267,18 +267,15 @@ components:
       description: Role ID.
       in: path
       schema:
-        type: string
+        $ref: "./common.yaml#/components/schemas/UUID"
       required: true
-      example: "roleID"
     RoleIDQuery:
       name: role_id
       description: Filter by role ID.
       in: query
       schema:
-        type: string
-        format: uuid
+        $ref: "./common.yaml#/components/schemas/UUID"
       required: false
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
     RoleNameQuery:
       name: role_name
       description: Filter by role name.

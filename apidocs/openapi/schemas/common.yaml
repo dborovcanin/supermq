@@ -1,0 +1,44 @@
+# Copyright (c) Abstract Machines
+# SPDX-License-Identifier: Apache-2.0
+
+# Common schemas and parameters for SuperMQ API
+
+components:
+  schemas:
+    UUID:
+      type: string
+      format: uuid
+      minLength: 36
+      maxLength: 36
+      pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
+      description: UUID identifier
+
+    SafeString:
+      type: string
+      maxLength: 1024
+      pattern: "^[\\x20-\\x7E]*$"
+      description: Safe printable ASCII string
+
+    SafeStringRequired:
+      type: string
+      maxLength: 1024
+      pattern: "^[\\x20-\\x7E]+$"
+      description: Safe printable ASCII string (non-empty)
+
+  parameters:
+    DomainID:
+      name: domainID
+      description: Unique domain identifier.
+      in: path
+      schema:
+        $ref: "#/components/schemas/UUID"
+      required: true
+
+    EntityID:
+      name: id
+      description: Unique entity identifier.
+      in: path
+      schema:
+        $ref: "#/components/schemas/UUID"
+      required: true

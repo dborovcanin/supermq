@@ -45,6 +45,9 @@ func (req retrieveDomainRequest) validate() error {
 	if req.domainID == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.domainID); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -59,6 +62,9 @@ type updateDomainReq struct {
 func (req updateDomainReq) validate() error {
 	if req.domainID == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.domainID); err != nil {
+		return err
 	}
 
 	return nil
@@ -90,6 +96,9 @@ func (req enableDomainReq) validate() error {
 	if req.domainID == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.domainID); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -102,6 +111,9 @@ func (req disableDomainReq) validate() error {
 	if req.domainID == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.domainID); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -113,6 +125,9 @@ type freezeDomainReq struct {
 func (req freezeDomainReq) validate() error {
 	if req.domainID == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.domainID); err != nil {
+		return err
 	}
 
 	return nil
@@ -127,6 +142,12 @@ type sendInvitationReq struct {
 func (req *sendInvitationReq) validate() error {
 	if req.InviteeUserID == "" || req.RoleID == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.InviteeUserID); err != nil {
+		return err
+	}
+	if err := api.ValidateUUID(req.RoleID); err != nil {
+		return err
 	}
 
 	return nil
@@ -152,6 +173,9 @@ func (req *acceptInvitationReq) validate() error {
 	if req.DomainID == "" {
 		return apiutil.ErrMissingDomainID
 	}
+	if err := api.ValidateUUID(req.DomainID); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -165,8 +189,14 @@ func (req *deleteInvitationReq) validate() error {
 	if req.UserID == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.UserID); err != nil {
+		return err
+	}
 	if req.domainID == "" {
 		return apiutil.ErrMissingDomainID
+	}
+	if err := api.ValidateUUID(req.domainID); err != nil {
+		return err
 	}
 
 	return nil

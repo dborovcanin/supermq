@@ -76,6 +76,9 @@ func (req viewChannelReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -123,6 +126,9 @@ func (req updateChannelReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	if len(req.Name) > api.MaxNameSize {
 		return apiutil.ErrNameSize
 	}
@@ -139,6 +145,9 @@ func (req updateChannelTagsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -152,8 +161,14 @@ func (req setChannelParentGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	if req.ParentGroupID == "" {
 		return apiutil.ErrMissingParentGroupID
+	}
+	if err := api.ValidateUUID(req.ParentGroupID); err != nil {
+		return err
 	}
 
 	return nil
@@ -167,6 +182,9 @@ func (req removeChannelParentGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -178,6 +196,9 @@ type changeChannelStatusReq struct {
 func (req changeChannelStatusReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 
 	return nil
@@ -192,6 +213,9 @@ type connectChannelClientsRequest struct {
 func (req *connectChannelClientsRequest) validate() error {
 	if req.channelID == "" || strings.TrimSpace(req.channelID) == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.channelID); err != nil {
+		return err
 	}
 
 	if len(req.ClientIDs) == 0 {
@@ -257,6 +281,9 @@ func (req *connectRequest) validate() error {
 		if strings.TrimSpace(cid) == "" {
 			return apiutil.ErrMissingChannelID
 		}
+		if err := api.ValidateUUID(cid); err != nil {
+			return err
+		}
 	}
 
 	if len(req.ClientIds) == 0 {
@@ -266,6 +293,9 @@ func (req *connectRequest) validate() error {
 	for _, tid := range req.ClientIds {
 		if strings.TrimSpace(tid) == "" {
 			return apiutil.ErrMissingChannelID
+		}
+		if err := api.ValidateUUID(tid); err != nil {
+			return err
 		}
 	}
 
@@ -316,6 +346,9 @@ type deleteChannelReq struct {
 func (req deleteChannelReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	return nil
 }

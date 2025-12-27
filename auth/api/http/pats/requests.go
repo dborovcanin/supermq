@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	api "github.com/absmach/supermq/api/http"
 	apiutil "github.com/absmach/supermq/api/http/util"
 	"github.com/absmach/supermq/auth"
 	"github.com/absmach/supermq/pkg/errors"
@@ -63,6 +64,9 @@ func (req retrievePatReq) validate() (err error) {
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -78,6 +82,9 @@ func (req updatePatNameReq) validate() (err error) {
 	}
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	if strings.TrimSpace(req.Name) == "" {
 		return apiutil.ErrMissingName
@@ -97,6 +104,9 @@ func (req updatePatDescriptionReq) validate() (err error) {
 	}
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	if strings.TrimSpace(req.Description) == "" {
 		return apiutil.ErrMissingDescription
@@ -132,6 +142,9 @@ func (req deletePatReq) validate() (err error) {
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -164,6 +177,9 @@ func (req resetPatSecretReq) validate() (err error) {
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -178,6 +194,9 @@ func (req revokePatSecretReq) validate() (err error) {
 	}
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	return nil
 }
@@ -221,6 +240,9 @@ func (req addScopeReq) validate() (err error) {
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 
 	if len(req.Scopes) == 0 {
 		return apiutil.ErrValidation
@@ -248,6 +270,9 @@ func (req removeScopeReq) validate() (err error) {
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	if len(req.ScopesID) == 0 {
 		return apiutil.ErrValidation
 	}
@@ -266,6 +291,9 @@ func (req clearAllScopeReq) validate() (err error) {
 	if req.id == "" {
 		return apiutil.ErrMissingPATID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -282,6 +310,9 @@ func (req listScopesReq) validate() (err error) {
 	}
 	if req.patID == "" {
 		return apiutil.ErrMissingPATID
+	}
+	if err := api.ValidateUUID(req.patID); err != nil {
+		return err
 	}
 	return nil
 }

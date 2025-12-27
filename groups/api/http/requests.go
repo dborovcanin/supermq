@@ -33,6 +33,9 @@ func (req updateGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	if len(req.Name) > api.MaxNameSize {
 		return apiutil.ErrNameSize
 	}
@@ -47,6 +50,9 @@ type updateGroupTagsReq struct {
 func (req updateGroupTagsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 
 	return nil
@@ -89,6 +95,9 @@ func (req groupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -100,6 +109,9 @@ type changeGroupStatusReq struct {
 func (req changeGroupStatusReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	return nil
 }
@@ -116,6 +128,9 @@ func (req retrieveGroupHierarchyReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -128,6 +143,9 @@ type addParentGroupReq struct {
 func (req addParentGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	if err := api.ValidateUUID(req.ParentID); err != nil {
 		return err
@@ -146,6 +164,9 @@ func (req removeParentGroupReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -157,6 +178,9 @@ type addChildrenGroupsReq struct {
 func (req addChildrenGroupsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	if len(req.ChildrenIDs) == 0 {
 		return apiutil.ErrMissingChildrenGroupIDs
@@ -181,6 +205,9 @@ func (req removeChildrenGroupsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	if len(req.ChildrenIDs) == 0 {
 		return apiutil.ErrMissingChildrenGroupIDs
 	}
@@ -200,6 +227,9 @@ func (req removeAllChildrenGroupsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
 	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -213,6 +243,9 @@ type listChildrenGroupsReq struct {
 func (req listChildrenGroupsReq) validate() error {
 	if req.id == "" {
 		return apiutil.ErrMissingID
+	}
+	if err := api.ValidateUUID(req.id); err != nil {
+		return err
 	}
 	if req.Limit > api.MaxLimitSize || req.Limit < 1 {
 		return apiutil.ErrLimitSize

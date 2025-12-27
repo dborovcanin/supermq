@@ -14,6 +14,7 @@ import (
 	"github.com/absmach/supermq/auth"
 	"github.com/absmach/supermq/pkg/errors"
 	"github.com/go-chi/chi/v5"
+	"github.com/gofrs/uuid/v5"
 )
 
 type sessionKeyType string
@@ -122,6 +123,15 @@ func (a *authnMiddleware) getMiddlewareOptions() *middlewareOptions {
 	return opts
 }
 
+// validateUUID validates UUID format.
+func validateUUID(extID string) error {
+	id, err := uuid.FromString(extID)
+	if id.String() != extID || err != nil {
+		return apiutil.ErrInvalidIDFormat
+	}
+	return nil
+}
+
 // Middleware returns an HTTP middleware function that handles authentication.
 func (a *authnMiddleware) Middleware() func(http.Handler) http.Handler {
 	opts := a.getMiddlewareOptions()
@@ -147,6 +157,10 @@ func (a *authnMiddleware) Middleware() func(http.Handler) http.Handler {
 				domain := chi.URLParam(r, "domainID")
 				if domain == "" {
 					encodeError(w, apiutil.ErrMissingDomainID, http.StatusBadRequest)
+					return
+				}
+				if err := validateUUID(domain); err != nil {
+					encodeError(w, err, http.StatusBadRequest)
 					return
 				}
 				resp.DomainID = domain

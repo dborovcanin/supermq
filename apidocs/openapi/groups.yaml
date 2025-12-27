@@ -1033,19 +1033,24 @@ components:
   schemas:
     GroupReqObj:
       type: object
+      additionalProperties: false
       properties:
         name:
           type: string
+          maxLength: 1024
+          pattern: "^[\\x20-\\x7E]+$"
           example: groupName
           description: Free-form group name. Group name is unique on the given hierarchy level.
         description:
           type: string
+          maxLength: 4096
+          pattern: "^[\\x20-\\x7E]*$"
           example: long group description
           description: Group description, free form text.
         parent_id:
-          type: string
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: Id of parent group, it must be existing group.
+          allOf:
+            - $ref: "./schemas/common.yaml#/components/schemas/UUID"
+            - description: Id of parent group, it must be existing group.
         metadata:
           type: object
           example: { "domain": "example.com" }
@@ -1284,25 +1289,24 @@ components:
 
     ParentGroupReqObj:
       type: object
+      additionalProperties: false
       properties:
         group_id:
-          type: string
-          format: uuid
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: Parent group unique identifier.
+          allOf:
+            - $ref: "./schemas/common.yaml#/components/schemas/UUID"
+            - description: Parent group unique identifier.
       required:
         - group_id
 
     ChildrenGroupReqObj:
       type: object
+      additionalProperties: false
       properties:
         groups:
           type: array
           minItems: 1
           items:
-            type: string
-            format: uuid
-            example: bb7edb32-2eac-4aad-aebe-ed96fe073879
+            $ref: "./schemas/common.yaml#/components/schemas/UUID"
           description: Children group IDs.
       required:
         - groups
@@ -1354,13 +1358,8 @@ components:
       description: Unique user identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     Status:
       name: status
@@ -1411,49 +1410,32 @@ components:
       description: Unique group identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     ChannelID:
       name: channelID
       description: Unique channel identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     MemberID:
       name: memberID
       description: Unique member identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     ParentID:
       name: parentID
       description: Unique parent identifier for a group.
       in: query
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: false
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     Level:
       name: level
@@ -1560,15 +1542,13 @@ components:
       required: false
       example: desc
 
-    ID: 
+    ID:
       name: id
       description: List groups with the given ID.
       in: query
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: false
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
     
     AccessType:
       name: access_type

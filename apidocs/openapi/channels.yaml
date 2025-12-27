@@ -541,17 +541,22 @@ components:
   schemas:
     ChannelReqObj:
       type: object
+      additionalProperties: false
       properties:
         name:
           type: string
+          maxLength: 1024
+          pattern: "^[\\x20-\\x7E]+$"
           example: channelName
           description: Free-form channel name. Channel name is unique on the given hierarchy level.
         parent_id:
-          type: string
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: Id of parent channel, it must be existing channel.
+          allOf:
+            - $ref: "./schemas/common.yaml#/components/schemas/UUID"
+            - description: Id of parent channel, it must be existing channel.
         route:
           type: string
+          maxLength: 1024
+          pattern: "^[\\x20-\\x7E]*$"
           example: channelRoute
           description: Channel route.
         metadata:
@@ -568,12 +573,12 @@ components:
 
     ParentGroupReqObj:
       type: object
+      additionalProperties: false
       properties:
         parent_group_id:
-          type: string
-          format: uuid
-          example: bb7edb32-2eac-4aad-aebe-ed96fe073879
-          description: Parent group unique identifier.
+          allOf:
+            - $ref: "./schemas/common.yaml#/components/schemas/UUID"
+            - description: Parent group unique identifier.
       required:
         - parent_group_id
 
@@ -690,35 +695,45 @@ components:
 
     ConnectionReqSchema:
       type: object
+      additionalProperties: false
       properties:
         channel_ids:
           type: array
           description: Channel IDs.
           items:
-            example: bb7edb32-2eac-4aad-aebe-ed96fe073879
+            $ref: "./schemas/common.yaml#/components/schemas/UUID"
         client_ids:
           type: array
           description: Client IDs
           items:
-            example: bb7edb32-2eac-4aad-aebe-ed96fe073879
+            $ref: "./schemas/common.yaml#/components/schemas/UUID"
         types:
           type: array
           description: Connection types.
           items:
+            type: string
+            enum:
+              - publish
+              - subscribe
             example: publish
 
     ChannelConnectionReqSchema:
       type: object
+      additionalProperties: false
       properties:
         client_ids:
           type: array
           description: Client IDs
           items:
-            example: bb7edb32-2eac-4aad-aebe-ed96fe073879
+            $ref: "./schemas/common.yaml#/components/schemas/UUID"
         types:
           type: array
           description: Connection types.
           items:
+            type: string
+            enum:
+              - publish
+              - subscribe
             example: publish
 
     Error:
@@ -810,20 +825,16 @@ components:
       description: Unique channel identifier.
       in: path
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     ParentId:
       name: parentId
       description: Unique parent identifier for a channel.
       in: query
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: false
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     Metadata:
       name: metadata
@@ -883,10 +894,8 @@ components:
       description: List channels with the given ID.
       in: query
       schema:
-        type: string
-        format: uuid
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: false
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     AccessType:
       name: access_type

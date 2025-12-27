@@ -1085,13 +1085,8 @@ components:
       description: Unique user identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     Username:
       name: username
@@ -1181,52 +1176,32 @@ components:
       description: Unique group identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     ChannelID:
       name: channelID
       description: Unique channel identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     ClientID:
       name: clientID
       description: Unique client identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     MemberID:
       name: memberID
       description: Unique member identifier.
       in: path
       schema:
-        type: string
-        format: uuid
-        minLength: 36
-        maxLength: 36
-        pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$"
+        $ref: "./schemas/common.yaml#/components/schemas/UUID"
       required: true
-      example: bb7edb32-2eac-4aad-aebe-ed96fe073879
 
     ParentID:
       name: parentID

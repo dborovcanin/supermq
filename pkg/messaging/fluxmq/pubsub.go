@@ -176,8 +176,42 @@ func subKey(id, topic string) string {
 // toMQTTSubscribeTopic converts a NATS-style wildcard subscribe topic to MQTT format.
 // e.g., "m.>" -> "m/#", "m.domain.c.*" -> "m/domain/c/+"
 func toMQTTSubscribeTopic(prefix, topic string) string {
-	mqttTopic := prefix + "/" + strings.ReplaceAll(topic, ".", "/")
+	topic = strings.TrimSpace(topic)
+	topic = strings.TrimPrefix(topic, "/")
+
+	mqttTopic := strings.ReplaceAll(topic, ".", "/")
 	mqttTopic = strings.ReplaceAll(mqttTopic, ">", "#")
 	mqttTopic = strings.ReplaceAll(mqttTopic, "*", "+")
+
+	if strings.HasPrefix(mqttTopic, prefix+"/") {
+		return mqttTopic
+	}
+
+	if mqttTopic == "#" {
+		return prefix + "/#"
+	}
+
+	if mqttTopic == "+" {
+		return prefix + "/+"
+	}
+
+	mqttTopic = strings.TrimPrefix(mqttTopic, "/")
+
+	if mqttTopic == "" {
+		return prefix + "/#"
+	}
+
+	if mqttTopic == prefix {
+		return prefix + "/#"
+	}
+
+	mqttTopic = strings.TrimPrefix(mqttTopic, ".")
+	mqttTopic = strings.TrimPrefix(mqttTopic, "/")
+
+	if mqttTopic == "" {
+		return prefix + "/#"
+	}
+
+	mqttTopic = prefix + "/" + mqttTopic
 	return mqttTopic
 }

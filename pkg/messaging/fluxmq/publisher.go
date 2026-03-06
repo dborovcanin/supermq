@@ -91,7 +91,15 @@ func (pub *publisher) Close() error {
 // toMQTTTopic converts a dot-separated NATS-style topic to slash-separated MQTT format.
 // e.g., "domain123.c.channel456.subtopic" -> "m/domain123/c/channel456/subtopic"
 func toMQTTTopic(prefix, topic string) string {
-	return prefix + "/" + strings.ReplaceAll(topic, ".", "/")
+	topic = strings.TrimSpace(topic)
+	topic = strings.TrimPrefix(topic, "/")
+	topic = strings.ReplaceAll(topic, ".", "/")
+
+	if strings.HasPrefix(topic, prefix+"/") {
+		return topic
+	}
+
+	return prefix + "/" + topic
 }
 
 // fromMQTTTopic converts a slash-separated MQTT topic to a dot-separated subject,

@@ -6,7 +6,7 @@
 # Runs all SuperMQ microservices (must be previously built and installed).
 #
 # Expects that PostgreSQL and needed messaging DB are alredy running.
-# Additionally, MQTT microservice demands that Redis is up and running.
+# Additionally, core services depend on external infrastructure (DB and NATS).
 #
 ###
 
@@ -44,22 +44,6 @@ SMQ_USERS_LOG_LEVEL=info SMQ_USERS_HTTP_PORT=9002 SMQ_USERS_GRPC_PORT=7001 SMQ_U
 # Clients
 ###
 SMQ_CLIENTS_LOG_LEVEL=info SMQ_CLIENTS_HTTP_PORT=9000 SMQ_CLIENTS_GRPC_PORT=7000 SMQ_CLIENTS_AUTH_HTTP_PORT=9002 $BUILD_DIR/supermq-clients &
-
-###
-# HTTP
-###
-SMQ_HTTP_ADAPTER_LOG_LEVEL=info SMQ_HTTP_ADAPTER_PORT=8008 SMQ_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/supermq-http &
-
-
-###
-# MQTT
-###
-SMQ_MQTT_ADAPTER_LOG_LEVEL=info SMQ_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/supermq-mqtt &
-
-###
-# CoAP
-###
-SMQ_COAP_ADAPTER_LOG_LEVEL=info SMQ_COAP_ADAPTER_PORT=5683 SMQ_CLIENTS_GRPC_URL=localhost:7000 $BUILD_DIR/supermq-coap &
 
 trap cleanup EXIT
 

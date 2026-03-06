@@ -70,9 +70,9 @@ setup_mg() {
         fi
     done
     echo "Compile check for rabbitmq..."
-    SMQ_MESSAGE_BROKER_TYPE=msg_rabbitmq make http
+    SMQ_MESSAGE_BROKER_TYPE=msg_rabbitmq make clients
     echo "Compile check for redis..."
-    SMQ_ES_TYPE=es_redis make http
+    SMQ_ES_TYPE=es_redis make clients
     make -j$NPROC
 }
 

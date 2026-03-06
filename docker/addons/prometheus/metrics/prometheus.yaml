@@ -15,8 +15,10 @@ scrape_configs:
     enable_http2: true
     static_configs:
     - targets: 
-      - supermq-clients:9000
+      - supermq-auth:9001
       - supermq-users:9002
-      - supermq-http:8008
-      - supermq-ws:8186
-      - supermq-coap:5683
+      - supermq-domains:9003
+      - supermq-groups:9004
+      - supermq-channels:9005
+      - supermq-clients:9006
+      - supermq-journal:9021

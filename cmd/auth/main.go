@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"time"
 
 	chclient "github.com/absmach/callhome/pkg/client"
+	"github.com/absmach/fluxmq/pkg/proto/auth/v1/authv1connect"
 	"github.com/absmach/supermq"
 	grpcAuthV1 "github.com/absmach/supermq/api/grpc/auth/v1"
 	grpcTokenV1 "github.com/absmach/supermq/api/grpc/token/v1"
@@ -27,7 +29,9 @@ import (
 	"github.com/absmach/supermq/auth/tokenizer/asymmetric"
 	"github.com/absmach/supermq/auth/tokenizer/symmetric"
 	redisclient "github.com/absmach/supermq/internal/clients/redis"
+	smqfluxmq "github.com/absmach/supermq/internal/fluxmq"
 	smqlog "github.com/absmach/supermq/logger"
+	"github.com/absmach/supermq/pkg/grpcclient"
 	"github.com/absmach/supermq/pkg/jaeger"
 	"github.com/absmach/supermq/pkg/policies/spicedb"
 	pgclient "github.com/absmach/supermq/pkg/postgres"
@@ -57,6 +61,10 @@ const (
 	defDB          = "auth"
 	defSvcHTTPPort = "8189"
 	defSvcGRPCPort = "8181"
+
+	envPrefixClients  = "SMQ_CLIENTS_GRPC_"
+	envPrefixChannels = "SMQ_CHANNELS_GRPC_"
+	envPrefixDomains  = "SMQ_DOMAINS_GRPC_"
 )
 
 type config struct {
@@ -213,13 +221,73 @@ func main() {
 		return gs.Start()
 	})
 
+	// FluxMQ auth callout: connect to clients, channels, domains gRPC services.
+	clientsGRPCCfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&clientsGRPCCfg, env.Options{Prefix: envPrefixClients}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load clients gRPC client configuration : %s", err))
+		exitCode = 1
+		return
+	}
+	channelsGRPCCfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&channelsGRPCCfg, env.Options{Prefix: envPrefixChannels}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load channels gRPC client configuration : %s", err))
+		exitCode = 1
+		return
+	}
+	domainsGRPCCfg := grpcclient.Config{}
+	if err := env.ParseWithOptions(&domainsGRPCCfg, env.Options{Prefix: envPrefixDomains}); err != nil {
+		logger.Error(fmt.Sprintf("failed to load domains gRPC client configuration : %s", err))
+		exitCode = 1
+		return
+	}
+
+	clientsClient, clientsHandler, err := grpcclient.SetupClientsClient(ctx, clientsGRPCCfg)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to connect to clients gRPC server: %s", err))
+		exitCode = 1
+		return
+	}
+	defer clientsHandler.Close()
+	logger.Info("Clients gRPC client successfully connected", slog.String("url", clientsGRPCCfg.URL))
+
+	channelsClient, channelsHandler, err := grpcclient.SetupChannelsClient(ctx, channelsGRPCCfg)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to connect to channels gRPC server: %s", err))
+		exitCode = 1
+		return
+	}
+	defer channelsHandler.Close()
+	logger.Info("Channels gRPC client successfully connected", slog.String("url", channelsGRPCCfg.URL))
+
+	domainsClient, domainsHandler, err := grpcclient.SetupDomainsClient(ctx, domainsGRPCCfg)
+	if err != nil {
+		logger.Error(fmt.Sprintf("failed to connect to domains gRPC server: %s", err))
+		exitCode = 1
+		return
+	}
+	defer domainsHandler.Close()
+	logger.Info("Domains gRPC client successfully connected", slog.String("url", domainsGRPCCfg.URL))
+
+	fluxmqAuthServer := smqfluxmq.NewAuthServer(smqfluxmq.AuthServerConfig{
+		Clients:  clientsClient,
+		Channels: channelsClient,
+		Domains:  domainsClient,
+		Logger:   logger,
+	})
+
 	httpServerConfig := server.Config{Port: defSvcHTTPPort}
 	if err := env.ParseWithOptions(&httpServerConfig, env.Options{Prefix: envPrefixHTTP}); err != nil {
 		logger.Error(fmt.Sprintf("failed to load %s HTTP server configuration : %s", svcName, err.Error()))
 		exitCode = 1
 		return
 	}
-	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, httpapi.MakeHandler(svc, logger, cfg.InstanceID, cfg.JWKSCacheMaxAge, cfg.JWKSCacheStaleWhileRevalidate), logger)
+
+	mux := http.NewServeMux()
+	connectPath, connectHandler := authv1connect.NewAuthServiceHandler(fluxmqAuthServer)
+	mux.Handle(connectPath, connectHandler)
+	mux.Handle("/", httpapi.MakeHandler(svc, logger, cfg.InstanceID, cfg.JWKSCacheMaxAge, cfg.JWKSCacheStaleWhileRevalidate))
+
+	hs := httpserver.NewServer(ctx, cancel, svcName, httpServerConfig, mux, logger)
 
 	g.Go(func() error {
 		return hs.Start()

@@ -84,6 +84,10 @@ cluster:
     route_batch_flush_workers: 8
     route_publish_timeout: 15s
 
+auth:
+  url: "http://auth:9001"
+  timeout: 2s
+
 queue_manager:
   auto_commit_interval: 5s
 

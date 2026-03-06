@@ -107,6 +107,9 @@ services:
     depends_on:
       - auth-db
       - spicedb
+      - clients
+      - channels
+      - domains
     expose:
       - ${SMQ_AUTH_GRPC_PORT}
     restart: on-failure
@@ -150,6 +153,12 @@ services:
       SMQ_AUTH_ADAPTER_INSTANCE_ID: ${SMQ_AUTH_ADAPTER_INSTANCE_ID}
       SMQ_ES_URL: ${SMQ_ES_URL}
       SMQ_AUTH_CACHE_URL: ${SMQ_AUTH_CACHE_URL}
+      SMQ_CLIENTS_GRPC_URL: ${SMQ_CLIENTS_GRPC_URL}
+      SMQ_CLIENTS_GRPC_TIMEOUT: ${SMQ_CLIENTS_GRPC_TIMEOUT}
+      SMQ_CHANNELS_GRPC_URL: ${SMQ_CHANNELS_GRPC_URL}
+      SMQ_CHANNELS_GRPC_TIMEOUT: ${SMQ_CHANNELS_GRPC_TIMEOUT}
+      SMQ_DOMAINS_GRPC_URL: ${SMQ_DOMAINS_GRPC_URL}
+      SMQ_DOMAINS_GRPC_TIMEOUT: ${SMQ_DOMAINS_GRPC_TIMEOUT}
     ports:
       - ${SMQ_AUTH_HTTP_PORT}:${SMQ_AUTH_HTTP_PORT}
       - ${SMQ_AUTH_GRPC_PORT}:${SMQ_AUTH_GRPC_PORT}
@@ -1218,6 +1227,8 @@ services:
     restart: on-failure
     user: "0:0"
     command: ["-config", "/etc/fluxmq/config.yaml"]
+    depends_on:
+      - auth
     networks:
       - supermq-base-net
     volumes:

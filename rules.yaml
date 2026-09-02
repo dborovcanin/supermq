@@ -421,6 +421,12 @@ components:
           $ref: '#/components/schemas/Script'
         outputs:
           type: array
+          description: >-
+            Replaces the stored output list. Secrets are write-only and are
+            never returned, so an output sent back after a read carries no
+            `password` or `token`; the stored secret is kept as long as the
+            output's `id` is sent unchanged. An output with no `id` is treated
+            as new and must carry its own secret.
           items:
             $ref: '#/components/schemas/RuleOutput'
 
@@ -467,7 +473,11 @@ components:
         mode:
           type: string
           enum: [sandboxed, unrestricted]
-          description: Creation defaults to unrestricted when omitted; updates preserve the stored mode when omitted.
+          description: >-
+            Creation defaults to sandboxed when omitted; unrestricted must be
+            asked for, since it gives the script the same access as the Rules
+            Engine process itself. An update that omits the mode preserves the
+            stored one.
 
     RuleStatus:
       type: string
@@ -542,6 +552,13 @@ components:
         type:
           type: string
           enum: [channels]
+        id:
+          type: string
+          description: >-
+            Server-assigned identifier, stable for the life of the output. It
+            is ignored when a rule is created and returned on every read; send
+            it back unchanged when updating so the output can be matched to the
+            one it replaces.
         channel:
           type: string
         topic:
@@ -554,6 +571,13 @@ components:
         type:
           type: string
           enum: [alarms]
+        id:
+          type: string
+          description: >-
+            Server-assigned identifier, stable for the life of the output. It
+            is ignored when a rule is created and returned on every read; send
+            it back unchanged when updating so the output can be matched to the
+            one it replaces.
 
     SenMLOutput:
       type: object
@@ -562,6 +586,13 @@ components:
         type:
           type: string
           enum: [save_senml]
+        id:
+          type: string
+          description: >-
+            Server-assigned identifier, stable for the life of the output. It
+            is ignored when a rule is created and returned on every read; send
+            it back unchanged when updating so the output can be matched to the
+            one it replaces.
 
     JSONOutput:
       type: object
@@ -570,6 +601,13 @@ components:
         type:
           type: string
           enum: [save_json]
+        id:
+          type: string
+          description: >-
+            Server-assigned identifier, stable for the life of the output. It
+            is ignored when a rule is created and returned on every read; send
+            it back unchanged when updating so the output can be matched to the
+            one it replaces.
 
     EmailOutput:
       type: object
@@ -578,6 +616,13 @@ components:
         type:
           type: string
           enum: [email]
+        id:
+          type: string
+          description: >-
+            Server-assigned identifier, stable for the life of the output. It
+            is ignored when a rule is created and returned on every read; send
+            it back unchanged when updating so the output can be matched to the
+            one it replaces.
         to:
           type: array
           items:
@@ -591,11 +636,22 @@ components:
 
     PostgresOutput:
       type: object
-      required: [type, host, port, user, password, database, table, mapping]
+      description: >-
+        `password` is write-only: supply it when the output is first created,
+        and it is never returned on a read. On update it may be omitted to keep
+        the stored password, or supplied to replace it.
+      required: [type, host, port, user, database, table, mapping]
       properties:
         type:
           type: string
           enum: [save_remote_pg]
+        id:
+          type: string
+          description: >-
+            Server-assigned identifier, stable for the life of the output. It
+            is ignored when a rule is created and returned on every read; send
+            it back unchanged when updating so the output can be matched to the
+            one it replaces.
         host:
           type: string
         port:
@@ -605,6 +661,10 @@ components:
         password:
           type: string
           format: password
+          writeOnly: true
+          description: >-
+            Required when the output is first created. Omit on update to keep
+            the stored password.
         database:
           type: string
         table:
@@ -615,14 +675,29 @@ components:
 
     SlackOutput:
       type: object
-      required: [type, token, channel_id, message]
+      description: >-
+        `token` is write-only: supply it when the output is first created, and
+        it is never returned on a read. On update it may be omitted to keep the
+        stored token, or supplied to replace it.
+      required: [type, channel_id, message]
       properties:
         type:
           type: string
           enum: [slack]
+        id:
+          type: string
+          description: >-
+            Server-assigned identifier, stable for the life of the output. It
+            is ignored when a rule is created and returned on every read; send
+            it back unchanged when updating so the output can be matched to the
+            one it replaces.
         token:
           type: string
           format: password
+          writeOnly: true
+          description: >-
+            Required when the output is first created. Omit on update to keep
+            the stored token.
         channel_id:
           type: string
         message:
